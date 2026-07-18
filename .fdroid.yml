@@ -1,6 +1,6 @@
 Categories:
+  - Messaging
   - Security
-  - Internet
 License: AGPL-3.0-only
 AuthorName: datakeeper
 WebSite: https://datakeeper.pages.dev/kryptos
@@ -12,21 +12,22 @@ Builds:
     versionCode: 6
     commit: v2.1.1
     subdir: android/app
-    ndk: 26.1.10909125
     sudo:
       - apt-get update
-      - apt-get install -y protobuf-compiler
-      - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
-    scandelete:
-      - ThirdParty/ObjectivePGP
-    prebuild:
-      - . "$HOME/.cargo/env"
-      - export CARGO_HOME="$HOME/.cargo" SOURCE_DATE_EPOCH=$(git -C ../.. log -1 --pretty=%ct)
-      - cd ../.. && ./scripts/setup-libsignal.sh --android
+      - apt-get install -y protobuf-compiler cmake
     gradle:
       - yes
+    prebuild:
+      - curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
+      - . "$HOME/.cargo/env"
+      - export CARGO_HOME="$HOME/.cargo"
+      - export SOURCE_DATE_EPOCH=$(git -C ../.. log -1 --pretty=%ct)
+      - cd ../.. && ./scripts/setup-libsignal.sh --android
+    scandelete:
+      - ThirdParty/ObjectivePGP
+    ndk: 26.1.10909125
 
-AutoUpdateMode: Version v%v
+AutoUpdateMode: Version
 UpdateCheckMode: Tags
 CurrentVersion: 2.1.1
 CurrentVersionCode: 6
