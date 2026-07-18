@@ -1,0 +1,32 @@
+Categories:
+  - Security
+  - Internet
+License: AGPL-3.0-only
+AuthorName: datakeeper
+WebSite: https://datakeeper.pages.dev/kryptos
+SourceCode: https://github.com/swisslite/Kryptos
+IssueTracker: https://github.com/swisslite/Kryptos/issues
+
+Builds:
+  - versionName: 2.1.1
+    versionCode: 6
+    commit: v2.1.1
+    subdir: android/app
+    ndk: 26.1.10909125
+    sudo:
+      - apt-get update
+      - apt-get install -y protobuf-compiler
+      - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
+    scandelete:
+      - ThirdParty/ObjectivePGP
+    prebuild:
+      - . "$HOME/.cargo/env"
+      - export CARGO_HOME="$HOME/.cargo" SOURCE_DATE_EPOCH=$(git -C ../.. log -1 --pretty=%ct)
+      - cd ../.. && ./scripts/setup-libsignal.sh --android
+    gradle:
+      - yes
+
+AutoUpdateMode: Version v%v
+UpdateCheckMode: Tags
+CurrentVersion: 2.1.1
+CurrentVersionCode: 6
