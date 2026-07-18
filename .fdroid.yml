@@ -14,15 +14,17 @@ Builds:
     subdir: android/app
     sudo:
       - apt-get update
-      - apt-get install -y protobuf-compiler cmake
+      - apt-get install -y protobuf-compiler cmake build-essential
     gradle:
       - yes
     prebuild:
       - curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
       - . "$HOME/.cargo/env"
       - export CARGO_HOME="$HOME/.cargo"
-      - export SOURCE_DATE_EPOCH=$(git -C ../.. log -1 --pretty=%ct)
-      - cd ../.. && ./scripts/setup-libsignal.sh --android
+      - cd ../.. && ./scripts/setup-libsignal.sh
+      - cd ThirdParty/libsignal
+      - rustup target add aarch64-linux-android armv7-linux-androideabi
+      - ./java/build_jni.sh android-arm64 android-arm
     scandelete:
       - ThirdParty/ObjectivePGP
     ndk: 26.1.10909125
