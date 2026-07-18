@@ -1,0 +1,28 @@
+diff --git a/java/client/src/main/java/org/signal/libsignal/net/ChatConnection.java b/java/client/src/main/java/org/signal/libsignal/net/ChatConnection.java
+index 5156a4c..dbd764c 100644
+--- a/java/client/src/main/java/org/signal/libsignal/net/ChatConnection.java
++++ b/java/client/src/main/java/org/signal/libsignal/net/ChatConnection.java
+@@ -260,7 +260,7 @@ public abstract class ChatConnection extends NativeHandleGuard.SimpleOwner {
+           NativeTesting.TESTING_FakeChatRemoteEnd_NextGrpcMessage(
+               body.array(), body.arrayOffset() + body.position());
+       var messageBytes = new byte[messageOffsets.getSecond() - messageOffsets.getFirst()];
+-      body.position(messageOffsets.getFirst() - body.arrayOffset()).get(messageBytes);
++      ((java.nio.ByteBuffer) body.position(messageOffsets.getFirst() - body.arrayOffset())).get(messageBytes);
+       var messageJson = NativeTesting.TESTING_FakeChatRemoteEnd_BinprotoToJson(name, messageBytes);
+       return FakeChatRemoteKt.decodeJson(messageJson);
+     }
+diff --git a/swift/Package.swift b/swift/Package.swift
+index 298949f..c2a5639 100644
+--- a/swift/Package.swift
++++ b/swift/Package.swift
+@@ -20,9 +20,7 @@ let package = Package(
+             targets: ["LibSignalClient"]
+         )
+     ],
+-    dependencies: [
+-        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.4.3")
+-    ],
++    dependencies: [],
+     targets: [
+         .systemLibrary(name: "SignalFfi"),
+         .target(

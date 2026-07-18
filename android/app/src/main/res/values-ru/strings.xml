@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kryptos</string>
+    <string name="keyboard_name">Клавиатура Kryptos</string>
+
+    <string name="tab_chats">Чаты</string>
+    <string name="tab_quick">Пароль</string>
+    <string name="tab_stego">Фото</string>
+    <string name="tab_pgp">PGP</string>
+    <string name="tab_settings">Настройки</string>
+
+    <string name="my_key">Мой ключ</string>
+    <string name="add_contact">Добавить контакт</string>
+    <string name="profiles">Профили</string>
+    <string name="no_contacts">Пока нет контактов. Поделитесь своим ключом и добавьте чужой.</string>
+    <string name="contact_name">Имя контакта</string>
+    <string name="paste_key">Вставьте KRYPTOS-KEY собеседника</string>
+    <string name="scan_qr">Сканировать QR</string>
+    <string name="add">Добавить</string>
+    <string name="cancel">Отмена</string>
+    <string name="copy">Копировать</string>
+    <string name="share">Поделиться</string>
+    <string name="copied">Скопировано</string>
+    <string name="safety_number">Код безопасности</string>
+    <string name="key_hint">При каждом показе ключа создаётся свежий одноразовый prekey — каждый контакт получает уникальный.</string>
+
+    <string name="message">Сообщение</string>
+    <string name="encrypt_and_copy">Зашифровать и скопировать</string>
+    <string name="paste_and_decrypt">Вставить и расшифровать</string>
+    <string name="decrypted">Расшифровано</string>
+    <string name="not_a_kryptos_message">Сообщение Kryptos не найдено.</string>
+    <string name="auto_delete">Исчезающие сообщения</string>
+    <string name="clear_chat">Очистить чат</string>
+    <string name="delete_contact">Удалить контакт</string>
+    <string name="off">Выкл</string>
+    <string name="s30">30 секунд</string>
+    <string name="m5">5 минут</string>
+    <string name="h1">1 час</string>
+    <string name="h8">8 часов</string>
+    <string name="d1">1 день</string>
+    <string name="w1">1 неделя</string>
+
+    <string name="new_profile">Новый профиль</string>
+    <string name="profile_name">Имя профиля</string>
+    <string name="regenerate_key">Пересоздать ключ</string>
+    <string name="regenerate_warning">Будет создана новая личность; все сессии этого профиля станут недействительны.</string>
+
+    <string name="password">Пароль</string>
+    <string name="encrypt">Зашифровать</string>
+    <string name="decrypt">Расшифровать</string>
+    <string name="wrong_password">Не удалось расшифровать — проверьте пароль.</string>
+
+    <string name="stego_hide">Спрятать</string>
+    <string name="stego_reveal">Извлечь</string>
+    <string name="pick_photo">Выбрать фото</string>
+    <string name="pick_file">Выбрать файл (PNG, JPG…)</string>
+    <string name="stego_hint">Сообщение сначала шифруется паролем, затем прячется в пикселях фото. Отправляйте итоговый PNG как ФАЙЛ (не как сжатое фото).</string>
+    <string name="capacity_exceeded">Сообщение не помещается в это фото.</string>
+    <string name="no_hidden_data">В этом фото нет скрытых данных.</string>
+
+    <string name="pgp_identities">Мои ключи</string>
+    <string name="pgp_recipients">Получатели</string>
+    <string name="pgp_name">Имя</string>
+    <string name="pgp_email">Email (необязательно)</string>
+    <string name="pgp_algo">Алгоритм</string>
+    <string name="pgp_generate">Создать</string>
+    <string name="pgp_busy">Создание ключа…</string>
+
+    <string name="settings_stego">Прятать сообщения чата в слова</string>
+    <string name="settings_stego_desc">Signal-сообщения маскируются под безобидный набор обычных слов.</string>
+    <string name="settings_stego_lang">Язык слов</string>
+    <string name="settings_stego_smart">Умные предложения</string>
+    <string name="stego_smart_footer">Умный режим строит настоящие, грамматически связные предложения, похожие на обычную заметку, ценой чуть более длинного сообщения. Отключите его, чтобы текст-прикрытие был как можно короче.</string>
+    <string name="lang_auto">Автоматически (язык системы)</string>
+    <string name="lang_en">Английский</string>
+    <string name="lang_ru">Русский</string>
+    <string name="settings_keyboard">Клавиатура</string>
+    <string name="settings_enable_keyboard">Включить клавиатуру Kryptos</string>
+    <string name="settings_kb_autodecrypt">Авторасшифровка буфера в клавиатуре</string>
+    <string name="settings_privacy">Приватность</string>
+    <string name="settings_shield">Блокировать скриншоты и снимки в переключателе</string>
+    <string name="settings_clip_autodecrypt">Авторасшифровка буфера при открытии</string>
+    <string name="settings_danger">Опасная зона</string>
+    <string name="settings_wipe_chats">Стереть все чаты</string>
+    <string name="settings_wipe_contacts">Стереть контакты и чаты</string>
+    <string name="settings_wipe_all">Стереть всё</string>
+
+    <string name="settings_about_row">О программе</string>
+    <string name="settings_danger_footer">Безвозвратно стирает выбранные данные — ключи, контакты, переписку и настройки. Отменить нельзя.</string>
+    <string name="privacy_footer">С включённой блокировкой вход в Kryptos требует биометрию или PIN устройства. Щит скрывает содержимое от скриншотов и снимка в переключателе приложений.</string>
+    <string name="clip_section">Буфер обмена</string>
+    <string name="clip_footer">Авторасшифровка: скопируйте зашифрованное сообщение, откройте Kryptos — и оно сразу на экране. Автоочистка стирает скопированное Kryptos через выбранное время.</string>
+    <string name="meta_section">Метаданные</string>
+    <string name="settings_length_padding">Маскировать длину сообщения</string>
+    <string name="length_padding_footer">Дополняет шифртекст до фиксированного набора размеров, чтобы его длина не выдавала размер сообщения. Немного увеличивает шифртекст.</string>
+    <string name="stego_example_header">Пример сообщения</string>
+    <string name="stego_example_footer">Так будут выглядеть ваши сообщения в чатах. Шифрование одинаково в обоих случаях — меняется только внешняя обёртка.</string>
+    <string name="kb_languages">Языки</string>
+    <string name="kb_languages_footer">Для каждого включённого языка на клавиатуре есть буквенная раскладка, клавиша языка переключает между ними. Хотя бы один язык всегда остаётся включённым.</string>
+    <string name="kb_feedback">Отклик</string>
+    <string name="kb_feedback_footer">Мягкая вибрация и системный щелчок при каждом нажатии.</string>
+    <string name="kb_autodecrypt_footer">Если в буфере лежит зашифрованное сообщение, клавиатура Kryptos расшифрует его сразу при открытии — скопируйте сообщение в любом мессенджере, и оно откроется прямо там.</string>
+
+    <string name="about_tagline">Шифруйте где угодно. Общайтесь через любой канал.</string>
+    <string name="about_version">Версия %1$s</string>
+    <string name="about_desc">Kryptos — инструмент приватного общения, который работает через любой мессенджер. Вы пишете сообщение, Kryptos шифрует его на устройстве, а результат вы отправляете через WhatsApp, Telegram, SMS — что угодно. Прочитать его может только Kryptos вашего собеседника; мессенджер видит лишь шифртекст.</string>
+    <string name="about_offline">Полностью офлайн: без серверов, аккаунтов и аналитики. У приложения вообще нет сетевых разрешений — закрытые ключи не покидают устройство.</string>
+    <string name="about_under_hood">Под капотом</string>
+    <string name="about_signal_t">Signal Protocol — официальная libsignal</string>
+    <string name="about_signal_d">Та же библиотека, что и в приложении Signal: постквантовый обмен ключами (PQXDH с Kyber) и Double Ratchet — новый ключ для каждого сообщения.</string>
+    <string name="about_pgp_t">OpenPGP — PGPainless / Bouncy Castle</string>
+    <string name="about_pgp_d">Классическое асимметричное шифрование с подписями, совместимое с другими PGP-инструментами.</string>
+    <string name="about_pw_t">Парольный режим</string>
+    <string name="about_pw_d">Общая парольная фраза: PBKDF2-HMAC-SHA256 и AES-256-GCM.</string>
+    <string name="about_stego_t">Стеганография</string>
+    <string name="about_stego_d">Прячет уже зашифрованное сообщение в обычном фото или в наборе повседневных слов.</string>
+    <string name="about_dev">Разработчик</string>
+    <string name="about_dev_footer">Вопросы, идеи или баг? Буду рад услышать.</string>
+    <string name="about_tg_channel">Telegram-канал</string>
+
+    <string name="screen_decrypt_service_label">Kryptos — расшифровка на экране</string>
+    <string name="screen_decrypt_service_desc">Находит сообщения, зашифрованные Kryptos, в любом месте на экране и показывает расшифрованный текст прямо поверх них. Читается только текст на экране — без нажатий клавиш и без сети.</string>
+    <string name="screen_section">На экране</string>
+    <string name="screen_decrypt_toggle">Расшифровывать на экране</string>
+    <string name="screen_block_screenshots">Запрет скриншотов</string>
+    <string name="screen_block_screenshots_desc">Пока работает расшифровка на экране, скриншоты и запись экрана блокируются на всём устройстве — расшифрованный текст не попадёт в снимок.</string>
+    <string name="screen_decrypt_footer">Находит сообщения Kryptos (компактный код или слова) в любом приложении и накладывает расшифрованный текст прямо поверх — вживую, при прокрутке. Работает только для контактов из чатов и никогда при заблокированном Kryptos.</string>
+    <string name="screen_decrypt_enable_service">Включить службу спец. возможностей</string>
+    <string name="screen_decrypt_service_off">Чтобы читать экран, Kryptos нужна включённая служба спец. возможностей. Нажмите, чтобы открыть настройки Android и включить её.</string>
+
+    <string name="kb_select_contact">Контакт</string>
+    <string name="kb_no_contacts">Сначала добавьте контакт в приложении Kryptos</string>
+    <string name="kb_encrypted">Зашифровано ✓</string>
+    <string name="kb_nothing_to_encrypt">Нечего шифровать — сначала введите сообщение</string>
+    <string name="kb_locked">Сначала разблокируйте приложение Kryptos</string>
+
+    <string name="sec_section">Безопасность</string>
+    <string name="sec_app_lock">Блокировка входа (биометрия / PIN)</string>
+    <string name="sec_app_lock_unavailable">Сначала установите блокировку экрана в настройках Android.</string>
+    <string name="sec_autolock">Автоблокировка</string>
+    <string name="sec_autolock_immediate">Сразу</string>
+    <string name="sec_autolock_10s">Через 10 секунд</string>
+    <string name="sec_autolock_1m">Через 1 минуту</string>
+    <string name="sec_autolock_5m">Через 5 минут</string>
+    <string name="sec_duress">PIN-паника (стирает всё)</string>
+    <string name="sec_duress_hint">Ввод этого PIN на экране блокировки стирает все ключи, чаты и контакты вместо разблокировки. Пусто — выключено.</string>
+    <string name="sec_secure_keyboard">Блокировать скриншоты при вводе (клавиатура)</string>
+    <string name="sec_clip_clear">Автоочистка буфера обмена</string>
+    <string name="sec_clip_never">Никогда</string>
+    <string name="sec_clip_15s">Через 15 секунд</string>
+    <string name="sec_clip_30s">Через 30 секунд</string>
+    <string name="sec_clip_1m">Через 1 минуту</string>
+    <string name="sec_clip_5m">Через 5 минут</string>
+    <string name="sec_clip_on_decrypt">Очищать буфер после расшифровки</string>
+    <string name="sec_integrity">Предупреждать о root / отладчике / эмуляторе</string>
+    <string name="sec_integrity_rooted">Похоже, на устройстве есть root — ключи под угрозой.</string>
+    <string name="sec_integrity_debugged">К Kryptos подключён отладчик.</string>
+    <string name="sec_integrity_emulator">Запущено в эмуляторе — это недоверенная среда.</string>
+    <string name="sec_integrity_hooked">Активен фреймворк перехвата (Frida / Xposed) — память приложения может читаться.</string>
+    <string name="sec_integrity_tampered">APK подписан не оригинальным ключом Kryptos — возможно, приложение модифицировано.</string>
+    <string name="sec_integrity_accessibility">Службы специальных возможностей могут читать экран: %1$s. Убедитесь, что доверяете каждой.</string>
+    <string name="lock_unlock">Разблокировать</string>
+    <string name="lock_duress_hint">PIN-паника</string>
+
+    <string name="paste">Вставить</string>
+    <string name="delete">Удалить</string>
+    <string name="shared_secret">общий секрет</string>
+    <string name="quick_subtitle">Простой симметричный режим: вы с собеседником договариваетесь об одном общем пароле и шифруете текст для любого мессенджера. (Это не PGP — у PGP своя вкладка.)</string>
+    <string name="label_message_text">Текст сообщения</string>
+    <string name="label_encrypted_block">Зашифрованный блок</string>
+    <string name="label_ready">Готово — вставьте собеседнику</string>
+    <string name="label_decrypted">Расшифрованный текст</string>
+    <string name="copied_banner">Зашифровано и скопировано в буфер — вставьте собеседнику.</string>
+
+    <string name="label_cover_photo">Фото-обложка</string>
+    <string name="label_stego_photo">Фото с секретом</string>
+    <string name="label_secret_message">Секретное сообщение</string>
+    <string name="stego_hide_action">Спрятать в фото</string>
+    <string name="stego_reveal_action">Извлечь сообщение</string>
+    <string name="stego_file_hint">Отправляйте как документ/файл. Отправка обычным фото пересожмёт картинку и уничтожит скрытые данные.</string>
+    <string name="label_hidden_message">Скрытое сообщение</string>
+    <string name="saved_as_file">Сохранено. Отправьте PNG как ФАЙЛ, чтобы скрытые данные уцелели.</string>
+    <string name="save_failed">Не удалось сохранить файл. Попробуйте другое расположение.</string>
+
+    <string name="pgp_your_key_manage">Ваш ключ — нажмите для управления</string>
+    <string name="label_recipient">Получатель</string>
+    <string name="pgp_choose_recipient">Выберите получателя</string>
+    <string name="pgp_add_first">Сначала добавьте получателя</string>
+    <string name="label_pgp_message">PGP-сообщение</string>
+    <string name="label_encrypted_send">Зашифровано — отправьте это</string>
+    <string name="pgp_keys_title">Ваши PGP-ключи</string>
+    <string name="pgp_create_new">Создать новый ключ</string>
+    <string name="pgp_use">Выбрать</string>
+    <string name="pgp_share_hint">Передайте этот открытый ключ тому, кто хочет отправлять вам PGP-сообщения или добавить вас в получатели (чтобы проверять вашу подпись).</string>
+    <string name="pgp_their_key">Их открытый ключ</string>
+    <string name="pgp_invalid_key">Это не похоже на корректный открытый PGP-ключ.</string>
+    <string name="pgp_verified_banner">Подпись подтверждена — отправитель из ваших получателей.</string>
+    <string name="pgp_unverified_banner">Расшифровано, но подпись не подтверждена — добавьте отправителя в получатели.</string>
+
+    <string name="manage_profiles">Управление профилями…</string>
+    <string name="empty_title">Пока нет диалогов</string>
+    <string name="chat_hint">Зашифруйте сообщение, отправьте результат через любой мессенджер, а ответ вставьте сюда для расшифровки.</string>
+    <string name="auto_delete_hint">Сообщения исчезают через %1$s.</string>
+    <string name="sent_banner">Зашифровано и скопировано — вставьте собеседнику.</string>
+    <string name="sent_banner_stego">Спрятано в словах и скопировано — вставьте собеседнику.</string>
+    <string name="clipboard_empty">Буфер обмена пуст.</string>
+    <string name="decrypt_failed">Не удалось расшифровать — не тот контакт, либо сообщение уже было прочитано. Если не читается каждое НОВОЕ сообщение — отправьте контакту свой ключ заново, пусть добавит вас ещё раз.</string>
+    <string name="key_for_profile">Ключ профиля</string>
+    <string name="show_qr">Показать QR-код</string>
+    <string name="hide_qr">Скрыть QR-код</string>
+    <string name="qr_scan_hint">Дайте собеседнику отсканировать, чтобы добавить вас.</string>
+    <string name="key_public_hint">Это ваш ОТКРЫТЫЙ ключ — им можно делиться. Закрытый ключ не покидает устройство.</string>
+    <string name="copy_key">Скопировать ключ</string>
+
+    <string name="set_section_stego">Стеганография</string>
+    <string name="wipe_all_warning">Сотрёт ВСЕ данные: ваши ключи, контакты, чаты, PGP-ключи и настройки. Отменить нельзя.</string>
+
+    <string name="confirm_delete_contact_title">Удалить контакт и чат?</string>
+    <string name="confirm_delete_contact_text">Его ключ и сессия будут стёрты с этого устройства вместе со всей перепиской; ваш собственный ключ останется. Отменить нельзя.</string>
+    <string name="confirm_clear_chat_title">Очистить этот чат?</string>
+    <string name="confirm_clear_chat_text">Переписка будет надёжно стёрта. Отменить нельзя.</string>
+    <string name="confirm_delete_profile_title">Удалить профиль?</string>
+    <string name="confirm_delete_profile_text">Эта личность будет удалена навсегда — её ключи, контакты и сообщения. Отменить нельзя.</string>
+    <string name="confirm_wipe_chats_title">Стереть все переписки?</string>
+    <string name="confirm_wipe_chats_text">История сообщений во всех чатах будет стёрта. Контакты останутся. Отменить нельзя.</string>
+    <string name="confirm_wipe_contacts_title">Удалить все контакты и чаты?</string>
+    <string name="confirm_wipe_contacts_text">Ключи, сессии и переписки всех контактов будут стёрты с этого устройства; ваш собственный ключ останется. Отменить нельзя.</string>
+    <string name="confirm_delete_pgp_title">Удалить этот PGP-ключ?</string>
+    <string name="confirm_delete_pgp_text">Закрытый ключ будет уничтожен навсегда — сообщения, зашифрованные для него, больше никогда не расшифровать.</string>
+
+    <string name="kb_clear">Очистить</string>
+    <string name="settings_kb_haptics">Вибрация клавиш</string>
+    <string name="settings_kb_sounds">Звук клавиш</string>
+    <string name="settings_kb_compose">Поле сообщения в клавиатуре</string>
+    <string name="settings_kb_compose_desc">Печатайте сообщение прямо в клавиатуре и шифруйте его там — в мессенджер попадает только зашифрованный результат, он никогда не увидит открытый текст. Применяется при следующем открытии клавиатуры.</string>
+
+    <string name="kb_typing">Набор текста</string>
+    <string name="settings_kb_suggestions">Подсказки слов</string>
+    <string name="settings_kb_autocorrect">Автоисправление</string>
+    <string name="settings_kb_emoji">Клавиша эмодзи</string>
+    <string name="settings_kb_suggestions_desc">Контекстные продолжения, предсказание следующего слова и исправление опечаток по встроенным офлайн-словарям (русский и английский). Автоисправление чинит слово в момент, когда вы его дописали: промахи по клавишам и пропущенный пробел (какдела → как дела). «Стереть» сразу после — или тап по вашему слову «в кавычках» в строке подсказок — отменяет замену, и это слово больше никогда не трогается. Всё обучение происходит только на устройстве, хранится в зашифрованном виде и отключено в полях паролей. Изменения применяются при следующем открытии клавиатуры.</string>
+    <string name="kb_forget_words">Забыть выученные слова</string>
+    <string name="confirm_forget_words_title">Забыть выученные слова?</string>
+    <string name="confirm_forget_words_text">Личный словарь, накопленный при наборе, будет стёрт. Встроенные словари останутся.</string>
+    <string name="kb_no_recents">Недавних эмодзи пока нет — выберите категорию ниже</string>
+
+    <string name="screen_you_to">Вы → %1$s</string>
+    <string name="screen_show_full">Показать сообщение полностью</string>
+</resources>

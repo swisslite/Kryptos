@@ -1,0 +1,186 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Choose a contact first": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сначала выберите контакт"
+          }
+        }
+      }
+    },
+    "Clear": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Очистить"
+          }
+        }
+      }
+    },
+    "Clipboard is empty.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Буфер обмена пуст."
+          }
+        }
+      }
+    },
+    "Contact": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Контакт"
+          }
+        }
+      }
+    },
+    "Could not decrypt — check the profile and contact": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось расшифровать — проверьте профиль и контакт"
+          }
+        }
+      }
+    },
+    "Could not decrypt — different profile/contact, or the message is damaged": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось расшифровать — другой профиль/контакт или сообщение повреждено"
+          }
+        }
+      }
+    },
+    "Could not encrypt": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось зашифровать"
+          }
+        }
+      }
+    },
+    "Decrypted": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Расшифровано"
+          }
+        }
+      }
+    },
+    "Decrypted · %@": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Расшифровано · %@"
+          }
+        }
+      }
+    },
+    "Encrypted for %@": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Зашифровано для %@"
+          }
+        }
+      }
+    },
+    "Enter some text.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Введите текст."
+          }
+        }
+      }
+    },
+    "No contacts in this profile": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "В профиле нет контактов"
+          }
+        }
+      }
+    },
+    "No message — paste it into the field or copy it": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет сообщения — вставьте его в поле или скопируйте"
+          }
+        }
+      }
+    },
+    "No recent emoji yet — pick a category below": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Недавних эмодзи пока нет — выберите категорию ниже"
+          }
+        }
+      }
+    },
+    "Open the Kryptos app and add a contact.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Откройте приложение Kryptos и добавьте контакт."
+          }
+        }
+      }
+    },
+    "Paste": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вставить"
+          }
+        }
+      }
+    },
+    "To encrypt, enable “Full Access” in the keyboard settings.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Для шифрования включите «Полный доступ» в настройках клавиатуры."
+          }
+        }
+      }
+    },
+    "Type or paste text — the messenger won't see it until it's encrypted": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Печатайте или вставьте текст — мессенджер не увидит его до шифрования"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

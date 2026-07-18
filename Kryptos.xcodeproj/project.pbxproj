@@ -1,0 +1,546 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		000000000000000000000120 /* CipherCore in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000110 /* CipherCore */; };
+		000000000000000000000220 /* LibSignalClient in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000210 /* LibSignalClient */; };
+		000000000000000000000320 /* ObjectivePGP in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000310 /* ObjectivePGP */; };
+		000000000000000000000430 /* CipherCore in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000410 /* CipherCore */; };
+		000000000000000000000440 /* LibSignalClient in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000420 /* LibSignalClient */; };
+		0000000000000000000005A1 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000005A0 /* AppGroup.swift */; };
+		0000000000000000000005B1 /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000005B0 /* Keychain.swift */; };
+		0000000000000000000005C1 /* SignalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000005C0 /* SignalModels.swift */; };
+		0000000000000000000005D1 /* PersistentSignalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000005D0 /* PersistentSignalStore.swift */; };
+		0000000000000000000005E1 /* SignalWire.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000005E0 /* SignalWire.swift */; };
+		0000000000000000000005F1 /* SharedSignalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000005F0 /* SharedSignalStore.swift */; };
+		000000000000000000000603 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000602 /* SharedStore.swift */; };
+		000000000000000000000610 /* KryptosKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 000000000000000000000510 /* KryptosKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		000000000000000000000030 /* Kryptos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Kryptos.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		000000000000000000000510 /* KryptosKeyboard.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KryptosKeyboard.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		0000000000000000000005A0 /* AppGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppGroup.swift; path = Kryptos/Model/AppGroup.swift; sourceTree = SOURCE_ROOT; };
+		0000000000000000000005B0 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Keychain.swift; path = Kryptos/Model/Keychain.swift; sourceTree = SOURCE_ROOT; };
+		0000000000000000000005C0 /* SignalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SignalModels.swift; path = Kryptos/Model/SignalModels.swift; sourceTree = SOURCE_ROOT; };
+		0000000000000000000005D0 /* PersistentSignalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PersistentSignalStore.swift; path = Kryptos/Model/PersistentSignalStore.swift; sourceTree = SOURCE_ROOT; };
+		0000000000000000000005E0 /* SignalWire.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SignalWire.swift; path = Kryptos/Model/SignalWire.swift; sourceTree = SOURCE_ROOT; };
+		0000000000000000000005F0 /* SharedSignalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SharedSignalStore.swift; path = Kryptos/Model/SharedSignalStore.swift; sourceTree = SOURCE_ROOT; };
+		000000000000000000000602 /* SharedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SharedStore.swift; path = Kryptos/Model/SharedStore.swift; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		000000000000000000000080 /* Kryptos */ = {isa = PBXFileSystemSynchronizedRootGroup; path = Kryptos; sourceTree = "<group>"; };
+		000000000000000000000550 /* KryptosKeyboard */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (000000000000000000000551 /* Exceptions */, ); path = KryptosKeyboard; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		000000000000000000000551 /* Exceptions */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				KryptosKeyboard.entitlements,
+			);
+			target = 000000000000000000000500 /* KryptosKeyboard */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		000000000000000000000060 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000120 /* CipherCore in Frameworks */,
+				000000000000000000000220 /* LibSignalClient in Frameworks */,
+				000000000000000000000320 /* ObjectivePGP in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		000000000000000000000530 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000430 /* CipherCore in Frameworks */,
+				000000000000000000000440 /* LibSignalClient in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		000000000000000000000010 = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000080 /* Kryptos */,
+				000000000000000000000550 /* KryptosKeyboard */,
+				000000000000000000000020 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		000000000000000000000020 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000030 /* Kryptos.app */,
+				000000000000000000000510 /* KryptosKeyboard.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		000000000000000000000040 /* Kryptos */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0000000000000000000000D0 /* Build configuration list for PBXNativeTarget "Kryptos" */;
+			buildPhases = (
+				000000000000000000000050 /* Sources */,
+				000000000000000000000060 /* Frameworks */,
+				000000000000000000000070 /* Resources */,
+				000000000000000000000600 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				000000000000000000000630 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				000000000000000000000080 /* Kryptos */,
+			);
+			name = Kryptos;
+			packageProductDependencies = (
+				000000000000000000000110 /* CipherCore */,
+				000000000000000000000210 /* LibSignalClient */,
+				000000000000000000000310 /* ObjectivePGP */,
+			);
+			productName = Kryptos;
+			productReference = 000000000000000000000030 /* Kryptos.app */;
+			productType = "com.apple.product-type.application";
+		};
+		000000000000000000000500 /* KryptosKeyboard */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 000000000000000000000560 /* Build configuration list for PBXNativeTarget "KryptosKeyboard" */;
+			buildPhases = (
+				000000000000000000000520 /* Sources */,
+				000000000000000000000530 /* Frameworks */,
+				000000000000000000000540 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				000000000000000000000550 /* KryptosKeyboard */,
+			);
+			name = KryptosKeyboard;
+			packageProductDependencies = (
+				000000000000000000000410 /* CipherCore */,
+				000000000000000000000420 /* LibSignalClient */,
+			);
+			productName = KryptosKeyboard;
+			productReference = 000000000000000000000510 /* KryptosKeyboard.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		000000000000000000000090 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2660;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					000000000000000000000040 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					000000000000000000000500 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+				};
+			};
+			buildConfigurationList = 0000000000000000000000A0 /* Build configuration list for PBXProject "Kryptos" */;
+			compatibilityVersion = "Xcode 16.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				ru,
+			);
+			mainGroup = 000000000000000000000010;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				000000000000000000000100 /* XCLocalSwiftPackageReference "CipherCore" */,
+				000000000000000000000200 /* XCLocalSwiftPackageReference "swift" */,
+				000000000000000000000300 /* XCLocalSwiftPackageReference "ObjectivePGP" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 000000000000000000000020 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				000000000000000000000040 /* Kryptos */,
+				000000000000000000000500 /* KryptosKeyboard */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		000000000000000000000070 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		000000000000000000000540 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		000000000000000000000050 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		000000000000000000000520 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0000000000000000000005A1 /* AppGroup.swift in Sources */,
+				0000000000000000000005B1 /* Keychain.swift in Sources */,
+				0000000000000000000005C1 /* SignalModels.swift in Sources */,
+				0000000000000000000005D1 /* PersistentSignalStore.swift in Sources */,
+				0000000000000000000005E1 /* SignalWire.swift in Sources */,
+				0000000000000000000005F1 /* SharedSignalStore.swift in Sources */,
+				000000000000000000000603 /* SharedStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		000000000000000000000600 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				000000000000000000000610 /* KryptosKeyboard.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXContainerItemProxy section */
+		000000000000000000000620 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000090 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 000000000000000000000500;
+			remoteInfo = KryptosKeyboard;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		000000000000000000000630 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 000000000000000000000500 /* KryptosKeyboard */;
+			targetProxy = 000000000000000000000620 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0000000000000000000000B0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		0000000000000000000000C0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		0000000000000000000000E0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_ENTITLEMENTS = Kryptos/Kryptos.entitlements;
+				CODE_SIGN_IDENTITY = "";
+				CURRENT_PROJECT_VERSION = 5;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Сканирование QR-кодов для безопасного обмена ключами.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Разблокировка приложения Kryptos.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Сохранение фотографий со скрытыми зашифрованными данными.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Скрытие и извлечение зашифрованных данных внутри фотографий.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 2.1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kryptos.app;
+				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
+					"$(inherited)",
+					"-lc++",
+					"-L$(SRCROOT)/ThirdParty/libsignal/target/aarch64-apple-ios/release",
+				);
+				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
+					"$(inherited)",
+					"-lc++",
+					"-L$(SRCROOT)/ThirdParty/libsignal/target/aarch64-apple-ios-sim/release",
+				);
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		0000000000000000000000F0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_ENTITLEMENTS = Kryptos/Kryptos.entitlements;
+				CODE_SIGN_IDENTITY = "";
+				CURRENT_PROJECT_VERSION = 5;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Сканирование QR-кодов для безопасного обмена ключами.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Разблокировка приложения Kryptos.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Сохранение фотографий со скрытыми зашифрованными данными.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Скрытие и извлечение зашифрованных данных внутри фотографий.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 2.1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kryptos.app;
+				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
+					"$(inherited)",
+					"-lc++",
+					"-L$(SRCROOT)/ThirdParty/libsignal/target/aarch64-apple-ios/release",
+				);
+				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
+					"$(inherited)",
+					"-lc++",
+					"-L$(SRCROOT)/ThirdParty/libsignal/target/aarch64-apple-ios-sim/release",
+				);
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		000000000000000000000570 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_ENTITLEMENTS = KryptosKeyboard/KryptosKeyboard.entitlements;
+				CODE_SIGN_IDENTITY = "";
+				CURRENT_PROJECT_VERSION = 5;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = KryptosKeyboard/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.1.1;
+				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
+					"$(inherited)",
+					"-lc++",
+					"-L$(SRCROOT)/ThirdParty/libsignal/target/aarch64-apple-ios/release",
+				);
+				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
+					"$(inherited)",
+					"-lc++",
+					"-L$(SRCROOT)/ThirdParty/libsignal/target/aarch64-apple-ios-sim/release",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.kryptos.app.keyboard;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		000000000000000000000580 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_ENTITLEMENTS = KryptosKeyboard/KryptosKeyboard.entitlements;
+				CODE_SIGN_IDENTITY = "";
+				CURRENT_PROJECT_VERSION = 5;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = KryptosKeyboard/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.1.1;
+				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
+					"$(inherited)",
+					"-lc++",
+					"-L$(SRCROOT)/ThirdParty/libsignal/target/aarch64-apple-ios/release",
+				);
+				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
+					"$(inherited)",
+					"-lc++",
+					"-L$(SRCROOT)/ThirdParty/libsignal/target/aarch64-apple-ios-sim/release",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.kryptos.app.keyboard;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0000000000000000000000A0 /* Build configuration list for PBXProject "Kryptos" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0000000000000000000000B0 /* Debug */,
+				0000000000000000000000C0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0000000000000000000000D0 /* Build configuration list for PBXNativeTarget "Kryptos" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0000000000000000000000E0 /* Debug */,
+				0000000000000000000000F0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		000000000000000000000560 /* Build configuration list for PBXNativeTarget "KryptosKeyboard" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000000000570 /* Debug */,
+				000000000000000000000580 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		000000000000000000000100 /* XCLocalSwiftPackageReference "CipherCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = CipherCore;
+		};
+		000000000000000000000200 /* XCLocalSwiftPackageReference "swift" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ThirdParty/libsignal/swift;
+		};
+		000000000000000000000300 /* XCLocalSwiftPackageReference "ObjectivePGP" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ThirdParty/ObjectivePGP;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		000000000000000000000110 /* CipherCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CipherCore;
+		};
+		000000000000000000000210 /* LibSignalClient */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = LibSignalClient;
+		};
+		000000000000000000000310 /* ObjectivePGP */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ObjectivePGP;
+		};
+		000000000000000000000410 /* CipherCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CipherCore;
+		};
+		000000000000000000000420 /* LibSignalClient */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = LibSignalClient;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 000000000000000000000090 /* Project object */;
+}

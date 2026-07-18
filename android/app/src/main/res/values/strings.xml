@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kryptos</string>
+    <string name="keyboard_name">Kryptos Keyboard</string>
+
+    <string name="tab_chats">Chats</string>
+    <string name="tab_quick">Password</string>
+    <string name="tab_stego">Photo</string>
+    <string name="tab_pgp">PGP</string>
+    <string name="tab_settings">Settings</string>
+
+    <string name="my_key">My key</string>
+    <string name="add_contact">Add contact</string>
+    <string name="profiles">Profiles</string>
+    <string name="no_contacts">No contacts yet. Share your key and add theirs.</string>
+    <string name="contact_name">Contact name</string>
+    <string name="paste_key">Paste their KRYPTOS-KEY here</string>
+    <string name="scan_qr">Scan QR</string>
+    <string name="add">Add</string>
+    <string name="cancel">Cancel</string>
+    <string name="copy">Copy</string>
+    <string name="share">Share</string>
+    <string name="copied">Copied</string>
+    <string name="safety_number">Safety number</string>
+    <string name="key_hint">Every time you show this key a fresh one-time prekey is minted, so each contact gets a unique one.</string>
+
+    <string name="message">Message</string>
+    <string name="encrypt_and_copy">Encrypt &amp; copy</string>
+    <string name="paste_and_decrypt">Paste &amp; decrypt</string>
+    <string name="decrypted">Decrypted</string>
+    <string name="not_a_kryptos_message">No Kryptos message found.</string>
+    <string name="auto_delete">Disappearing messages</string>
+    <string name="clear_chat">Clear chat</string>
+    <string name="delete_contact">Delete contact</string>
+    <string name="off">Off</string>
+    <string name="s30">30 seconds</string>
+    <string name="m5">5 minutes</string>
+    <string name="h1">1 hour</string>
+    <string name="h8">8 hours</string>
+    <string name="d1">1 day</string>
+    <string name="w1">1 week</string>
+
+    <string name="new_profile">New profile</string>
+    <string name="profile_name">Profile name</string>
+    <string name="regenerate_key">Regenerate key</string>
+    <string name="regenerate_warning">This creates a brand-new identity and invalidates all sessions of this profile.</string>
+
+    <string name="password">Password</string>
+    <string name="encrypt">Encrypt</string>
+    <string name="decrypt">Decrypt</string>
+    <string name="wrong_password">Could not decrypt — check the password.</string>
+
+    <string name="stego_hide">Hide</string>
+    <string name="stego_reveal">Reveal</string>
+    <string name="pick_photo">Pick a photo</string>
+    <string name="pick_file">Choose a file (PNG, JPG…)</string>
+    <string name="stego_hint">The message is password-encrypted first, then hidden in the photo pixels. Send the resulting PNG as a FILE (not a compressed photo).</string>
+    <string name="capacity_exceeded">The message does not fit into this photo.</string>
+    <string name="no_hidden_data">No hidden data found in this photo.</string>
+
+    <string name="pgp_identities">My keys</string>
+    <string name="pgp_recipients">Recipients</string>
+    <string name="pgp_name">Name</string>
+    <string name="pgp_email">Email (optional)</string>
+    <string name="pgp_algo">Algorithm</string>
+    <string name="pgp_generate">Generate</string>
+    <string name="pgp_busy">Generating key…</string>
+
+    <string name="settings_stego">Hide chat messages in words</string>
+    <string name="settings_stego_desc">Signal messages are disguised as an innocent run of ordinary words.</string>
+    <string name="settings_stego_lang">Word language</string>
+    <string name="settings_stego_smart">Smart sentences</string>
+    <string name="stego_smart_footer">Smart mode builds real, grammatical sentences that read like an ordinary note, at the cost of a somewhat longer message. Turn it off for the shortest possible cover text.</string>
+    <string name="lang_auto">Automatic (system language)</string>
+    <string name="lang_en">English</string>
+    <string name="lang_ru">Russian</string>
+    <string name="settings_keyboard">Keyboard</string>
+    <string name="settings_enable_keyboard">Enable Kryptos keyboard</string>
+    <string name="settings_kb_autodecrypt">Auto-decrypt clipboard in keyboard</string>
+    <string name="settings_privacy">Privacy</string>
+    <string name="settings_shield">Block screenshots &amp; app-switcher snapshots</string>
+    <string name="settings_clip_autodecrypt">Auto-decrypt clipboard on app open</string>
+    <string name="settings_danger">Danger zone</string>
+    <string name="settings_wipe_chats">Erase all chats</string>
+    <string name="settings_wipe_contacts">Erase contacts &amp; chats</string>
+    <string name="settings_wipe_all">Erase everything</string>
+
+    <string name="settings_about_row">About</string>
+    <string name="settings_danger_footer">Permanently erases the chosen data — keys, contacts, conversations and settings. This cannot be undone.</string>
+    <string name="privacy_footer">With the lock on, biometrics or the device PIN is required to open Kryptos. The shield keeps your chats out of screenshots and the app-switcher snapshot.</string>
+    <string name="clip_section">Clipboard</string>
+    <string name="clip_footer">Auto-decrypt: copy an encrypted message, open Kryptos, and it is shown at once. Auto-clear erases whatever Kryptos copied after the chosen time.</string>
+    <string name="meta_section">Metadata</string>
+    <string name="settings_length_padding">Mask message length</string>
+    <string name="length_padding_footer">Pads the ciphertext to a fixed set of sizes so its length no longer hints at how long your message is. Makes the ciphertext somewhat larger.</string>
+    <string name="stego_example_header">Example output</string>
+    <string name="stego_example_footer">Your messages in Chats will look like this. The encryption is identical either way — only the outer wrapping changes.</string>
+    <string name="kb_languages">Languages</string>
+    <string name="kb_languages_footer">The keyboard offers a letter layout for each enabled language, and the language key switches between them. At least one language always stays on.</string>
+    <string name="kb_feedback">Feedback</string>
+    <string name="kb_feedback_footer">Soft vibration and the native click on each key press.</string>
+    <string name="kb_autodecrypt_footer">When the clipboard holds an encrypted message, the Kryptos keyboard decrypts it the moment it opens — copy a message in any messenger and it is revealed right there.</string>
+
+    <string name="about_tagline">Encrypt anywhere. Talk over any channel.</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_desc">Kryptos is a private-communication tool that works through any messenger. You write a message, Kryptos encrypts it on your device, and you send the result through WhatsApp, Telegram, SMS — anything. Only your contact\'s Kryptos can read it; the messenger only ever sees ciphertext.</string>
+    <string name="about_offline">Fully offline: no servers, no accounts, no analytics. The app has no network permission at all — your private keys never leave this device.</string>
+    <string name="about_under_hood">Under the hood</string>
+    <string name="about_signal_t">Signal Protocol — official libsignal</string>
+    <string name="about_signal_d">The very library the Signal app uses: post-quantum key agreement (PQXDH with Kyber) and the Double Ratchet — a fresh key for every message.</string>
+    <string name="about_pgp_t">OpenPGP — PGPainless / Bouncy Castle</string>
+    <string name="about_pgp_d">Classic asymmetric encryption with signatures, compatible with other PGP tools.</string>
+    <string name="about_pw_t">Password mode</string>
+    <string name="about_pw_d">A shared passphrase: PBKDF2-HMAC-SHA256 and AES-256-GCM.</string>
+    <string name="about_stego_t">Steganography</string>
+    <string name="about_stego_d">Hides the already-encrypted message inside an ordinary photo or a run of everyday words.</string>
+    <string name="about_dev">Developer</string>
+    <string name="about_dev_footer">Questions, ideas or a bug to report? I\'d be glad to hear from you.</string>
+    <string name="about_tg_channel">Telegram channel</string>
+
+    <string name="screen_decrypt_service_label">Kryptos — on-screen decryption</string>
+    <string name="screen_decrypt_service_desc">Finds messages encrypted by Kryptos anywhere on screen and shows the decrypted text right over them. Only screen text is read — no keystrokes, no network.</string>
+    <string name="screen_section">On screen</string>
+    <string name="screen_decrypt_toggle">Decrypt on screen</string>
+    <string name="screen_block_screenshots">Block screenshots</string>
+    <string name="screen_block_screenshots_desc">While on-screen decryption is running, screenshots and screen recording are blocked on the whole device so decrypted text never ends up in a capture.</string>
+    <string name="screen_decrypt_footer">Finds Kryptos messages (compact code or words) shown by any app and lays the decrypted text right on top — live, as you scroll. Works only for your chat contacts, and never while Kryptos is locked.</string>
+    <string name="screen_decrypt_enable_service">Turn on the accessibility service</string>
+    <string name="screen_decrypt_service_off">Kryptos needs the accessibility service enabled to read the screen. Tap to open Android settings and switch it on.</string>
+
+    <string name="kb_select_contact">Contact</string>
+    <string name="kb_no_contacts">Add a contact in the Kryptos app first</string>
+    <string name="kb_encrypted">Encrypted ✓</string>
+    <string name="kb_nothing_to_encrypt">Nothing to encrypt — type a message first</string>
+    <string name="kb_locked">Unlock the Kryptos app first</string>
+
+    <string name="sec_section">Security</string>
+    <string name="sec_app_lock">App lock (biometrics / PIN)</string>
+    <string name="sec_app_lock_unavailable">Set a screen lock in Android settings first.</string>
+    <string name="sec_autolock">Auto-lock</string>
+    <string name="sec_autolock_immediate">Immediately</string>
+    <string name="sec_autolock_10s">After 10 seconds</string>
+    <string name="sec_autolock_1m">After 1 minute</string>
+    <string name="sec_autolock_5m">After 5 minutes</string>
+    <string name="sec_duress">Panic PIN (wipes everything)</string>
+    <string name="sec_duress_hint">Entering this PIN on the lock screen erases all keys, chats and contacts instead of unlocking. Leave empty to disable.</string>
+    <string name="sec_secure_keyboard">Block screenshots while typing (keyboard)</string>
+    <string name="sec_clip_clear">Auto-clear clipboard</string>
+    <string name="sec_clip_never">Never</string>
+    <string name="sec_clip_15s">After 15 seconds</string>
+    <string name="sec_clip_30s">After 30 seconds</string>
+    <string name="sec_clip_1m">After 1 minute</string>
+    <string name="sec_clip_5m">After 5 minutes</string>
+    <string name="sec_clip_on_decrypt">Clear clipboard after decrypting</string>
+    <string name="sec_integrity">Warn about root / debugger / emulator</string>
+    <string name="sec_integrity_rooted">This device appears to be rooted — your keys may be at risk.</string>
+    <string name="sec_integrity_debugged">A debugger is attached to Kryptos.</string>
+    <string name="sec_integrity_emulator">Running on an emulator — not a trusted environment.</string>
+    <string name="sec_integrity_hooked">A hooking framework (Frida / Xposed) is active — the app\'s memory can be read.</string>
+    <string name="sec_integrity_tampered">This APK is not signed with the original Kryptos key — it may have been modified.</string>
+    <string name="sec_integrity_accessibility">Accessibility services can read your screen: %1$s. Make sure you trust each of them.</string>
+    <string name="lock_unlock">Unlock</string>
+    <string name="lock_duress_hint">Panic PIN</string>
+
+    <string name="paste">Paste</string>
+    <string name="delete">Delete</string>
+    <string name="shared_secret">shared secret</string>
+    <string name="quick_subtitle">A simple symmetric mode: you and your contact agree on one shared password, then encrypt/decrypt text for any messenger. (This is not PGP — PGP has its own tab.)</string>
+    <string name="label_message_text">Message text</string>
+    <string name="label_encrypted_block">Encrypted block</string>
+    <string name="label_ready">Ready — paste this to your contact</string>
+    <string name="label_decrypted">Decrypted text</string>
+    <string name="copied_banner">Encrypted and copied to the clipboard — paste it to your contact.</string>
+
+    <string name="label_cover_photo">Cover photo</string>
+    <string name="label_stego_photo">Photo with a secret</string>
+    <string name="label_secret_message">Secret message</string>
+    <string name="stego_hide_action">Hide in photo</string>
+    <string name="stego_reveal_action">Reveal message</string>
+    <string name="stego_file_hint">Send it as a document/file. Sending it as a normal photo will recompress it and destroy the hidden data.</string>
+    <string name="label_hidden_message">Hidden message</string>
+    <string name="saved_as_file">Saved. Send the PNG as a FILE so the hidden data survives.</string>
+    <string name="save_failed">Could not save the file. Try a different location.</string>
+
+    <string name="pgp_your_key_manage">Your key — tap to manage</string>
+    <string name="label_recipient">Recipient</string>
+    <string name="pgp_choose_recipient">Choose a recipient</string>
+    <string name="pgp_add_first">Add a recipient first</string>
+    <string name="label_pgp_message">PGP message</string>
+    <string name="label_encrypted_send">Encrypted — send this</string>
+    <string name="pgp_keys_title">Your PGP keys</string>
+    <string name="pgp_create_new">Create a new key</string>
+    <string name="pgp_use">Use</string>
+    <string name="pgp_share_hint">Give this public key to anyone who wants to send you PGP messages, or to add you as a recipient (so they can verify your signature).</string>
+    <string name="pgp_their_key">Their public key</string>
+    <string name="pgp_invalid_key">This is not a valid PGP public key.</string>
+    <string name="pgp_verified_banner">Signature verified — from a saved recipient.</string>
+    <string name="pgp_unverified_banner">Decrypted, but the signature is unverified — add the sender to Recipients to verify.</string>
+
+    <string name="manage_profiles">Manage profiles…</string>
+    <string name="empty_title">No conversations yet</string>
+    <string name="chat_hint">Encrypt a message, send the result through any messenger, and paste the reply here to decrypt.</string>
+    <string name="auto_delete_hint">Messages disappear after %1$s.</string>
+    <string name="sent_banner">Encrypted &amp; copied — paste it to your contact.</string>
+    <string name="sent_banner_stego">Hidden in words &amp; copied — paste it to your contact.</string>
+    <string name="clipboard_empty">Clipboard is empty.</string>
+    <string name="decrypt_failed">Could not decrypt — wrong contact, or the message was already read once. If every NEW message from this contact fails, share your key with them again and have them re-add you.</string>
+    <string name="key_for_profile">Key for profile</string>
+    <string name="show_qr">Show QR code</string>
+    <string name="hide_qr">Hide QR code</string>
+    <string name="qr_scan_hint">Let your contact scan it to add you.</string>
+    <string name="key_public_hint">This is your PUBLIC key — safe to share. Your private key never leaves this device.</string>
+    <string name="copy_key">Copy key</string>
+
+    <string name="set_section_stego">Steganography</string>
+    <string name="wipe_all_warning">Erases ALL data: your keys, contacts, chats, PGP keys and settings. This cannot be undone.</string>
+
+    <string name="confirm_delete_contact_title">Delete contact &amp; chat?</string>
+    <string name="confirm_delete_contact_text">Their key and session are erased from this device together with the whole conversation; your own key stays. This cannot be undone.</string>
+    <string name="confirm_clear_chat_title">Clear this chat?</string>
+    <string name="confirm_clear_chat_text">Securely erases this conversation. This cannot be undone.</string>
+    <string name="confirm_delete_profile_title">Delete profile?</string>
+    <string name="confirm_delete_profile_text">This permanently removes this identity — its keys, contacts and messages. This cannot be undone.</string>
+    <string name="confirm_wipe_chats_title">Erase every conversation?</string>
+    <string name="confirm_wipe_chats_text">Message history in all chats is wiped. Contacts stay. This cannot be undone.</string>
+    <string name="confirm_wipe_contacts_title">Delete every contact and chat?</string>
+    <string name="confirm_wipe_contacts_text">All contacts\' keys, sessions and conversations are erased from this device; your own key stays. This cannot be undone.</string>
+    <string name="confirm_delete_pgp_title">Delete this PGP key?</string>
+    <string name="confirm_delete_pgp_text">The private key is destroyed permanently — messages encrypted to it can never be decrypted again.</string>
+
+    <string name="kb_clear">Clear</string>
+    <string name="settings_kb_haptics">Key vibration</string>
+    <string name="settings_kb_sounds">Key sounds</string>
+    <string name="settings_kb_compose">Message field in the keyboard</string>
+    <string name="settings_kb_compose_desc">Type your message inside the keyboard and encrypt it there — only the encrypted result reaches the messenger, so it can never store the plaintext. Applies the next time the keyboard opens.</string>
+
+    <string name="kb_typing">Typing</string>
+    <string name="settings_kb_suggestions">Word suggestions</string>
+    <string name="settings_kb_autocorrect">Auto-correction</string>
+    <string name="settings_kb_emoji">Emoji key</string>
+    <string name="settings_kb_suggestions_desc">Context-aware completions, next-word predictions and typo fixes from built-in offline dictionaries (Russian and English). Auto-correction fixes a mistyped word the moment you finish it — keyboard-slip typos and a missing space (какдела → как дела). Backspace right after — or a tap on your word shown «quoted» in the strip — undoes the fix and the keyboard never touches that word again. Everything is learned right on the device, stored encrypted, and disabled in password fields. Changes apply the next time the keyboard opens.</string>
+    <string name="kb_forget_words">Forget learned words</string>
+    <string name="confirm_forget_words_title">Forget learned words?</string>
+    <string name="confirm_forget_words_text">The personal dictionary learned from your typing is erased. The built-in dictionaries stay.</string>
+    <string name="kb_no_recents">No recent emoji yet — pick a category below</string>
+
+    <string name="screen_you_to">You → %1$s</string>
+    <string name="screen_show_full">Show the full message</string>
+</resources>
