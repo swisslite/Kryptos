@@ -1,5 +1,7 @@
 # Kryptos 🔐
 
+**English** · [Русский](README.ru.md)
+
 **Encrypt anywhere. Talk over any channel.**
 
 Kryptos is an end-to-end encryption app for **iOS and Android** that works *through* any messenger
