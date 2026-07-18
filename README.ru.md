@@ -180,6 +180,4 @@ cd android && ./gradlew :app:assembleRelease    # Android: APK
 ## Лицензия
 
 Kryptos распространяется под лицензией **GNU Affero General Public License v3.0** — см.
-[LICENSE](LICENSE). Этого требует `libsignal` (AGPL-3.0): любое приложение на его основе, раздаваемое
-другим людям, обязано открывать свой исходный код под той же лицензией. ObjectivePGP используется под
-собственной пермиссивной лицензией.
+[LICENSE](LICENSE).
