@@ -23,7 +23,6 @@ Builds:
       - curl -sSLo /tmp/p.zip $U/v29.3/protoc-29.3-linux-x86_64.zip
       - unzip -q -o /tmp/p.zip -d "$HOME/protoc"
       - export PROTOC="$HOME/protoc/bin/protoc"
-      - export PROTOC_INCLUDE="$HOME/protoc/include"
       - export PATH="$HOME/protoc/bin:$PATH"
       - cd ../.. && ./scripts/setup-libsignal.sh
       - cd ThirdParty/libsignal
