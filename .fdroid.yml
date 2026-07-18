@@ -24,6 +24,7 @@ Builds:
       - unzip -q -o /tmp/p.zip -d "$HOME/protoc"
       - export PROTOC="$HOME/protoc/bin/protoc"
       - export PROTOC_INCLUDE="$HOME/protoc/include"
+      - export PATH="$HOME/protoc/bin:$PATH"
       - cd ../.. && ./scripts/setup-libsignal.sh
       - cd ThirdParty/libsignal
       - rustup target add aarch64-linux-android armv7-linux-androideabi
