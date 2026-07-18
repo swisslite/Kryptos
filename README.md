@@ -12,6 +12,14 @@ No accounts. No phone number. No servers. No telemetry. The app has **no network
 (the Android build ships without the `INTERNET` permission), and keys are generated on-device and
 never leave it.
 
+**iOS and Android are first-class equals**, native on both (SwiftUI / Jetpack Compose) and
+byte-for-byte compatible — an iPhone and an Android phone talk to each other seamlessly, so it never
+matters which one you or your friend carry. And it's built to be **used every day, not just for
+"special" secret messages**: encrypting is a single tap and the code is already on your clipboard;
+the reply is decrypted right on your screen or in the keyboard, without leaving the chat. There's no
+new app to talk your friends into and nothing to set up — Kryptos slips into the messengers you
+already use all day.
+
 - 🌍 Website & docs: <https://datakeeper.pages.dev/kryptos>
 - 📣 News: Telegram [@KryptosApp](https://t.me/KryptosApp)
 
@@ -69,6 +77,15 @@ around a different idea:
 - **Two ways to hide a message in plain sight (steganography).** Bury an already-encrypted payload
   in the low bits of an ordinary **photo**, or disguise it as an innocent-looking run of **real,
   grammatical words/sentences** (EN + RU) — so even the fact that a message exists can be hidden.
+
+- **Same app, either phone.** Both platforms are complete native apps, not a port with a "lite"
+  side — everything (Signal chats, PGP, password mode, both kinds of steganography, the keyboard)
+  works on iOS and Android alike, and they interoperate exactly.
+
+- **Simple enough to actually use daily.** The point was never a lab tool for one-off secrets but
+  something convenient for ordinary chatting: one-tap encrypt with auto-copy, automatic detection
+  and decryption of incoming messages, the in-keyboard crypto bar, adaptive light/dark themes, and
+  Russian/English that follow the system language. Strong crypto that doesn't get in your way.
 
 ## Three ways to encrypt
 
