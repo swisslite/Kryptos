@@ -14,14 +14,15 @@ Builds:
     subdir: android/app
     sudo:
       - apt-get update
-      - apt-get install -y protobuf-compiler cmake build-essential
-      - apt-get install -y clang libclang-dev
+      - apt-get install -y protobuf-compiler libprotobuf-dev
+      - apt-get install -y cmake build-essential clang libclang-dev
     gradle:
       - yes
     prebuild:
       - curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
       - . "$HOME/.cargo/env"
       - export CARGO_HOME="$HOME/.cargo"
+      - export PROTOC=/usr/bin/protoc PROTOC_INCLUDE=/usr/include
       - cd ../.. && ./scripts/setup-libsignal.sh
       - cd ThirdParty/libsignal
       - rustup target add aarch64-linux-android armv7-linux-androideabi
