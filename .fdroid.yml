@@ -24,8 +24,12 @@ Builds:
       - cd ThirdParty/libsignal
       - rustup target add aarch64-linux-android armv7-linux-androideabi
       - ./java/build_jni.sh android-arm64 android-arm
+    scanignore:
+      - ThirdParty/libsignal/java/android/src/main/jniLibs
     scandelete:
       - ThirdParty/ObjectivePGP
+      - ThirdParty/libsignal/target
+      - ThirdParty/libsignal/rust
     ndk: 26.1.10909125
 
 AutoUpdateMode: Version
