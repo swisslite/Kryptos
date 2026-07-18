@@ -1,0 +1,13 @@
+Kryptos is end-to-end encryption that works through any messenger or SMS. You encrypt a message inside Kryptos (or on its keyboard), paste the resulting code into WhatsApp, Telegram, SMS or anything else, and your correspondent decrypts it with Kryptos on their side. The messenger only ever carries what looks like random noise; the plaintext never touches it.
+
+No accounts, no phone number, no servers, no telemetry. The app has no networking code at all and ships without the INTERNET permission. Keys are generated on-device and never leave it.
+
+Features:
+
+* Real Signal Protocol via Signal's own libsignal (PQXDH post-quantum handshake and Double Ratchet), a fresh key for every message.
+* Ciphertext looks like pure random noise, with no recognizable prefixes.
+* Password mode (a shared passphrase) and OpenPGP mode.
+* Steganography: hide an encrypted message inside a photo, or disguise it as an innocent run of ordinary words (English and Russian).
+* An encrypting keyboard, on-screen decryption, app lock, panic PIN and more.
+
+iOS and Android are wire-compatible, so an iPhone and an Android phone talk to each other seamlessly.

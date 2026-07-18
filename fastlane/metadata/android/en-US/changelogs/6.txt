@@ -1,0 +1,7 @@
+Kryptos 2.1.1
+
+* On-screen decryption on Android finds the token inside surrounding text again.
+* Steganography is more robust to stray words next to the message.
+* The Back button in a chat closes the chat instead of the whole app.
+* Screen scanner and clipboard performance improvements.
+* Android UI polish.
