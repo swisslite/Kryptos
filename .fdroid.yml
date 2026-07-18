@@ -15,15 +15,11 @@ Builds:
     sudo:
       - apt-get update
       - apt-get install -y rustup cmake build-essential clang libclang-dev
-      - apt-get install -y unzip
+      - apt-get install -y protobuf-compiler libprotobuf-dev
     gradle:
       - yes
     prebuild:
-      - U=https://github.com/protocolbuffers/protobuf/releases/download
-      - curl -sSLo /tmp/p.zip $U/v29.3/protoc-29.3-linux-x86_64.zip
-      - unzip -q -o /tmp/p.zip -d "$HOME/protoc"
-      - export PROTOC="$HOME/protoc/bin/protoc"
-      - export PATH="$HOME/protoc/bin:$PATH"
+      - export PROTOC=/usr/bin/protoc
       - cd ../.. && ./scripts/setup-libsignal.sh
       - cd ThirdParty/libsignal
       - rustup target add aarch64-linux-android armv7-linux-androideabi
