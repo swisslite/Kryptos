@@ -10,7 +10,7 @@ IssueTracker: https://github.com/swisslite/Kryptos/issues
 Builds:
   - versionName: 2.1.1
     versionCode: 6
-    commit: v2.1.1
+    commit: 8567521ec1242db7c6c58170edb56361e5f6bb73
     subdir: android/app
     sudo:
       - apt-get update
@@ -18,18 +18,15 @@ Builds:
       - apt-get install -y protobuf-compiler libprotobuf-dev
     gradle:
       - yes
-    prebuild:
+    scandelete:
+      - ThirdParty/ObjectivePGP
+    build:
       - export PROTOC=/usr/bin/protoc
-      - cd ../.. && ./scripts/setup-libsignal.sh
+      - cd ../..
+      - ./scripts/setup-libsignal.sh
       - cd ThirdParty/libsignal
       - rustup target add aarch64-linux-android armv7-linux-androideabi
       - ./java/build_jni.sh android-arm64 android-arm
-    scanignore:
-      - ThirdParty/libsignal/java/android/src/main/jniLibs
-    scandelete:
-      - ThirdParty/ObjectivePGP
-      - ThirdParty/libsignal/target
-      - ThirdParty/libsignal/rust
     ndk: 26.1.10909125
 
 AutoUpdateMode: Version
