@@ -42,7 +42,7 @@ Kryptos — приложение сквозного шифрования для 
 
 | Сквозное шифрование | Обмен ключами | Режим PGP | Любой мессенджер | Стеганография |
 |:---:|:---:|:---:|:---:|:---:|
-| <img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/1.jpg" width="150" alt="Сквозное шифрование"> | <img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/2.jpg" width="150" alt="Обмен ключами"> | <img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/3.jpg" width="150" alt="Режим PGP"> | <img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/4.jpg" width="150" alt="Любой мессенджер"> | <img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/5.jpg" width="150" alt="Стеганография"> |
+| <img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/1.jpg" width="130" alt="Сквозное шифрование"> | <img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/2.jpg" width="130" alt="Обмен ключами"> | <img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/3.jpg" width="130" alt="Режим PGP"> | <img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/4.jpg" width="130" alt="Любой мессенджер"> | <img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/5.jpg" width="130" alt="Стеганография"> |
 
 ## Чем Kryptos отличается
 

@@ -42,7 +42,7 @@ or want it on F-Droid? See [Building](#building).
 
 | End-to-end encryption | Key exchange | PGP mode | Any messenger | Steganography |
 |:---:|:---:|:---:|:---:|:---:|
-| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg" width="150" alt="End-to-end encryption"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg" width="150" alt="Key exchange"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.jpg" width="150" alt="PGP mode"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg" width="150" alt="Any messenger"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg" width="150" alt="Steganography"> |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg" width="130" alt="End-to-end encryption"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg" width="130" alt="Key exchange"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.jpg" width="130" alt="PGP mode"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg" width="130" alt="Any messenger"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg" width="130" alt="Steganography"> |
 
 ## What makes Kryptos different
 
