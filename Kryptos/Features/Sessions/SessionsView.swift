@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SessionsView: View {
     @EnvironmentObject private var signal: SignalService
+    @EnvironmentObject private var lock: LockGate
     @State private var showMyKey = false
     @State private var showAdd = false
     @State private var showProfiles = false
@@ -10,9 +11,6 @@ struct SessionsView: View {
     @State private var confirmDeleteContact: Contact?
     @State private var engineOK: Bool?
     nonisolated(unsafe) private static var cachedEngineOK: Bool?
-    #if DEBUG
-    nonisolated(unsafe) static var ranIsolationTest = false
-    #endif
 
     var body: some View {
         NavigationStack {
@@ -21,6 +19,7 @@ struct SessionsView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         engineCard
+                        if signal.keyMaterialLost { keyLostCard }
                         if signal.contacts.isEmpty {
                             emptyCard
                         } else {
@@ -96,17 +95,17 @@ struct SessionsView: View {
         }
         .task {
             if Self.cachedEngineOK == nil {
-                Self.cachedEngineOK = await Task.detached { SignalWire.selfTestError() == nil }.value
+                Self.cachedEngineOK = await Task.detached { SignalWire.engineCheckError() == nil }.value
             }
             engineOK = Self.cachedEngineOK
-            #if DEBUG
-            if !Self.ranIsolationTest {
-                Self.ranIsolationTest = true
-                NSLog("PROFILE_ISOLATION=%@", signal.profileIsolationSelfTestError() ?? "PASS")
-            }
-            #endif
         }
         .onAppear { signal.reloadCurrentFromDisk() }
+        .onChange(of: lock.isLocked) { _, locked in
+            guard locked else { return }
+            showMyKey = false
+            showAdd = false
+            showProfiles = false
+        }
     }
 
     private var engineCard: some View {
@@ -123,12 +122,31 @@ struct SessionsView: View {
         .glassCard()
     }
 
+    private var keyLostCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(KTheme.danger)
+                Text("This identity's key is gone").font(.kHeadline()).foregroundStyle(KTheme.textPrimary)
+                Spacer(minLength: 0)
+            }
+            Text("The data saved for this identity can no longer be decrypted. Open the identity menu above, choose Manage identities and regenerate the key to use this profile again — the old contacts and messages cannot be recovered.")
+                .font(.kBody()).foregroundStyle(KTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Button { showProfiles = true } label: {
+                Label("Manage identities…", systemImage: "person.crop.circle.badge.plus")
+            }
+            .buttonStyle(SecondaryButtonStyle(accent: true))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCard()
+    }
+
     private var emptyCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             Image(systemName: "bubble.left.and.bubble.right.fill")
                 .font(.system(size: 26, weight: .semibold)).foregroundStyle(KTheme.accent)
             Text("No conversations yet").font(.kHeadline()).foregroundStyle(KTheme.textPrimary)
-            Text("Exchange keys to start: open **My key** (top-left) and let your contact scan it, then add their key with **+** (top-right). Both of you add each other once.")
+            Text("Exchange keys to start: tap the QR icon (top left) to show **My key** and let your contact scan it. Then open the **…** menu (top right) and choose **Add contact** to add their key. Both of you add each other once. A step-by-step guide with screenshots is in **Settings → How to use**.")
                 .font(.kBody()).foregroundStyle(KTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }

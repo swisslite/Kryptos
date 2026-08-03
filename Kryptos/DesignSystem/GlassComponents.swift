@@ -76,6 +76,8 @@ struct PrimaryButtonStyle: ButtonStyle {
         configuration.label
             .font(.kHeadline())
             .foregroundStyle(.white)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 15)
             .background(RoundedRectangle(cornerRadius: KTheme.cornerSmall, style: .continuous)
@@ -88,15 +90,23 @@ struct PrimaryButtonStyle: ButtonStyle {
 }
 
 struct SecondaryButtonStyle: ButtonStyle {
+    var accent = false
+
     func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: KTheme.cornerSmall, style: .continuous)
         return configuration.label
             .font(.kHeadline())
-            .foregroundStyle(KTheme.textPrimary)
+            .foregroundStyle(accent ? KTheme.accentInk : KTheme.textPrimary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 15)
-            .background(shape.fill(.ultraThinMaterial))
-            .overlay(shape.strokeBorder(KTheme.hairline, lineWidth: 1))
+            .background {
+                shape.fill(.ultraThinMaterial)
+                if accent { shape.fill(KTheme.accent.opacity(0.14)) }
+            }
+            .overlay(shape.strokeBorder(accent ? KTheme.accent.opacity(0.45) : KTheme.hairline,
+                                        lineWidth: accent ? 1.5 : 1))
             .opacity(configuration.isPressed ? 0.8 : 1)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }

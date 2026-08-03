@@ -24,6 +24,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +41,9 @@ import androidx.fragment.app.FragmentActivity
 import com.kryptos.android.R
 import com.kryptos.android.security.AppLock
 import com.kryptos.android.signal.AppSettingsStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun LockGate(activity: FragmentActivity, content: @Composable () -> Unit) {
@@ -59,7 +63,10 @@ fun LockGate(activity: FragmentActivity, content: @Composable () -> Unit) {
 
 @Composable
 private fun LockScreen(activity: FragmentActivity) {
-    var pin by remember { mutableStateOf("") }
+    var code by remember { mutableStateOf("") }
+    var checking by remember { mutableStateOf(false) }
+    var wrong by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) { AppLock.prompt(activity) }
 
@@ -96,24 +103,43 @@ private fun LockScreen(activity: FragmentActivity) {
                 icon = Icons.Default.LockOpen,
             ) { AppLock.prompt(activity) }
 
-            if (AppSettingsStore.hasDuressPin) {
+            run {
                 Spacer(Modifier.height(28.dp))
                 Column(Modifier.widthIn(max = 280.dp)) {
-                    FieldLabel(stringResource(R.string.lock_duress_hint))
+                    FieldLabel(stringResource(R.string.lock_code))
                     Spacer(Modifier.height(6.dp))
                     KTextField(
-                        pin, { pin = it },
+                        code,
+                        { code = it; wrong = false },
                         password = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     )
+                    if (wrong) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            stringResource(R.string.lock_code_wrong),
+                            fontSize = 13.sp, color = K.danger,
+                        )
+                    }
                     Spacer(Modifier.height(10.dp))
                     SecondaryButton(
-                        "✓",
+                        stringResource(R.string.lock_code_submit),
                         Modifier.fillMaxWidth(),
-                        enabled = pin.isNotEmpty(),
+                        enabled = code.length >= AppSettingsStore.CODE_MIN_LENGTH && !checking,
                     ) {
-                        AppLock.tryDuress(pin) { AppLock.locked.value = false }
-                        pin = ""
+                        val entered = code
+                        code = ""
+                        wrong = false
+                        checking = true
+                        scope.launch {
+                            kotlinx.coroutines.delay(AppLock.codeThrottleMillis())
+                            val outcome = withContext(Dispatchers.Default) {
+                                AppLock.submitCode(activity.applicationContext, entered)
+                            }
+                            checking = false
+                            wrong = outcome == AppLock.CodeOutcome.REJECTED
+                            if (!wrong) AppLock.locked.value = false
+                        }
                     }
                 }
             }

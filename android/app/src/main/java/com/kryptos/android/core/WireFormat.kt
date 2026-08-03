@@ -61,6 +61,19 @@ object WireFormat {
         return d.size >= MIN_TOKEN_BYTES
     }
 
+    fun hasTokenRun(text: String): Boolean {
+        var run = 0
+        for (c in text) {
+            if (isBase64UrlChar(c)) {
+                run++
+                if (run >= MIN_TOKEN_CHARS) return true
+            } else {
+                run = 0
+            }
+        }
+        return false
+    }
+
     fun extractToken(text: String): String? {
         val bounds = longestRunBounds(text) ?: return null
         val len = bounds.last - bounds.first + 1

@@ -8,7 +8,6 @@ class CipherException(val kind: Kind) : Exception(kind.name) {
         NOT_A_KRYPTOS_MESSAGE,
         DECRYPTION_FAILED,
         STEGO_CAPACITY_EXCEEDED,
-        NO_HIDDEN_DATA,
         INVALID_INPUT,
     }
 }
@@ -56,8 +55,6 @@ class BinaryWriter {
         out.write(((v shr 8) and 0xFF).toInt())
         out.write((v and 0xFF).toInt())
     }
-
-    fun writeRaw(d: ByteArray) = out.write(d)
 
     fun writeVar(d: ByteArray) {
         writeUInt32(d.size.toLong())

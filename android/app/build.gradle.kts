@@ -22,8 +22,8 @@ android {
         applicationId = "com.kryptos.android"
         minSdk = 26
         targetSdk = 34
-        versionCode = 6
-        versionName = "2.1.1"
+        versionCode = 8
+        versionName = "2.3"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 
@@ -86,6 +86,7 @@ dependencies {
     implementation(project(":libsignal"))
 
     implementation("org.pgpainless:pgpainless-core:1.6.8")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.77")
 
     implementation("com.google.zxing:core:3.5.3")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")

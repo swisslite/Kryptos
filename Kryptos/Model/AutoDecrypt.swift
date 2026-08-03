@@ -11,21 +11,24 @@ struct RevealedIncoming: Identifiable {
 enum AutoDecrypt {
     private static var lastChangeCount = Int.min
 
-    static func scan(signal: SignalService) -> RevealedIncoming? {
+    static func scan(signal: SignalService) async -> RevealedIncoming? {
         guard PrivacyConfig.clipboardAutoDecrypt else { return nil }
         let pb = UIPasteboard.general
         guard pb.changeCount != lastChangeCount, pb.hasStrings else { return nil }
         lastChangeCount = pb.changeCount
         guard !RemoteClipboard.isRemote else { return nil }
         guard let s = pb.string, !s.isEmpty, s != Clipboard.lastWritten else { return nil }
-        let stegoSized = s.utf16.count >= 40 && s.utf16.count <= 64_000
-        guard WireFormat.isToken(s) || (stegoSized && (TextStego.looksLikeStego(s) || SmartTextStego.looksLikeStego(s))) else { return nil }
-        guard !OwnCipherMarker.matches(s) else { return nil }
+        let marker = OwnCipherMarker.storedKey()
+        let worth = await Task.detached(priority: .userInitiated) {
+            ClipProbe.isWorthDecrypting(s, ownMarker: marker)
+        }.value
+        guard worth else { return nil }
+        signal.reloadCurrentFromDisk()
         if let hit = signal.cachedDecrypt(s) {
             return RevealedIncoming(contact: hit.contact, text: hit.text)
         }
         for contact in signal.contacts {
-            if let text = try? signal.decrypt(s, from: contact) {
+            if let text = try? signal.decrypt(s, from: contact, refreshOnFailure: false) {
                 return RevealedIncoming(contact: contact, text: text)
             }
         }

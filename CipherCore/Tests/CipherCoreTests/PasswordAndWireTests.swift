@@ -37,12 +37,12 @@ final class PasswordAndWireTests: XCTestCase {
         XCTAssertEqual(try Kryptos.decrypt(armored: armored, password: "pw"), text)
     }
 
-    func testWireWrapUnwrapRoundTrip() {
+    func testWireWrapUnwrapRoundTrip() throws {
         let pairKey = Data("abcd".utf8) + Data("efgh".utf8)
         for n in [1, 20, 33, 200, 2048] {
             for padded in [false, true] {
                 let body = randomBytes(n)
-                let token = WireFormat.wrap(body, type: 3, deflate: true, padded: padded, pairKey: pairKey)
+                let token = try WireFormat.wrap(body, type: 3, deflate: true, padded: padded, pairKey: pairKey)
                 if n >= 33 { XCTAssertTrue(WireFormat.isToken(token)) }
                 guard let (type, deflate, out) = WireFormat.unwrap(token, pairKey: pairKey) else {
                     return XCTFail("unwrap n=\(n) padded=\(padded)")
@@ -54,22 +54,22 @@ final class PasswordAndWireTests: XCTestCase {
         }
     }
 
-    func testWirePaddedGivesExactBucketLength() {
+    func testWirePaddedGivesExactBucketLength() throws {
         let pairKey = Data("pair".utf8)
-        let t40 = WireFormat.wrap(randomBytes(40), type: 2, deflate: false, padded: true, pairKey: pairKey)
-        let t55 = WireFormat.wrap(randomBytes(55), type: 2, deflate: false, padded: true, pairKey: pairKey)
-        let t200 = WireFormat.wrap(randomBytes(200), type: 2, deflate: false, padded: true, pairKey: pairKey)
+        let t40 = try WireFormat.wrap(randomBytes(40), type: 2, deflate: false, padded: true, pairKey: pairKey)
+        let t55 = try WireFormat.wrap(randomBytes(55), type: 2, deflate: false, padded: true, pairKey: pairKey)
+        let t200 = try WireFormat.wrap(randomBytes(200), type: 2, deflate: false, padded: true, pairKey: pairKey)
         XCTAssertEqual(t40.count, t55.count)
         XCTAssertGreaterThan(t200.count, t40.count)
-        let u40 = WireFormat.wrap(randomBytes(40), type: 2, deflate: false, padded: false, pairKey: pairKey)
-        let u55 = WireFormat.wrap(randomBytes(55), type: 2, deflate: false, padded: false, pairKey: pairKey)
+        let u40 = try WireFormat.wrap(randomBytes(40), type: 2, deflate: false, padded: false, pairKey: pairKey)
+        let u55 = try WireFormat.wrap(randomBytes(55), type: 2, deflate: false, padded: false, pairKey: pairKey)
         XCTAssertNotEqual(u40.count, u55.count)
     }
 
-    func testWireUnwrapWrongPairKeyNeverRecoversBody() {
+    func testWireUnwrapWrongPairKeyNeverRecoversBody() throws {
         let body = randomBytes(80)
         for padded in [false, true] {
-            let token = WireFormat.wrap(body, type: 2, deflate: false, padded: padded, pairKey: Data("one".utf8))
+            let token = try WireFormat.wrap(body, type: 2, deflate: false, padded: padded, pairKey: Data("one".utf8))
             for i in 0 ..< 64 {
                 if let u = WireFormat.unwrap(token, pairKey: Data("k\(i)".utf8)) {
                     XCTAssertNotEqual(u.body, body)
@@ -79,10 +79,24 @@ final class PasswordAndWireTests: XCTestCase {
         }
     }
 
-    func testWireTokenExtractedFromSurroundingText() {
-        let token = WireFormat.wrap(randomBytes(64), type: 2, deflate: false, padded: false, pairKey: Data("p".utf8))
+    func testWireTokenExtractedFromSurroundingText() throws {
+        let token = try WireFormat.wrap(randomBytes(64), type: 2, deflate: false, padded: false, pairKey: Data("p".utf8))
         XCTAssertEqual(WireFormat.extractToken("смотри: \(token) ответь"), token)
         XCTAssertNil(WireFormat.extractToken("just some ordinary words here"))
+    }
+
+    func testTokenScanStaysLinearOnPathologicalText() throws {
+        let token = try WireFormat.wrap(randomBytes(64), type: 2, deflate: false, padded: false, pairKey: Data("p".utf8))
+        let evil = token + " " + String(repeating: "A", count: 200_000) + String(repeating: " x", count: 40_000)
+        let started = Date()
+        let run = WireFormat.extractToken(evil)
+        XCTAssertEqual(run?.count, 200_000)
+        XCTAssertLessThan(Date().timeIntervalSince(started), 2.0)
+    }
+
+    func testTokenBytesIgnoresShortWordRuns() {
+        XCTAssertNil(WireFormat.extractToken("just some ordinary words that mean nothing at all"))
+        XCTAssertNil(WireFormat.extractToken(""))
     }
 
     func testPaddingTargetBuckets() {

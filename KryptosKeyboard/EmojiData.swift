@@ -86,14 +86,55 @@ enum EmojiData {
     private static let storeKey = "kbemoji"
     private static let maxRecents = 40
 
+    private static let lock = NSLock()
+    private nonisolated(unsafe) static var cached: [String]?
+    private nonisolated(unsafe) static var loadedFromStore = false
+    private static let writer = DispatchQueue(label: "kryptos.keyboard.emoji", qos: .utility)
+
     static func recents() -> [String] {
-        guard let d = SharedStore.read(storeKey),
-              let list = try? JSONDecoder().decode([String].self, from: d) else { return [] }
-        return list
+        lock.lock()
+        if let cached {
+            lock.unlock()
+            return cached
+        }
+        lock.unlock()
+
+        let stored = SharedStore.read(storeKey)
+        let list = stored.flatMap { try? JSONDecoder().decode([String].self, from: $0) } ?? []
+        lock.lock()
+        if cached == nil {
+            cached = list
+            loadedFromStore = stored != nil
+        }
+        let result = cached ?? list
+        lock.unlock()
+        return result
     }
 
     static func addRecent(_ emoji: String) {
-        let list = Array(([emoji] + recents().filter { $0 != emoji }).prefix(maxRecents))
-        if let d = try? JSONEncoder().encode(list) { SharedStore.write(storeKey, d) }
+        let current = recents()
+        let list = Array(([emoji] + current.filter { $0 != emoji }).prefix(maxRecents))
+        lock.lock()
+        cached = list
+        lock.unlock()
+        writer.async { persist(list) }
+    }
+
+    private static func persist(_ list: [String]) {
+        lock.lock()
+        let hadStoredCopy = loadedFromStore
+        lock.unlock()
+        if hadStoredCopy, SharedStore.read(storeKey) == nil {
+            lock.lock()
+            cached = []
+            loadedFromStore = false
+            lock.unlock()
+            return
+        }
+        guard let d = try? JSONEncoder().encode(list) else { return }
+        SharedStore.write(storeKey, d)
+        lock.lock()
+        loadedFromStore = true
+        lock.unlock()
     }
 }

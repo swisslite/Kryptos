@@ -99,25 +99,16 @@ final class SharedSignalStore {
     }
 
     func encrypt(_ text: String, to fingerprint: String) throws -> String {
-        try withLock {
+        let cover = ChatStego.resolvedCover()
+        let pad = PrivacyConfig.lengthPadding
+        return try withLock {
             let cipher = try withConflictRetry { store in
                 try SignalWire.encrypt(text, toFingerprint: fingerprint, myFingerprint: myFingerprint,
-                                       store: store, stego: ChatStego.resolvedLanguage(), smart: ChatStego.resolvedSmart(),
-                                       pad: PrivacyConfig.lengthPadding)
+                                       store: store, stego: cover.language, mode: cover.mode, pad: pad)
             }
             OwnCipherMarker.mark(cipher)
             appendMessage(text, mine: true, to: fingerprint)
             return cipher
-        }
-    }
-
-    func decrypt(_ armored: String, from fingerprint: String) throws -> String {
-        try withLock {
-            let text = try withConflictRetry { store in
-                try SignalWire.decrypt(armored, fromFingerprint: fingerprint, myFingerprint: myFingerprint, store: store)
-            }
-            appendMessage(text, mine: false, to: fingerprint, decryptedFrom: armored)
-            return text
         }
     }
 
@@ -158,9 +149,19 @@ final class SharedSignalStore {
 
     func decryptFromAnyContact(_ armored: String) -> (contact: Contact, text: String)? {
         if let hit = cachedDecrypt(armored) { return hit }
-        for contact in contacts {
-            if let text = try? decrypt(armored, from: contact.fingerprint) { return (contact, text) }
+        return withLock {
+            var store = freshStore()
+            for contact in contacts {
+                do {
+                    let text = try SignalWire.decrypt(armored, fromFingerprint: contact.fingerprint,
+                                                      myFingerprint: myFingerprint, store: store)
+                    appendMessage(text, mine: false, to: contact.fingerprint, decryptedFrom: armored)
+                    return (contact, text)
+                } catch {
+                    if store.hadStaleConflict { store = freshStore() }
+                }
+            }
+            return nil
         }
-        return nil
     }
 }

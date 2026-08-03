@@ -9,16 +9,17 @@ public enum WireFormat {
     static let minTokenChars = 32
     static let maxTokenChars = 2_000_000
 
-    public static func wrap(_ body: Data, type: UInt8, deflate: Bool, padded: Bool, pairKey: Data) -> String {
-        wrap(body, type: type, deflate: deflate, padded: padded, pairKey: pairKey, salt: randomBytes(saltLength))
+    public static func wrap(_ body: Data, type: UInt8, deflate: Bool, padded: Bool, pairKey: Data) throws -> String {
+        try wrap(body, type: type, deflate: deflate, padded: padded, pairKey: pairKey, salt: randomBytes(saltLength))
     }
 
-    public static func wrap(_ body: Data, type: UInt8, deflate: Bool, padded: Bool, pairKey: Data, salt: Data) -> String {
+    public static func wrap(_ body: Data, type: UInt8, deflate: Bool, padded: Bool, pairKey: Data, salt: Data) throws -> String {
         var plain = Data([(type & 0x0F) | (deflate ? 0x10 : 0x00) | (padded ? 0x20 : 0x00)])
         plain.append(padded ? Padding.frame(body) : body)
         let (key, iv) = derive(pairKey: pairKey, salt: salt)
+        guard let masked = ctr(key: key, iv: iv, plain) else { throw CipherError.invalidInput }
         var token = salt
-        token.append(ctr(key: key, iv: iv, plain))
+        token.append(masked)
         return base64URLEncode(token)
     }
 
@@ -27,7 +28,7 @@ public enum WireFormat {
         let salt = raw.prefix(saltLength)
         let masked = raw.suffix(from: raw.startIndex + saltLength)
         let (key, iv) = derive(pairKey: pairKey, salt: Data(salt))
-        let plain = ctr(key: key, iv: iv, Data(masked))
+        guard let plain = ctr(key: key, iv: iv, Data(masked)) else { return nil }
         guard let header = plain.first else { return nil }
         let type = header & 0x0F
         guard type == 2 || type == 3 else { return nil }
@@ -67,13 +68,21 @@ public enum WireFormat {
     static func longestRun(_ text: String) -> String? {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if !t.isEmpty, t.allSatisfy(isBase64URLChar) { return t }
-        var best = "", current = ""
-        func consider() { if current.count > best.count { best = current } }
-        for c in text {
-            if isBase64URLChar(c) { current.append(c) } else { consider(); current = "" }
+        var bestStart = text.startIndex, bestEnd = text.startIndex, bestLength = 0
+        var runStart = text.startIndex, runLength = 0
+        var i = text.startIndex
+        while i < text.endIndex {
+            if isBase64URLChar(text[i]) {
+                if runLength == 0 { runStart = i }
+                runLength += 1
+            } else {
+                if runLength > bestLength { bestLength = runLength; bestStart = runStart; bestEnd = i }
+                runLength = 0
+            }
+            i = text.index(after: i)
         }
-        consider()
-        return best.isEmpty ? nil : best
+        if runLength > bestLength { bestLength = runLength; bestStart = runStart; bestEnd = text.endIndex }
+        return bestLength > 0 ? String(text[bestStart ..< bestEnd]) : nil
     }
 
     static func derive(pairKey: Data, salt: Data) -> (Data, Data) {
@@ -83,7 +92,7 @@ public enum WireFormat {
         return (bytes.prefix(32), bytes.suffix(16))
     }
 
-    static func ctr(key: Data, iv: Data, _ input: Data) -> Data {
+    static func ctr(key: Data, iv: Data, _ input: Data) -> Data? {
         guard !input.isEmpty else { return Data() }
         var cryptor: CCCryptorRef?
         let status = key.withUnsafeBytes { k in
@@ -93,16 +102,17 @@ public enum WireFormat {
                                         nil, 0, 0, CCModeOptions(kCCModeOptionCTR_BE), &cryptor)
             }
         }
-        guard status == kCCSuccess, let c = cryptor else { return input }
+        guard status == kCCSuccess, let c = cryptor else { return nil }
         defer { CCCryptorRelease(c) }
         var out = Data(count: input.count)
         let outCount = out.count
         var moved = 0
-        _ = out.withUnsafeMutableBytes { o in
+        let updated = out.withUnsafeMutableBytes { o in
             input.withUnsafeBytes { i in
                 CCCryptorUpdate(c, i.baseAddress, input.count, o.baseAddress, outCount, &moved)
             }
         }
+        guard updated == kCCSuccess, moved == input.count else { return nil }
         return out
     }
 

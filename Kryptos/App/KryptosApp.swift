@@ -5,25 +5,13 @@ import CipherCore
 struct KryptosApp: App {
     @StateObject private var signal = SignalService()
     @StateObject private var settings = AppSettings()
+    @StateObject private var pgp = PGPService()
     @StateObject private var lock = LockGate()
     @Environment(\.scenePhase) private var scenePhase
     @State private var incoming: RevealedIncoming?
 
     init() {
-        #if DEBUG
-        NSLog("SIGNAL_SELFTEST=%@", SignalService.selfTestError() ?? "PASS")
-        NSLog("SIGNAL_WIRETEST=%@", SignalService.fullWireTestError() ?? "PASS")
-        NSLog("PGP_SELFTEST=%@", PGPService.selfTestError() ?? "PASS")
-        let probe = Data([0x03, 0x02, 0xAB, 0xCD, 0xEF, 0x10])
-        let hidden = TextStego.encode(probe, language: .russian)
-        NSLog("STEGO_SELFTEST=%@", TextStego.decode(hidden) == probe ? "PASS" : "FAIL")
-        let smartHidden = SmartTextStego.encode(probe, language: .russian)
-        NSLog("SMART_STEGO_SELFTEST=%@", SmartTextStego.decode(smartHidden) == probe && TextStego.decode(smartHidden) == nil ? "PASS" : "FAIL")
-        NSLog("STEGO_WIRETEST=%@", SignalService.stegoWireTestError() ?? "PASS")
-        NSLog("PROVISION_SELFTEST=%@", SignalService.provisioningSelfTestError() ?? "PASS")
-        NSLog("CONTACT_DELETE_SELFTEST=%@", SignalService.contactDeletionSelfTestError() ?? "PASS")
-        NSLog("PGP_CYCLE=%@", PGPService.exportCycleTestError() ?? "PASS")
-        #endif
+        AppLanguage.captureLaunch(InterfaceConfig.language)
     }
 
     var body: some Scene {
@@ -32,24 +20,62 @@ struct KryptosApp: App {
                 RootView()
                     .environmentObject(signal)
                     .environmentObject(settings)
+                    .environmentObject(pgp)
+                    .environmentObject(lock)
                 if lock.isShielded && !lock.isLocked { PrivacyShield() }
-                if lock.isLocked { LockScreen(gate: lock) }
+                if lock.isLocked { LockScreen(gate: lock, onCode: handleCode) }
             }
+            .preferredColorScheme(settings.colorScheme)
             .tint(KTheme.accent)
             .onChange(of: scenePhase) { _, phase in
                 lock.scenePhaseChanged(phase)
+                ScreenCover.set(lock.isShielded)
                 if phase == .active {
+                    SharedStore.revalidateBackend()
                     signal.reloadCurrentFromDisk()
-                    if !lock.isLocked, let found = AutoDecrypt.scan(signal: signal) { incoming = found }
-                } else if PrivacyConfig.shield || PrivacyConfig.appLock {
-                    incoming = nil
+                    if !lock.isLocked { scanClipboard() }
+                } else {
+                    let cover = PrivacyConfig.coverState()
+                    if cover.shield || cover.appLock { incoming = nil }
                 }
             }
             .onChange(of: lock.isLocked) { _, locked in
-                if locked { incoming = nil }
-                else if scenePhase == .active, let found = AutoDecrypt.scan(signal: signal) { incoming = found }
+                if locked {
+                    incoming = nil
+                    ScreenCover.dismissSharePresentations()
+                } else if scenePhase == .active {
+                    scanClipboard()
+                }
             }
             .sheet(item: $incoming) { IncomingRevealView(reveal: $0) }
+        }
+    }
+
+    @MainActor
+    private func scanClipboard() {
+        Task { @MainActor in
+            if let found = await AutoDecrypt.scan(signal: signal), !lock.isLocked {
+                incoming = found
+            }
+        }
+    }
+
+    @MainActor
+    private func handleCode(_ code: String) async -> Bool {
+        let throttle = lock.codeThrottle
+        if throttle > .zero { try? await Task.sleep(for: throttle) }
+        switch await LockCodes.classifyOffMain(code) {
+        case .rejected:
+            lock.noteCodeRejected()
+            return false
+        case .unlocked:
+            lock.forceUnlock()
+            return true
+        case .wiped:
+            incoming = nil
+            PanicWipe.run(signal: signal, pgp: pgp, settings: settings)
+            lock.forceUnlock()
+            return true
         }
     }
 }

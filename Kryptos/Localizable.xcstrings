@@ -1,6 +1,17 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%lld identities, %lld contacts, %lld PGP keys": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld профилей, %lld контактов, %lld PGP-ключей"
+          }
+        }
+      }
+    },
     "1 day": {
       "localizations": {
         "ru": {
@@ -101,45 +112,26 @@
         }
       }
     },
-    "A fresh key for every message": {
+    "A profile is a separate identity with its own key and its own contacts. You can keep several and switch between them — to keep work and private life apart, for example.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Новый ключ для каждого сообщения"
+            "value": "Профиль — это отдельная личность со своим ключом и своим списком контактов. Их можно держать несколько и переключаться между ними — например, чтобы разделить рабочее и личное."
           }
         }
       }
     },
-    "A shared passphrase: PBKDF2-HMAC-SHA256 and AES-256-GCM.": {
+    "A shared passphrase: Argon2id key derivation, then AES-256-GCM from Apple CryptoKit.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Общий пароль: PBKDF2-HMAC-SHA256 и AES-256-GCM."
+            "value": "Общая парольная фраза: выработка ключа Argon2id, затем шифрование AES-256-GCM из Apple CryptoKit."
           }
         }
-      }
-    },
-    "A shared passphrase: PBKDF2-HMAC-SHA256 key derivation and AES-256-GCM.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Общий пароль: выработка ключа PBKDF2-HMAC-SHA256 и шифрование AES-256-GCM."
-          }
-        }
-      }
-    },
-    "A shared password is the simplest way. Agree on a password in person, then encrypt text here and paste it into any messenger or SMS.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Общий пароль — самый простой способ. Договоритесь о пароле лично, затем шифруйте текст здесь и вставляйте в любой мессенджер или SMS."
-          }
-        }
-      }
+      },
+      "extractionState": "manual"
     },
     "A simple symmetric mode: you and your contact agree on one shared password, then encrypt/decrypt text for any messenger. (This is not PGP — PGP is on its own tab.)": {
       "localizations": {
@@ -191,12 +183,12 @@
         }
       }
     },
-    "After the exchange — a Signal chat begins": {
+    "Add their key": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "После обмена — начинается Signal-диалог"
+            "value": "Добавьте ключ собеседника"
           }
         }
       }
@@ -221,22 +213,99 @@
         }
       }
     },
-    "Anything Kryptos copies is erased from the clipboard after this time.": {
+    "An ordinary passcode that opens Kryptos when you do not want to use biometrics. Optional — you can always unlock with Face ID or your device passcode.": {
+      "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Всё, что копирует Kryptos, стирается из буфера обмена по истечении этого времени."
+            "value": "Обычный код, которым можно открыть Kryptos, когда не хочется пользоваться биометрией. Необязателен — войти всегда можно по Face ID или код-паролю устройства."
           }
         }
       }
     },
-    "App lock, clipboard protection, screen privacy.": {
+    "App language": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Блокировка приложения, защита буфера обмена и экрана."
+            "value": "Язык приложения"
+          }
+        }
+      }
+    },
+    "App passcode": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Код приложения"
+          }
+        }
+      }
+    },
+    "App passcode removed.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Код приложения удалён."
+          }
+        }
+      }
+    },
+    "App passcode saved.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Код приложения сохранён."
+          }
+        }
+      }
+    },
+    "Appearance": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Оформление"
+          }
+        }
+      }
+    },
+    "At least 4 characters. It must be different from the panic password.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Минимум 4 символа. Он должен отличаться от пароля-ловушки."
+          }
+        }
+      }
+    },
+    "At least 4 characters. Pick something you would never type by accident, and that is not your device passcode or your app passcode.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Минимум 4 символа. Выберите то, что вы никогда не введёте случайно и что не совпадает с код-паролем устройства или кодом приложения."
+          }
+        }
+      }
+    },
+    "At least 8 characters. Anyone who gets both the file and this password gets your keys, so keep them apart.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Минимум 8 символов. Кто получит и файл, и этот пароль — получит ваши ключи, поэтому храните их отдельно."
           }
         }
       }
@@ -291,12 +360,65 @@
         }
       }
     },
+    "Automatic": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Автоматически"
+          }
+        }
+      }
+    },
     "Automatic (system language)": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Автоматически (язык системы)"
+          }
+        }
+      }
+    },
+    "Automatic follows the system. The theme changes at once; a new language applies when Kryptos starts again.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Автоматически — как в системе. Тема меняется сразу, новый язык применяется при следующем запуске Kryptos."
+          }
+        }
+      }
+    },
+    "Backup file created.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Файл копии создан."
+          }
+        }
+      }
+    },
+    "Backup password": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пароль копии"
+          }
+        }
+      }
+    },
+    "Both codes are typed in the same field on the lock screen. The app passcode opens Kryptos. The panic password erases everything instead, then opens the app as if it were freshly installed.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Оба кода вводятся в одно и то же поле на экране блокировки. Код приложения открывает Kryptos. Пароль-ловушка вместо этого стирает всё и открывает приложение так, будто его только что установили."
           }
         }
       }
@@ -341,22 +463,52 @@
         }
       }
     },
+    "Camera access is off, so the QR scanner cannot open. Allow the camera in Settings, or paste the key as text.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Доступ к камере выключен, поэтому сканер QR не открывается. Разрешите камеру в Настройках или вставьте ключ текстом."
+          }
+        }
+      }
+    },
+    "Can I send a photo or a file through Kryptos?": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Можно ли отправить через Kryptos фотографию или файл?"
+          }
+        }
+      }
+    },
+    "Can I use one key on two phones?": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Можно ли пользоваться одним ключом на двух телефонах?"
+          }
+        }
+      }
+    },
+    "Can the messenger read my messages?": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Видит ли мессенджер мои сообщения?"
+          }
+        }
+      }
+    },
     "Cancel": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Отмена"
-          }
-        }
-      }
-    },
-    "Changes apply the next time you open the Kryptos keyboard.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Изменения применятся при следующем открытии клавиатуры Kryptos."
           }
         }
       }
@@ -371,22 +523,23 @@
         }
       }
     },
-    "Chats use the official **libsignal** library (the same code as the Signal app): X3DH + post-quantum PQXDH key agreement and the Double Ratchet. Messages carry no BEGIN/END headers — the raw Signal ciphertext is simply text-encoded so it survives SMS and any messenger.": {
+    "Chats use Signal's own libsignal library — the same protocol as Signal itself, post-quantum handshake included. Password mode and photos use Argon2id and AES-256-GCM. Kryptos contains no home-made cryptography.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Диалоги используют официальную библиотеку **libsignal** (тот же код, что и в приложении Signal): согласование ключей X3DH + постквантовое PQXDH и Double Ratchet. В сообщениях нет заголовков BEGIN/END — необработанный шифртекст Signal просто кодируется в текст, чтобы пройти через SMS и любой мессенджер."
+            "value": "Диалоги используют официальную библиотеку libsignal — тот же протокол, что и в самом Signal, вместе с постквантовым рукопожатием. Режим «Пароль» и фотографии используют Argon2id и AES-256-GCM. Собственной криптографии в Kryptos нет."
           }
         }
       }
     },
-    "Checking the encryption engine…": {
+    "Choose a backup file": {
+      "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Проверка движка шифрования…"
+            "value": "Выбрать файл копии"
           }
         }
       }
@@ -441,26 +594,6 @@
         }
       }
     },
-    "Classic OpenPGP (asymmetric): manage your keypairs, share a public key, encrypt to a contact's public key, decrypt with your private key.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Классический OpenPGP (асимметричный): управляйте своими ключами, делитесь публичным ключом, шифруйте на публичный ключ контакта и расшифровывайте своим приватным."
-          }
-        }
-      }
-    },
-    "Classic OpenPGP (asymmetric): share your public key, encrypt to a contact's public key, decrypt with your private key. Different from the shared-password mode.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Классический OpenPGP (асимметричный): поделитесь публичным ключом, шифруйте на публичный ключ собеседника, расшифровывайте своим приватным ключом. Отличается от режима с общим паролем."
-          }
-        }
-      }
-    },
     "Classic asymmetric encryption with signatures, compatible with other PGP tools.": {
       "localizations": {
         "ru": {
@@ -511,22 +644,23 @@
         }
       }
     },
-    "Clipboard: this device only": {
+    "Close Kryptos to apply": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Буфер обмена: только это устройство"
+            "value": "Закрыть Kryptos, чтобы применить"
           }
         }
       }
     },
-    "Compare these characters with your contact in person or over a call.": {
+    "Codes are typed on the lock screen. Turn on the app lock so they can be used.": {
+      "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Сверьте эти символы с собеседником при личной встрече или звонке."
+            "value": "Коды вводятся на экране блокировки. Включите блокировку приложения, чтобы они работали."
           }
         }
       }
@@ -551,6 +685,17 @@
         }
       }
     },
+    "Continue": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Продолжить"
+          }
+        }
+      }
+    },
     "Copied": {
       "localizations": {
         "ru": {
@@ -567,16 +712,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Копировать"
-          }
-        }
-      }
-    },
-    "Copy an encrypted message, open Kryptos — it is decrypted and shown at once. For a prompt-free experience allow pasting in Settings → Kryptos → Paste from Other Apps.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Скопируйте зашифрованное сообщение и откройте Kryptos — оно расшифруется и покажется сразу. Чтобы iOS не спрашивала разрешение, включите Настройки → Kryptos → Вставка из других программ → Разрешать."
           }
         }
       }
@@ -601,22 +736,24 @@
         }
       }
     },
-    "Could not decrypt — wrong contact or damaged message.": {
+    "Could not create the backup file.": {
+      "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Не удалось расшифровать — не тот контакт или повреждённое сообщение."
+            "value": "Не удалось создать файл копии."
           }
         }
       }
     },
-    "Could not decrypt. If every NEW message from this contact now fails, the session is out of sync: share your key from “My Key” with them, have them add you again and send a new message — that repairs the conversation.": {
+    "Could not delete this contact — try again.": {
+      "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Не удалось расшифровать. Если теперь не читается КАЖДОЕ новое сообщение от этого контакта — сессия рассинхронизирована: отправьте ему свой ключ с экрана «Мой ключ», пусть добавит вас заново и напишет новое сообщение — это восстановит переписку."
+            "value": "Не удалось удалить контакт — попробуйте ещё раз."
           }
         }
       }
@@ -681,12 +818,56 @@
         }
       }
     },
+    "Could not read this backup — wrong password, or the file is not a Kryptos key backup.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось прочитать копию — неверный пароль или файл не является резервной копией ключей Kryptos."
+          }
+        }
+      }
+    },
+    "Could not restore the keys from this backup.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось восстановить ключи из этой копии."
+          }
+        }
+      }
+    },
+    "Could not save the code.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось сохранить код."
+          }
+        }
+      }
+    },
     "Cover language": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Язык прикрытия"
+          }
+        }
+      }
+    },
+    "Create backup file": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Создать файл копии"
           }
         }
       }
@@ -701,16 +882,6 @@
         }
       }
     },
-    "Curve25519 (modern, fast)": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Curve25519 (современный, быстрый)"
-          }
-        }
-      }
-    },
     "DECRYPTED TEXT": {
       "localizations": {
         "ru": {
@@ -721,12 +892,12 @@
         }
       }
     },
-    "DEVELOPER": {
+    "Dark": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "РАЗРАБОТЧИК"
+            "value": "Тёмная"
           }
         }
       }
@@ -841,22 +1012,52 @@
         }
       }
     },
+    "Do my keys and messages end up in the phone's cloud backup?": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Попадают ли мои ключи и переписка в облачную копию телефона?"
+          }
+        }
+      }
+    },
+    "Does it need an internet connection?": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нужен ли интернет?"
+          }
+        }
+      }
+    },
+    "Does my contact need Kryptos too?": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Собеседнику тоже нужен Kryptos?"
+          }
+        }
+      }
+    },
+    "Does the key backup restore my messages too?": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Резервная копия ключей восстановит и переписку?"
+          }
+        }
+      }
+    },
     "Done": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Готово"
-          }
-        }
-      }
-    },
-    "Double Ratchet protocol under the hood": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Протокол Double Ratchet под капотом"
           }
         }
       }
@@ -907,6 +1108,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Клавиша эмодзи"
+          }
+        }
+      }
+    },
+    "Enable the keyboard and Full Access": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включите клавиатуру и полный доступ"
           }
         }
       }
@@ -1031,6 +1243,17 @@
         }
       }
     },
+    "Everything below is done once, when you add a new contact — after that you simply write to each other.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Всё, что ниже, делается один раз, при добавлении нового собеседника, — дальше вы просто переписываетесь."
+          }
+        }
+      }
+    },
     "Example output": {
       "localizations": {
         "ru": {
@@ -1041,22 +1264,24 @@
         }
       }
     },
-    "Exchange keys to start: open **My key** (top-left) and let your contact scan it, then add their key with **+** (top-right). Both of you add each other once.": {
+    "Exchange keys to start: tap the QR icon (top left) to show **My key** and let your contact scan it. Then open the **…** menu (top right) and choose **Add contact** to add their key. Both of you add each other once. A step-by-step guide with screenshots is in **Settings → How to use**.": {
+      "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Чтобы начать, обменяйтесь ключами: откройте **Мой ключ** (слева сверху) и дайте собеседнику отсканировать его, затем добавьте его ключ через **+** (справа сверху). Оба добавляете друг друга один раз."
+            "value": "Чтобы начать, обменяйтесь ключами: нажмите значок QR (слева сверху) — откроется **Мой ключ**, дайте собеседнику отсканировать его. Затем откройте меню **…** (справа сверху) и выберите **Добавить контакт**, чтобы добавить его ключ. Оба добавляете друг друга один раз. Пошаговая инструкция со скриншотами — в разделе **Настройки → Как пользоваться**."
           }
         }
       }
     },
-    "Extract and decrypt in one step": {
+    "Export": {
+      "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Извлечение и расшифровка в один шаг"
+            "value": "Экспорт"
           }
         }
       }
@@ -1071,12 +1296,13 @@
         }
       }
     },
-    "Face ID or the device passcode is required to open Kryptos. Outside the app the screen is covered, so the app-switcher snapshot never shows your chats.": {
+    "Face ID or the device passcode is required to open Kryptos. Outside the app the screen is covered, so the app-switcher snapshot never shows your chats. Your keys stay encrypted in the device keychain either way — this guards the app, not the files.": {
+      "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Для входа в Kryptos потребуется Face ID или код-пароль. Вне приложения экран закрывается, поэтому снимок в переключателе приложений не показывает ваши переписки."
+            "value": "Для открытия Kryptos требуется Face ID или код-пароль устройства. Вне приложения экран закрыт, поэтому снимок в переключателе приложений никогда не покажет ваши переписки. Ключи в любом случае зашифрованы в связке ключей устройства — эта настройка защищает приложение, а не файлы."
           }
         }
       }
@@ -1087,6 +1313,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Отклик"
+          }
+        }
+      }
+    },
+    "Field button on the keyboard": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Кнопка поля на клавиатуре"
           }
         }
       }
@@ -1107,36 +1343,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Забыть слова, которые клавиатура выучила при наборе? Встроенные словари останутся."
-          }
-        }
-      }
-    },
-    "Full Signal end-to-end encryption via the official libsignal library (PQXDH + Double Ratchet). Exchange keys once — everything after is automatic.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Полное сквозное шифрование Signal через официальную библиотеку libsignal (PQXDH + Double Ratchet). Обменяйтесь ключами один раз — дальше всё автоматически."
-          }
-        }
-      }
-    },
-    "Full Signal end-to-end encryption: a new key for every message, forward secrecy. Exchange keys once — everything after is automatic.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Полное сквозное шифрование Signal: новый ключ на каждое сообщение, forward secrecy. Обменяйтесь ключами один раз — дальше всё автоматически."
-          }
-        }
-      }
-    },
-    "Full reset": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Полный сброс"
           }
         }
       }
@@ -1191,6 +1397,37 @@
         }
       }
     },
+    "GitHub": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub"
+          }
+        }
+      }
+    },
+    "GitHub profile": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub-профиль"
+          }
+        }
+      }
+    },
+    "Give the key to your contact": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Передайте ключ собеседнику"
+          }
+        }
+      }
+    },
     "Give this public key to anyone who wants to send you PGP messages, or to add you as a recipient (so they can verify your signature).": {
       "localizations": {
         "ru": {
@@ -1201,12 +1438,22 @@
         }
       }
     },
-    "Give this public key to anyone who wants to send you PGP messages.": {
+    "Go back to Chats, tap the … menu at the top right and choose Add contact.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Дайте этот публичный ключ тем, кто хочет отправлять вам PGP-сообщения."
+            "value": "Вернитесь в «Диалоги», нажмите меню «…» справа сверху и выберите «Добавить контакт»."
+          }
+        }
+      }
+    },
+    "Good to know": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Важно знать"
           }
         }
       }
@@ -1241,12 +1488,12 @@
         }
       }
     },
-    "Hidden in words & copied — paste it to your contact.": {
+    "Hidden in text & copied — paste it to your contact.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Спрятано в словах и скопировано — вставьте собеседнику."
+            "value": "Спрятано в тексте и скопировано — вставьте собеседнику."
           }
         }
       }
@@ -1271,32 +1518,12 @@
         }
       }
     },
-    "Hide an encrypted message inside an ordinary photo. It looks like a normal picture, but your data is safely concealed inside.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Спрячьте зашифрованное сообщение внутри обычной фотографии. На вид — обычное фото, но данные надёжно скрыты внутри."
-          }
-        }
-      }
-    },
     "Hide an encrypted message inside an ordinary photo. Send it as a file (not as a compressed photo) so the hidden data survives.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Спрячьте зашифрованное сообщение внутри обычной фотографии. Отправляйте как файл (а не как сжатое фото), чтобы скрытые данные сохранились."
-          }
-        }
-      }
-    },
-    "Hide chats in ordinary words": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Прятать переписку в обычные слова"
           }
         }
       }
@@ -1311,32 +1538,12 @@
         }
       }
     },
-    "Hide in a photo": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Скрыть в фото"
-          }
-        }
-      }
-    },
     "Hide in photo": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Спрятать в фото"
-          }
-        }
-      }
-    },
-    "Hide the ciphertext inside ordinary words.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Прятать шифротекст в обычные слова."
           }
         }
       }
@@ -1351,6 +1558,56 @@
         }
       }
     },
+    "Hiding a message in a photo": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сообщение внутри фотографии"
+          }
+        }
+      }
+    },
+    "How strong is the encryption?": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Насколько надёжно это шифрование?"
+          }
+        }
+      }
+    },
+    "How to use": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Как пользоваться"
+          }
+        }
+      }
+    },
+    "I forgot the password to my key backup": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Я забыл пароль от резервной копии ключей"
+          }
+        }
+      }
+    },
+    "I hid a message in a photo and it will not open": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Спрятал сообщение в фото, а оно не читается"
+          }
+        }
+      }
+    },
     "Identities": {
       "localizations": {
         "ru": {
@@ -1361,52 +1618,106 @@
         }
       }
     },
-    "If the clipboard holds an encrypted message when the keyboard opens, it is decrypted and shown immediately — no extra taps.": {
+    "If exchanging keys is too much trouble, agree on one shared password instead. On the Password tab enter the password and the text, and you get a block that is unlocked with the same password. Simpler, but it is exactly as strong as the password you chose and as safe as the way you passed it on.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Если при открытии клавиатуры в буфере обмена лежит зашифрованное сообщение, оно расшифруется и покажется сразу — без лишних нажатий."
+            "value": "Если обмениваться ключами не хочется, договоритесь с собеседником об одном общем пароле. На вкладке «Пароль» введите пароль и текст — получится блок, который открывается тем же паролем. Это проще, но защищено ровно настолько, насколько хорош ваш пароль и насколько безопасно вы его передали."
           }
         }
       }
     },
-    "Invisible: each pixel changes by at most 1": {
+    "Import": {
+      "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Незаметно: каждый пиксель меняется максимум на 1"
+            "value": "Импорт"
           }
         }
       }
     },
-    "KEYBOARD": {
+    "In Kryptos open Settings → Keyboard.": {
+      "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "КЛАВИАТУРА"
+            "value": "В Kryptos откройте Настройки → Клавиатура."
+          }
+        }
+      }
+    },
+    "Interface": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Интерфейс"
+          }
+        }
+      }
+    },
+    "It carries the post-quantum handshake (PQXDH with Kyber), which is about two kilobytes. It is sent once; as soon as your contact replies, messages become many times shorter.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "В нём передаётся постквантовое рукопожатие (PQXDH с Kyber) — это около двух килобайт. Оно отправляется один раз: как только собеседник ответит, сообщения станут в разы короче."
+          }
+        }
+      }
+    },
+    "It is a fingerprint of the key. Compare it with your contact over some other channel — read it out loud, for instance. If the numbers match, there is definitely nobody in the middle.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Это отпечаток ключа. Сверьте его с собеседником по другому каналу — например, зачитайте вслух. Если коды совпали, посредника между вами точно нет."
+          }
+        }
+      }
+    },
+    "It is a second password for the lock screen. Type it instead of your normal passcode and the app silently and irreversibly destroys every key, message and setting, then opens as if it had just been installed. You set it up in Settings → Privacy.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Это второй пароль для экрана блокировки. Введите его вместо обычного кода — и приложение молча и необратимо уничтожит все ключи, переписку и настройки, а затем откроется как только что установленное. Настраивается в «Настройках → Конфиденциальность»."
+          }
+        }
+      }
+    },
+    "It says it could not decrypt. What now?": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пишет, что не удалось расшифровать. Что делать?"
+          }
+        }
+      }
+    },
+    "Key backup": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Резервная копия ключей"
           }
         }
       }
     },
     "Key exchange": {
+      "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Обмен ключами"
-          }
-        }
-      }
-    },
-    "Key exchange via QR or text": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Обмен ключами через QR или текст"
           }
         }
       }
@@ -1441,16 +1752,6 @@
         }
       }
     },
-    "Key vibration and the in-keyboard message field.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вибрация клавиш и поле ввода в клавиатуре."
-          }
-        }
-      }
-    },
     "Keyboard": {
       "localizations": {
         "ru": {
@@ -1471,22 +1772,44 @@
         }
       }
     },
+    "Keys restored.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ключи восстановлены."
+          }
+        }
+      }
+    },
+    "Kryptos encrypts a message right on your device. You send the resulting ciphertext as ordinary text — in any messenger, by SMS or by email. Whatever carries it sees only a block of characters, and only the person holding the right key can read it. The app never needs an internet connection.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kryptos шифрует сообщение прямо на вашем устройстве. Готовый шифртекст вы отправляете как обычный текст — в любом мессенджере, по SMS или почтой. Мессенджер, оператор или почтовый сервис видят только набор символов, а прочитать сообщение может лишь владелец нужного ключа. Интернет приложению не нужен вообще."
+          }
+        }
+      }
+    },
+    "Kryptos in other apps": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kryptos в других приложениях"
+          }
+        }
+      }
+    },
     "Kryptos is a private-communication tool that works through any messenger. You write a message, Kryptos encrypts it on your device, and you send the result through WhatsApp, Telegram, SMS — anything. Only your contact's Kryptos can read it; the messenger only ever sees ciphertext.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Kryptos — инструмент приватного общения, работающий поверх любого мессенджера. Вы пишете сообщение, Kryptos шифрует его на вашем устройстве, а результат вы отправляете через WhatsApp, Telegram, SMS — что угодно. Прочитать сможет только Kryptos вашего собеседника; мессенджер видит лишь шифртекст."
-          }
-        }
-      }
-    },
-    "Kryptos is a private-communication tool that works through any messenger. You write a message, Kryptos encrypts it right on your device, and you send the result through WhatsApp, Telegram, SMS — anything. Only your contact's Kryptos can read it; the messenger only ever sees ciphertext.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kryptos — инструмент приватного общения, который работает поверх любого мессенджера. Вы пишете сообщение, Kryptos шифрует его прямо на вашем устройстве, а результат вы отправляете через WhatsApp, Telegram, SMS — что угодно. Прочитать его сможет только Kryptos вашего собеседника; мессенджер видит лишь шифртекст."
           }
         }
       }
@@ -1521,6 +1844,17 @@
         }
       }
     },
+    "Leave “Auto-decrypt on open” switched on. Then, whenever an encrypted message is on the clipboard, the Kryptos keyboard decrypts it the moment it opens — copy the message in any messenger and it is revealed right there.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Оставьте включённой «Авторасшифровку при открытии». Тогда, если в буфере обмена лежит зашифрованное сообщение, клавиатура Kryptos расшифрует его сразу при открытии — скопируйте сообщение в любом мессенджере, и оно раскроется прямо там."
+          }
+        }
+      }
+    },
     "Let your contact scan it to add you.": {
       "localizations": {
         "ru": {
@@ -1531,22 +1865,33 @@
         }
       }
     },
+    "Light": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Светлая"
+          }
+        }
+      }
+    },
+    "Lock screen codes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Коды на экране блокировки"
+          }
+        }
+      }
+    },
     "Lock with Face ID": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Блокировка по Face ID"
-          }
-        }
-      }
-    },
-    "Locked — unlock to use encryption": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Заблокировано — разблокируйте, чтобы пользоваться шифрованием"
           }
         }
       }
@@ -1581,12 +1926,12 @@
         }
       }
     },
-    "Manage keys…": {
+    "Mask message length": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Управление ключами…"
+            "value": "Маскировать длину сообщения"
           }
         }
       }
@@ -1631,12 +1976,22 @@
         }
       }
     },
-    "My fingerprint": {
+    "Metadata": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Мой отпечаток"
+            "value": "Метаданные"
+          }
+        }
+      }
+    },
+    "Mode": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Режим"
           }
         }
       }
@@ -1657,16 +2012,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Мои ключи"
-          }
-        }
-      }
-    },
-    "My public key": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Мой публичный ключ"
           }
         }
       }
@@ -1697,6 +2042,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Имя (например, Alice)"
+          }
+        }
+      }
+    },
+    "New passcode": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Новый код"
+          }
+        }
+      }
+    },
+    "New password": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Новый пароль"
           }
         }
       }
@@ -1751,22 +2118,95 @@
         }
       }
     },
-    "No hidden message found in this photo.": {
+    "No message found — wrong password, or this photo carries nothing.": {
+      "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "В этом фото нет скрытого сообщения."
+            "value": "Сообщение не найдено — неверный пароль либо в этом фото ничего нет."
           }
         }
       }
     },
-    "No servers, no analytics, no network code at all.": {
+    "No — it only ever gets text that is already encrypted. It does still see that you sent something, to whom, and roughly how much. That is metadata, and Kryptos does not hide it; you can at least mask the length in Settings → Privacy.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Никаких серверов, аналитики и сетевого кода вообще."
+            "value": "Нет — ему достаётся уже зашифрованный текст. Но он видит сам факт отправки, кому и примерно какого объёма. Это метаданные, и Kryptos их не скрывает; замаскировать хотя бы длину можно в «Настройках → Конфиденциальность»."
+          }
+        }
+      }
+    },
+    "No, Kryptos encrypts text only. The Photo tab does something different: it hides a text message inside a picture, rather than sending the picture itself securely.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет, Kryptos шифрует только текст. Вкладка «Фото» решает другую задачу: она прячет текстовое сообщение внутрь фотографии, а не пересылает саму фотографию защищённо."
+          }
+        }
+      }
+    },
+    "No, and that is deliberate. The file carries only your keys, your contacts and your PGP keys — message history is never written into it. After restoring on a new phone you carry on with the same people, but the old messages do not come back.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет, и это сделано намеренно. В файл попадают только ваши ключи, контакты и PGP-ключи — история сообщений в него не записывается вообще. После восстановления на новом телефоне вы продолжите переписку с теми же людьми, но старые сообщения не вернутся."
+          }
+        }
+      }
+    },
+    "No. A conversation runs from one device: its key chain cannot advance in two places at once. Move your keys to the new phone with a key backup and then use only that phone.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет. Переписка ведётся с одного устройства: цепочка ключей не может идти в двух местах одновременно. Перенесите ключи на новый телефон резервной копией и пользуйтесь дальше только им."
+          }
+        }
+      }
+    },
+    "No. Kryptos has no servers, no accounts and not a single line of networking code. Encryption happens entirely on the device, and delivery is handled by whatever messenger you already use.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет. У Kryptos нет ни серверов, ни аккаунтов, ни единой строчки сетевого кода. Шифрование целиком происходит на устройстве, а доставку берёт на себя тот мессенджер, которым вы и так пользуетесь."
+          }
+        }
+      }
+    },
+    "No. The keys sit in the Keychain marked as this-device-only, so they are not saved into an iCloud or computer backup. Everything else is encrypted with exactly those keys, so even if a copy of it were backed up it would be unreadable anywhere else.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет. Ключи лежат в Связке ключей с пометкой «только на этом устройстве», поэтому в копию iCloud или компьютера они не попадают. Всё остальное зашифровано именно этими ключами, так что даже оказавшись в копии, оно осталось бы нечитаемым где-либо ещё."
+          }
+        }
+      }
+    },
+    "Not active right now": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сейчас не работает"
+          }
+        }
+      }
+    },
+    "Not set": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не задан"
           }
         }
       }
@@ -1781,16 +2221,6 @@
         }
       }
     },
-    "Official libsignal — verified working on this device.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Официальная libsignal — проверена и работает на этом устройстве."
-          }
-        }
-      }
-    },
     "Official libsignal — verified working.": {
       "localizations": {
         "ru": {
@@ -1801,12 +2231,127 @@
         }
       }
     },
-    "OpenPGP keypairs": {
+    "On": {
+      "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Пары ключей OpenPGP"
+            "value": "Вкл."
+          }
+        }
+      }
+    },
+    "On the Chats tab, tap the QR icon at the top left. That opens My key — your public key, which is safe to share.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "На вкладке «Диалоги» нажмите значок QR слева сверху. Откроется экран «Мой ключ» — это ваш публичный ключ, им можно спокойно делиться."
+          }
+        }
+      }
+    },
+    "On the Photo tab a message is hidden inside an ordinary picture: pick a photo, set a password and type the text. Send the result as a file (a document) — sent as a normal photo it gets recompressed by the messenger and the hidden data is destroyed.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "На вкладке «Фото» сообщение прячется внутрь обычного снимка: выберите фотографию, задайте пароль и напишите текст. Отправлять результат нужно файлом (документом) — отправленный как обычное фото, он будет пережат мессенджером, и спрятанные данные пропадут."
+          }
+        }
+      }
+    },
+    "Once the keyboard is set up (see “Kryptos in other apps”), you can encrypt without leaving the other app. Type your text, tap the lock, and only the ciphertext is left in the field. A copied incoming message is decrypted by the keyboard itself and shown in a panel above the keys — the plaintext never reaches the messenger.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Когда клавиатура настроена (см. «Kryptos в других приложениях»), шифровать можно прямо в чужом приложении, не переключаясь. Наберите текст, нажмите замок: в поле останется только шифртекст. Скопированное входящее сообщение клавиатура расшифрует сама и покажет в окошке над клавишами — открытый текст в мессенджер не попадает."
+          }
+        }
+      }
+    },
+    "Only to scan a contact key from a QR code. The camera is used nowhere else, and refusing access breaks nothing — you can always paste the key as text instead.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Только чтобы отсканировать ключ собеседника с QR-кода. Больше камера нигде не используется, и отказ ничего не ломает — ключ всегда можно вставить текстом."
+          }
+        }
+      }
+    },
+    "Open Add contact": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Откройте добавление контакта"
+          }
+        }
+      }
+    },
+    "Open app settings": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открыть настройки приложения"
+          }
+        }
+      }
+    },
+    "Open the contact, type a message and send it: Kryptos encrypts it and puts the result on the clipboard straight away, so you only have to paste it into the messenger. When a reply arrives, copy it and come back to Kryptos — the app recognises its own ciphertext on the clipboard and shows the decrypted text by itself.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Откройте контакт, напишите сообщение и отправьте — Kryptos зашифрует его и сразу положит результат в буфер обмена, останется только вставить в мессенджер. Когда придёт ответ, скопируйте его и вернитесь в Kryptos: приложение само распознает свой шифртекст в буфере и покажет расшифровку."
+          }
+        }
+      }
+    },
+    "Open the iOS Settings app, find Kryptos in the list of apps and tap Keyboards. On the same screen you can set “Paste from Other Apps” to Allow, so iOS stops asking every time a copied message is read.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Откройте системные Настройки iOS, найдите в списке приложений Kryptos и нажмите «Клавиатуры». Там же можно поставить «Вставка из других приложений» на «Разрешать», чтобы iOS не спрашивал каждый раз при чтении скопированного сообщения."
+          }
+        }
+      }
+    },
+    "Open the iOS keyboard settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Откройте настройки клавиатур в iOS"
+          }
+        }
+      }
+    },
+    "Open the keyboard settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Откройте настройки клавиатуры"
+          }
+        }
+      }
+    },
+    "Open your key": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Откройте свой ключ"
           }
         }
       }
@@ -1821,22 +2366,22 @@
         }
       }
     },
-    "Or exchange the key as text": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Или обменяться ключом текстом"
-          }
-        }
-      }
-    },
     "PASSWORD": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "ПАРОЛЬ"
+          }
+        }
+      }
+    },
+    "PGP": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PGP"
           }
         }
       }
@@ -1881,6 +2426,60 @@
         }
       }
     },
+    "Pads the ciphertext to a fixed set of sizes so its length no longer hints at how long your message is. Makes the ciphertext somewhat larger.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Дополняет шифртекст до фиксированного набора размеров, чтобы его длина не выдавала размер сообщения. Немного увеличивает шифртекст."
+          }
+        }
+      }
+    },
+    "Panic password": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пароль-ловушка"
+          }
+        }
+      }
+    },
+    "Panic password removed.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пароль-ловушка удалён."
+          }
+        }
+      }
+    },
+    "Panic password saved.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пароль-ловушка сохранён."
+          }
+        }
+      }
+    },
+    "Passcode": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Код доступа"
+          }
+        }
+      }
+    },
     "Password": {
       "localizations": {
         "ru": {
@@ -1891,15 +2490,26 @@
         }
       }
     },
-    "Password mode — Apple CryptoKit": {
+    "Password mode": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Парольный режим — Apple CryptoKit"
+            "value": "Режим «Пароль»"
           }
         }
       }
+    },
+    "Password mode — Argon2id": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Парольный режим — Argon2id"
+          }
+        }
+      },
+      "extractionState": "manual"
     },
     "Paste": {
       "localizations": {
@@ -1911,52 +2521,12 @@
         }
       }
     },
-    "Permanently erases all app data — your keys, contacts' keys, conversations and settings.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Безвозвратно стирает все данные приложения — ваши ключи, ключи контактов, переписки и настройки."
-          }
-        }
-      }
-    },
-    "Permanently erases everything: your keys, contacts' keys, all conversations, PGP keys and settings. The app closes afterwards.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Безвозвратно стирает всё: ваши ключи, ключи контактов, все переписки, PGP-ключи и настройки. После очистки приложение закроется."
-          }
-        }
-      }
-    },
     "Photo": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Фото"
-          }
-        }
-      }
-    },
-    "Pick a photo — get a photo with a secret": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Выберите фото — получите фото с секретом"
-          }
-        }
-      }
-    },
-    "Post-quantum key agreement (PQXDH)": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пост-квантовый обмен ключами (PQXDH)"
           }
         }
       }
@@ -1981,22 +2551,22 @@
         }
       }
     },
-    "Public key": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Публичный ключ"
-          }
-        }
-      }
-    },
     "QR unavailable — use Copy key or Share below.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "QR недоступен — используйте «Скопировать ключ» или «Поделиться» ниже."
+          }
+        }
+      }
+    },
+    "Questions and answers": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вопросы и ответы"
           }
         }
       }
@@ -2051,22 +2621,22 @@
         }
       }
     },
-    "RSA 4096 (strongest RSA)": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "RSA 4096 (самый стойкий RSA)"
-          }
-        }
-      }
-    },
     "RSA 4096 (strongest)": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "RSA 4096 (самый стойкий)"
+          }
+        }
+      }
+    },
+    "Random letters": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Случайные буквы"
           }
         }
       }
@@ -2121,6 +2691,105 @@
         }
       }
     },
+    "Remove app passcode": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить код приложения"
+          }
+        }
+      }
+    },
+    "Remove panic password": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить пароль-ловушку"
+          }
+        }
+      }
+    },
+    "Remove the app passcode? You will still be able to unlock with biometrics or your device passcode.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить код приложения? Входить по биометрии или код-паролю устройства по-прежнему можно будет."
+          }
+        }
+      }
+    },
+    "Remove the panic password? Typing it will no longer erase anything.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить пароль-ловушку? Его ввод больше ничего не будет стирать."
+          }
+        }
+      }
+    },
+    "Repeat passcode": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Повторите код"
+          }
+        }
+      }
+    },
+    "Repeat password": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Повторите пароль"
+          }
+        }
+      }
+    },
+    "Replace the keys on this device with the ones from the backup? The keys currently here will be gone.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заменить ключи на этом устройстве ключами из копии? Те, что здесь сейчас, будут удалены."
+          }
+        }
+      }
+    },
+    "Restore keys": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Восстановить ключи"
+          }
+        }
+      }
+    },
+    "Restoring replaces the identities, contacts' keys and PGP keys currently on this device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Восстановление заменяет профили, ключи контактов и PGP-ключи, которые сейчас на этом устройстве."
+          }
+        }
+      }
+    },
     "Reveal": {
       "localizations": {
         "ru": {
@@ -2171,22 +2840,34 @@
         }
       }
     },
-    "STEGANOGRAPHY": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "СТЕГАНОГРАФИЯ"
-          }
-        }
-      }
-    },
     "Save": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Сохранить"
+          }
+        }
+      }
+    },
+    "Save passcode": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сохранить код"
+          }
+        }
+      }
+    },
+    "Save password": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сохранить пароль"
           }
         }
       }
@@ -2207,16 +2888,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Сканировать QR"
-          }
-        }
-      }
-    },
-    "Scan your contact's QR": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отсканировать QR собеседника"
           }
         }
       }
@@ -2271,12 +2942,34 @@
         }
       }
     },
-    "Send this to your contact through any messenger or SMS.": {
+    "Sending and receiving": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Отправьте это собеседнику через любой мессенджер или SMS."
+            "value": "Переписка"
+          }
+        }
+      }
+    },
+    "Set": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Задан"
+          }
+        }
+      }
+    },
+    "Set a password": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Задать пароль"
           }
         }
       }
@@ -2331,32 +3024,12 @@
         }
       }
     },
-    "Show my QR code": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Показать мой QR-код"
-          }
-        }
-      }
-    },
     "Signal Protocol — official libsignal": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Протокол Signal — официальная libsignal"
-          }
-        }
-      }
-    },
-    "Signal chats": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Signal-диалоги"
           }
         }
       }
@@ -2381,12 +3054,22 @@
         }
       }
     },
-    "Smart mode builds real, grammatical sentences that read like an ordinary note, at the cost of a somewhat longer message. Turn it off for the shortest possible cover text.": {
+    "Simple words": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Умный режим строит настоящие, грамматически связные предложения, которые читаются как обычная заметка, ценой немного более длинного сообщения. Отключите его для самого короткого прикрытия."
+            "value": "Обычные слова"
+          }
+        }
+      }
+    },
+    "Smart mode builds real, grammatical sentences that read like an ordinary note, at the cost of a somewhat longer message. Pick Simple words for a shorter cover text.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Умный режим строит настоящие, грамматически связные предложения, похожие на обычную заметку, ценой чуть более длинного сообщения. Выберите «Обычные слова», чтобы текст-прикрытие был короче."
           }
         }
       }
@@ -2401,22 +3084,22 @@
         }
       }
     },
-    "Soft haptic feedback on each key press.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Мягкая отдача при каждом нажатии клавиши."
-          }
-        }
-      }
-    },
     "Soft vibration and the native click on each key press.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Мягкая вибрация и родной щелчок при каждом нажатии клавиши."
+          }
+        }
+      }
+    },
+    "Source code": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Исходный код"
           }
         }
       }
@@ -2441,6 +3124,16 @@
         }
       }
     },
+    "Step %lld": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Шаг %lld"
+          }
+        }
+      }
+    },
     "THEIR KEY": {
       "localizations": {
         "ru": {
@@ -2457,6 +3150,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "ЕГО ПУБЛИЧНЫЙ КЛЮЧ"
+          }
+        }
+      }
+    },
+    "Tab bar": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нижняя панель"
+          }
+        }
+      }
+    },
+    "Tabs you switch off disappear from the tab bar. Settings cannot be hidden, and at least one other tab stays on.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выключенные разделы исчезают из нижней панели. «Настройки» скрыть нельзя, и хотя бы один раздел остаётся включённым."
           }
         }
       }
@@ -2481,12 +3194,96 @@
         }
       }
     },
+    "That is not a fault but forward secrecy: the key for each message is destroyed the moment it is read, so old correspondence cannot be recovered even by someone who takes your phone. Messages you have already opened remain in the chat history.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Это не поломка, а прямая секретность: ключ каждого сообщения уничтожается сразу после прочтения, поэтому старую переписку не восстановить, даже забрав телефон. Уже открытые сообщения остаются в истории чата."
+          }
+        }
+      }
+    },
+    "The Kryptos keyboard": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Клавиатура Kryptos"
+          }
+        }
+      }
+    },
+    "The Kryptos keyboard lets you encrypt and decrypt without leaving the app you are in. It is set up once: turn on auto-decrypt inside Kryptos, then enable the keyboard in the iOS settings.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Клавиатура Kryptos позволяет шифровать и расшифровывать, не выходя из приложения, в котором вы находитесь. Настраивается один раз: включите авторасшифровку в самом Kryptos, затем включите клавиатуру в настройках iOS."
+          }
+        }
+      }
+    },
+    "The PGP tab is for writing to people who already use ordinary OpenPGP. It keeps its own keys and its own list of recipients, separate from your chats.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вкладка PGP — для переписки с теми, кто уже пользуется обычным OpenPGP. У неё свои ключи и свой список получателей, отдельно от диалогов."
+          }
+        }
+      }
+    },
+    "The app is completely offline: no servers, no accounts, and not a single line of networking code.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Приложение полностью офлайн: ни серверов, ни аккаунтов, ни единой строчки сетевого кода."
+          }
+        }
+      }
+    },
     "The clipboard has no Kryptos message — copy the encrypted text first.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "В буфере обмена нет сообщения Kryptos — сначала скопируйте зашифрованный текст."
+          }
+        }
+      }
+    },
+    "The data saved for this identity can no longer be decrypted. Open the identity menu above, choose Manage identities and regenerate the key to use this profile again — the old contacts and messages cannot be recovered.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Данные этого профиля больше не расшифровываются. Откройте меню профиля сверху, выберите «Управление профилями» и перегенерируйте ключ, чтобы снова пользоваться профилем, — прежние контакты и переписку восстановить нельзя."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "The file holds your identities and their private keys, your contacts' keys and your PGP keys. It is encrypted with the password you choose here — Kryptos keeps no copy of that password, so a lost password means a lost backup.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Файл содержит ваши профили и их закрытые ключи, ключи контактов и PGP-ключи. Он зашифрован паролем, который вы задаёте здесь, — Kryptos не хранит копию этого пароля, поэтому забытый пароль означает потерянную копию."
+          }
+        }
+      }
+    },
+    "The full source is public: read it, check the cryptography, or build the app yourself.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Весь исходный код открыт: его можно прочитать, проверить криптографию и собрать приложение самому."
           }
         }
       }
@@ -2501,6 +3298,16 @@
         }
       }
     },
+    "The keys live on the device and nowhere else, so deleting the app destroys them for good and there is nothing left to decrypt with. The only insurance is to make a key backup in Settings beforehand. The flip side of the same property: whoever finds the phone gets nothing either.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ключи хранятся только на самом устройстве, поэтому вместе с приложением они исчезают безвозвратно — расшифровывать станет нечем. Единственная страховка — заранее сделать резервную копию ключей в настройках. Обратная сторона того же свойства: тому, кто найдёт телефон, тоже ничего не достанется."
+          }
+        }
+      }
+    },
     "The libsignal check failed.": {
       "localizations": {
         "ru": {
@@ -2511,52 +3318,74 @@
         }
       }
     },
-    "The message is encrypted first, then hidden": {
+    "The message is too large for this photo. Use a bigger or more detailed photo, or a shorter message.": {
+      "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Сообщение сначала шифруется, потом прячется"
+            "value": "Сообщение слишком большое для этого фото. Возьмите фото крупнее или с большим количеством деталей, либо укоротите текст."
           }
         }
       }
     },
-    "The message is too large for this photo. Use a bigger photo or a shorter message.": {
+    "The passwords do not match.": {
+      "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Сообщение слишком большое для этого фото. Возьмите фото побольше или сообщение покороче."
+            "value": "Пароли не совпадают."
           }
         }
       }
     },
-    "The native iOS click sound on each key press.": {
+    "The photo has to be sent as a file (a document). Sent as an ordinary picture it is recompressed by the messenger, and recompression destroys the hidden data.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Системный звук клика iOS при нажатии клавиши."
+            "value": "Фотографию нужно отправлять файлом (документом). Отправленная как обычная картинка, она пережимается мессенджером, а пережатие разрушает спрятанные данные."
           }
         }
       }
     },
-    "The same library the Signal app itself uses: post-quantum key agreement (PQXDH with Kyber) and the Double Ratchet — a fresh key for every message.": {
+    "The safest way is to show the QR code and let them scan it in person. If they are far away, tap Copy key and send the text however you like. Intercepting this key gains an eavesdropper nothing — it is the public half.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Та же библиотека, что использует сам Signal: постквантовый обмен ключами (PQXDH с Kyber) и Double Ratchet — новый ключ для каждого сообщения."
+            "value": "Самый надёжный способ — показать QR-код и дать отсканировать его при встрече. Если человек далеко, нажмите «Скопировать ключ» и отправьте текст любым способом. Перехват этого ключа ничего не даёт: он публичный."
           }
         }
       }
     },
-    "The screen is covered outside the app, so the snapshot iOS saves for the app switcher never shows your chats.": {
+    "The same message decrypts only once — that is forward secrecy at work. Messages you have already read stay in the chat history.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Вне приложения экран закрывается шторкой, поэтому снимок, который iOS сохраняет для переключателя приложений, никогда не показывает ваши переписки."
+            "value": "Одно и то же сообщение расшифровывается только один раз — так работает прямая секретность. Уже прочитанные сообщения остаются в истории чата."
+          }
+        }
+      }
+    },
+    "The shortest mode there is — roughly half the length of Simple words. The text is a plain run of random letters, so it does not pretend to be a real message: it hides what you wrote, not the fact that you sent something.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Самый короткий режим — примерно вдвое короче «Обычных слов». Текст выглядит как обычный набор случайных букв и не притворяется настоящим сообщением: он скрывает то, что вы написали, но не сам факт отправки."
+          }
+        }
+      }
+    },
+    "The very first message to a new contact is noticeably longer than the rest: it carries the post-quantum handshake. Once they reply, messages become short.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Первое сообщение новому контакту заметно длиннее остальных: в нём передаётся постквантовое рукопожатие. Как только собеседник ответит, сообщения станут короткими."
           }
         }
       }
@@ -2571,12 +3400,54 @@
         }
       }
     },
-    "There are no servers and no accounts: the app is fully offline, collects nothing, and your private keys never leave this device.": {
+    "Theme": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Здесь нет серверов и аккаунтов: приложение полностью офлайн, ничего не собирает, а ваши приватные ключи никогда не покидают это устройство."
+            "value": "Тема"
+          }
+        }
+      }
+    },
+    "There are no keys to export yet.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пока нет ключей для экспорта."
+          }
+        }
+      }
+    },
+    "There is no way to recover it. The file is encrypted with that password and Kryptos keeps no copy of it anywhere. Make a fresh backup with a password you will not forget.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Восстановить его невозможно: файл зашифрован именно этим паролем, а Kryptos нигде его не хранит. Сделайте новую копию с паролем, который точно не забудете."
+          }
+        }
+      }
+    },
+    "They erase the conversation inside Kryptos after the time you pick — on your device, and on your contact's if they set the same thing themselves. What they cannot touch is the ciphertext already sitting in the messenger: only the messenger itself can remove that.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Они стирают переписку внутри Kryptos через выбранное время — у вас, и у собеседника, если он выставил то же самое у себя. Чего они не могут — так это тронуть шифртекст, уже лежащий в мессенджере: удалить его оттуда способен только сам мессенджер."
+          }
+        }
+      }
+    },
+    "This device has no passcode, so Kryptos never shows its lock screen — and a code saved here cannot be typed anywhere. Set a device passcode and turn the app lock on to make it work again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "На устройстве нет код-пароля, поэтому Kryptos не показывает экран блокировки — и введённый здесь код негде набрать. Задайте код-пароль устройства и включите блокировку приложения, чтобы код снова работал."
           }
         }
       }
@@ -2587,6 +3458,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Только это устройство"
+          }
+        }
+      }
+    },
+    "This identity's key is gone": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ключ этого профиля утерян"
+          }
+        }
+      }
+    },
+    "This is already used as the other code. Choose a different one.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Этот код уже используется как другой. Выберите другой."
           }
         }
       }
@@ -2641,6 +3534,17 @@
         }
       }
     },
+    "This photo is too large. Use a smaller one.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Это фото слишком большое. Возьмите поменьше."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
     "To use the lock, set a passcode on your device.": {
       "localizations": {
         "ru": {
@@ -2651,12 +3555,68 @@
         }
       }
     },
-    "To use the lock, set a passcode on your device. Outside the app the screen is covered, so the app-switcher snapshot never shows your chats.": {
+    "To use the lock, set a passcode on your device. Outside the app the screen is covered, so the app-switcher snapshot never shows your chats. Your keys stay encrypted in the device keychain either way — this guards the app, not the files.": {
+      "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Чтобы включить блокировку, установите код-пароль на устройстве. Вне приложения экран закрывается, поэтому снимок в переключателе приложений не показывает ваши переписки."
+            "value": "Чтобы включить блокировку, задайте код-пароль на устройстве. Вне приложения экран закрыт, поэтому снимок в переключателе приложений никогда не покажет ваши переписки. Ключи в любом случае зашифрованы в связке ключей устройства — эта настройка защищает приложение, а не файлы."
+          }
+        }
+      }
+    },
+    "Turn on Kryptos, then turn on Allow Full Access — without it the keyboard cannot reach your keys and encryption in it will not work. iOS shows a general warning about third-party keyboards here; Kryptos contains no networking code at all, so what you type cannot leave the device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включите Kryptos, затем «Разрешить полный доступ» — без него клавиатура не получит доступ к вашим ключам, и шифрование в ней работать не будет. iOS показывает здесь общее предупреждение о сторонних клавиатурах; в Kryptos нет ни одной строки сетевого кода, поэтому набранное не может покинуть устройство."
+          }
+        }
+      }
+    },
+    "Turn on app lock": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включить блокировку"
+          }
+        }
+      }
+    },
+    "Turn on auto-decrypt": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включите авторасшифровку"
+          }
+        }
+      }
+    },
+    "Type a name, then paste the key you received or scan their QR code, and tap Add. Your contact does exactly the same on their side.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Впишите имя, вставьте полученный ключ или отсканируйте его QR-код и нажмите «Добавить». Собеседник делает то же самое со своей стороны."
+          }
+        }
+      }
+    },
+    "Type this password on the lock screen instead of unlocking, and Kryptos immediately and permanently erases everything: your identities and private keys, contacts' keys, every conversation, PGP keys, learned keyboard words and all settings. The app then opens empty, exactly like a fresh install — nothing hints that anything was erased. There is no confirmation step and no way to undo it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Введите этот пароль на экране блокировки вместо разблокировки — и Kryptos немедленно и безвозвратно сотрёт всё: ваши профили и закрытые ключи, ключи контактов, все переписки, PGP-ключи, выученные клавиатурой слова и все настройки. После этого приложение откроется пустым, точно как после установки, — ничто не выдаст, что данные были стёрты. Подтверждения не будет, отменить нельзя."
           }
         }
       }
@@ -2671,22 +3631,13 @@
         }
       }
     },
-    "Type your message inside the keyboard and encrypt it there. Only the encrypted result reaches the messenger — it can never store the plaintext you typed before sending. Changes apply the next time you open the Kryptos keyboard.": {
+    "Type your message inside the keyboard and encrypt it there. Only the encrypted result reaches the messenger — it can never store the plaintext you typed before sending. The button on the keyboard turns the field on and off without leaving the app you are in.": {
+      "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Печатайте сообщение прямо в клавиатуре и шифруйте его там же. В мессенджер попадает только зашифрованный результат — он не сможет сохранить черновик вашего текста до отправки. Изменения вступают в силу при следующем открытии клавиатуры Kryptos."
-          }
-        }
-      }
-    },
-    "Type your message inside the keyboard and encrypt it there. Only the encrypted result reaches the messenger — so it can never store the plaintext you typed before sending.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Печатайте сообщение внутри клавиатуры и шифруйте его там. В мессенджер попадает только зашифрованный результат — он не сможет сохранить исходный текст, набранный до отправки."
+            "value": "Набирайте сообщение прямо в клавиатуре и там же шифруйте. В мессенджер попадает только зашифрованный результат — он не может сохранить набранный вами открытый текст. Кнопка на клавиатуре включает и выключает поле, не выходя из приложения, в котором вы находитесь."
           }
         }
       }
@@ -2697,16 +3648,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Набор текста"
-          }
-        }
-      }
-    },
-    "UNDER THE HOOD": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ПОД КАПОТОМ"
           }
         }
       }
@@ -2751,6 +3692,38 @@
         }
       }
     },
+    "Use at least 4 characters.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Используйте минимум 4 символа."
+          }
+        }
+      }
+    },
+    "Use at least 8 characters for the backup password.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Используйте минимум 8 символов для пароля копии."
+          }
+        }
+      }
+    },
+    "Usually the wrong contact or the wrong profile is selected. If every new message from one person fails, the session has gone out of sync: send them your key again and have them add you a second time.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Чаще всего выбран не тот контакт или не тот профиль. Если не читается каждое новое сообщение от одного человека — сессия рассинхронизировалась: отправьте ему свой ключ заново и попросите добавить вас ещё раз."
+          }
+        }
+      }
+    },
     "Version %@": {
       "localizations": {
         "ru": {
@@ -2761,42 +3734,62 @@
         }
       }
     },
-    "What Kryptos copies won't sync to your other devices via Universal Clipboard.": {
+    "What are profiles for?": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Скопированное в Kryptos не будет синхронизироваться с другими вашими устройствами через универсальный буфер обмена."
+            "value": "Зачем нужны профили?"
           }
         }
       }
     },
-    "What Kryptos is, the crypto inside, and how to reach the developer.": {
+    "What do disappearing messages actually do?": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Что такое Kryptos, какая криптография внутри и как связаться с разработчиком."
+            "value": "Что на самом деле делают исчезающие сообщения?"
           }
         }
       }
     },
-    "When on, a message in **Chats** is first encrypted with Signal, then disguised as a harmless run of words. Off, it is sent as a compact code. Either way the encryption is identical — only the outer wrapping changes.": {
+    "What happens if I delete the app or lose my phone?": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Когда включено, сообщение в **Диалогах** сначала шифруется Signal, а затем маскируется под безобидный набор слов. Когда выключено — отправляется компактным кодом. Шифрование в обоих случаях одинаковое, меняется только внешняя оболочка."
+            "value": "Что будет, если удалить приложение или потерять телефон?"
           }
         }
       }
     },
-    "When on, a message in Chats is first encrypted with Signal, then disguised as a harmless run of words. Off, it is sent as a compact code. The encryption is identical either way — only the outer wrapping changes.": {
+    "What is the panic password?": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Когда включено, сообщение в Диалогах сначала шифруется через Signal, а затем маскируется под безобидный набор слов. Когда выключено — отправляется компактным кодом. Шифрование в обоих случаях одинаковое, меняется лишь внешняя обёртка."
+            "value": "Что такое пароль-ловушка?"
+          }
+        }
+      }
+    },
+    "What is the safety number for?": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Зачем нужен код безопасности?"
+          }
+        }
+      }
+    },
+    "When on, a message in Chats is first encrypted with Signal, then wrapped in ordinary text — Mode decides how that text looks. Off, it is sent as a compact code. The encryption is identical either way — only the outer wrapping changes.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Когда включено, сообщение в Диалогах сначала шифруется Signal, а затем заворачивается в обычный текст — как именно, задаёт «Режим». Когда выключено, отправляется компактный код. Шифрование одинаково в обоих случаях — меняется только внешняя обёртка."
           }
         }
       }
@@ -2811,6 +3804,36 @@
         }
       }
     },
+    "Why does the app ask for the camera?": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Зачем приложению доступ к камере?"
+          }
+        }
+      }
+    },
+    "Why is the first message so long?": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Почему первое сообщение такое длинное?"
+          }
+        }
+      }
+    },
+    "Why will a message not decrypt a second time?": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Почему сообщение не расшифровывается второй раз?"
+          }
+        }
+      }
+    },
     "Word suggestions": {
       "localizations": {
         "ru": {
@@ -2821,12 +3844,24 @@
         }
       }
     },
-    "Works on top of any messenger": {
+    "Working…": {
+      "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Работает поверх любого мессенджера"
+            "value": "Обработка…"
+          }
+        }
+      }
+    },
+    "Wrong passcode.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неверный код."
           }
         }
       }
@@ -2851,22 +3886,12 @@
         }
       }
     },
-    "Your Kryptos identity. Compare the fingerprint below with your contact to make sure no one has intercepted the connection.": {
+    "Yes — nothing but Kryptos can decrypt the message. Which phone each of you carries does not matter though: the iPhone and Android versions are fully compatible, and keys and messages work in both directions.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ваша личность в Kryptos. Сверьте отпечаток ниже с собеседником, чтобы убедиться, что связь никто не перехватил."
-          }
-        }
-      }
-    },
-    "Your PGP key is still being generated.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ваш ключ PGP ещё генерируется."
+            "value": "Да — расшифровать сообщение не может ничто, кроме Kryptos. А вот телефоны могут быть любые: версии для iPhone и Android полностью совместимы, ключи и сообщения работают в обе стороны."
           }
         }
       }
@@ -2891,12 +3916,23 @@
         }
       }
     },
-    "Your everyday messages look like this. The very first message to a new contact carries the post-quantum key setup, so it is longer — but once they reply even once, every message after that is short.": {
+    "Your keys live on this device only. Before you change phones, make a key backup in Settings.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Обычные сообщения выглядят так. Самое первое сообщение новому контакту несёт постквантовую настройку ключей, поэтому оно длиннее — но как только собеседник хотя бы раз ответит, все следующие сообщения будут короткими."
+            "value": "Ключи хранятся только на этом устройстве. Перед сменой телефона сделайте резервную копию ключей в настройках."
+          }
+        }
+      }
+    },
+    "Your message history is not included. After restoring on a new phone, use only that phone: a conversation's key chain cannot run in two places at once.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Переписка в копию не входит. После восстановления на новом телефоне пользуйтесь только им: цепочка ключей переписки не может работать в двух местах одновременно."
           }
         }
       }
@@ -2927,36 +3963,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "скоро"
-          }
-        }
-      }
-    },
-    "Metadata": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Метаданные"
-          }
-        }
-      }
-    },
-    "Mask message length": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Маскировать длину сообщения"
-          }
-        }
-      }
-    },
-    "Pads the ciphertext to a fixed set of sizes so its length no longer hints at how long your message is. Makes the ciphertext somewhat larger.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Дополняет шифртекст до фиксированного набора размеров, чтобы его длина не выдавала размер сообщения. Немного увеличивает шифртекст."
           }
         }
       }

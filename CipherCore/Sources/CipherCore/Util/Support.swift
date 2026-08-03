@@ -1,19 +1,24 @@
 import Foundation
+import Security
 
 public enum CipherError: Error, Equatable {
     case malformed
     case notAKryptosMessage
     case decryptionFailed
     case stegoCapacityExceeded
-    case noHiddenData
     case invalidInput
 }
 
 public func randomBytes(_ count: Int) -> Data {
-    var generator = SystemRandomNumberGenerator()
-    var bytes = [UInt8]()
-    bytes.reserveCapacity(count)
-    for _ in 0 ..< count { bytes.append(UInt8.random(in: UInt8.min ... UInt8.max, using: &generator)) }
+    guard count > 0 else { return Data() }
+    var bytes = [UInt8](repeating: 0, count: count)
+    let status = bytes.withUnsafeMutableBytes { buffer -> Int32 in
+        guard let base = buffer.baseAddress else { return errSecParam }
+        return SecRandomCopyBytes(kSecRandomDefault, count, base)
+    }
+    guard status == errSecSuccess else {
+        preconditionFailure("SecRandomCopyBytes failed with \(status)")
+    }
     return Data(bytes)
 }
 
@@ -29,8 +34,6 @@ public struct BinaryWriter {
         data.append(UInt8((v >> 8) & 0xFF))
         data.append(UInt8(v & 0xFF))
     }
-
-    public mutating func writeRaw(_ d: Data) { data.append(d) }
 
     public mutating func writeVar(_ d: Data) {
         writeUInt32(UInt32(d.count))
@@ -57,7 +60,7 @@ public struct BinaryReader {
     }
 
     public mutating func readRaw(_ n: Int) throws -> Data {
-        guard n >= 0, index + n <= bytes.count else { throw CipherError.malformed }
+        guard n >= 0, n <= bytes.count - index else { throw CipherError.malformed }
         defer { index += n }
         return Data(bytes[index ..< index + n])
     }

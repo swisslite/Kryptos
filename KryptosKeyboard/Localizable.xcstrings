@@ -31,6 +31,17 @@
         }
       }
     },
+    "Compose field": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Поле ввода"
+          }
+        }
+      }
+    },
     "Contact": {
       "localizations": {
         "ru": {
@@ -71,16 +82,6 @@
         }
       }
     },
-    "Decrypted": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Расшифровано"
-          }
-        }
-      }
-    },
     "Decrypted · %@": {
       "localizations": {
         "ru": {
@@ -107,6 +108,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Введите текст."
+          }
+        }
+      }
+    },
+    "Locked — unlock to use encryption": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заблокировано — разблокируйте, чтобы пользоваться шифрованием"
           }
         }
       }
@@ -177,6 +189,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Печатайте или вставьте текст — мессенджер не увидит его до шифрования"
+          }
+        }
+      }
+    },
+    "Unlock Kryptos": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Разблокируйте Kryptos"
           }
         }
       }

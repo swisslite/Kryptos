@@ -115,6 +115,77 @@ final class PGPService: ObservableObject {
         if storeUnavailable { bootstrap() }
     }
 
+    func archivedIdentities() -> [KeyArchive.ArchivedPgpIdentity]? {
+        var out: [KeyArchive.ArchivedPgpIdentity] = []
+        for ident in identities {
+            guard case .found(let secret) = Keychain.loadStrict(account: Self.secretAccount(ident.id)),
+                  let armored = String(data: secret, encoding: .utf8), !armored.isEmpty else { return nil }
+            out.append(KeyArchive.ArchivedPgpIdentity(
+                id: ident.id.uuidString, name: ident.name, email: ident.email,
+                fingerprint: ident.fingerprint, algo: ident.algo,
+                created: Int64(ident.createdAt.timeIntervalSince1970 * 1000),
+                publicKey: ident.publicKey, secret: armored))
+        }
+        return out
+    }
+
+    func archivedRecipients() -> [KeyArchive.ArchivedPgpRecipient] {
+        recipients.map {
+            KeyArchive.ArchivedPgpRecipient(name: $0.name, publicKey: $0.publicKey, fingerprint: $0.fingerprint)
+        }
+    }
+
+    @discardableResult
+    func restore(identities list: [KeyArchive.ArchivedPgpIdentity],
+                 recipients incoming: [KeyArchive.ArchivedPgpRecipient]) -> Bool {
+        retryBootstrapIfNeeded()
+        guard !storeUnavailable else { return false }
+        for ident in identities { Keychain.delete(account: Self.secretAccount(ident.id)) }
+
+        var restored: [PGPIdentity] = []
+        var seen = Set<String>()
+        for entry in list {
+            guard seen.insert(entry.id).inserted,
+                  let id = UUID(uuidString: entry.id), !entry.secret.isEmpty,
+                  (try? ObjectivePGP.readKeys(from: Data(entry.secret.utf8)))?.first != nil,
+                  Keychain.save(Data(entry.secret.utf8), account: Self.secretAccount(id)) else { continue }
+            restored.append(PGPIdentity(id: id, name: entry.name, email: entry.email,
+                                        fingerprint: entry.fingerprint, algo: entry.algo,
+                                        createdAt: Date(timeIntervalSince1970: Double(entry.created) / 1000),
+                                        publicKey: entry.publicKey))
+        }
+
+        recipients = incoming.map {
+            PGPRecipient(name: $0.name, publicKey: $0.publicKey, fingerprint: $0.fingerprint)
+        }
+        saveRecipients()
+
+        if restored.isEmpty {
+            identities = []
+            currentID = UUID()
+            persistIndex()
+            generate(name: "My key", email: "", algo: .curve25519)
+            return false
+        }
+        identities = restored
+        currentID = restored[0].id
+        persistIndex()
+        loadCurrent()
+        return true
+    }
+
+    func resetAfterWipe() {
+        currentKey = nil
+        identities = []
+        recipients = []
+        myPublicKey = ""
+        currentID = UUID()
+        ready = false
+        busy = false
+        storeUnavailable = false
+        bootstrap()
+    }
+
     private static func loadIndexStrict() -> PGPIndex? {
         switch SharedStore.readStrict(indexStoreKey) {
         case .unavailable:
@@ -160,9 +231,21 @@ final class PGPService: ObservableObject {
     }
 
     private func loadCurrent() {
-        guard let data = Keychain.load(account: Self.secretAccount(currentID)),
-              let key = try? ObjectivePGP.readKeys(from: data).first else {
+        let data: Data
+        switch Keychain.loadStrict(account: Self.secretAccount(currentID)) {
+        case .found(let stored):
+            data = stored
+        case .absent:
             currentKey = nil; myPublicKey = ""; ready = !identities.isEmpty
+            return
+        case .unavailable:
+            storeUnavailable = true
+            currentKey = nil; myPublicKey = ""; ready = false
+            return
+        }
+        guard let key = try? ObjectivePGP.readKeys(from: data).first else {
+            storeUnavailable = true
+            currentKey = nil; myPublicKey = ""; ready = false
             return
         }
         currentKey = key
@@ -324,34 +407,20 @@ final class PGPService: ObservableObject {
         } else {
             binary = Data(armored.utf8)
         }
+        let verifyKeys = [currentKey] + allRecipientKeys()
+        var verifiedCode: Int32 = -1
+        var decryptionError: NSError?
+        if let plain = try? ObjectivePGP.decrypt(binary, verified: &verifiedCode, certifyWithRootKey: false,
+                                                 using: verifyKeys, passphraseForKey: nil,
+                                                 decryptionError: &decryptionError),
+           decryptionError == nil {
+            return (String(decoding: plain, as: UTF8.self), verifiedCode == 0 ? .verified : .unverified)
+        }
         guard let plain = try? ObjectivePGP.decrypt(binary, andVerifySignature: false, using: [currentKey], passphraseForKey: nil) else {
             throw PGPError.badMessage
         }
-        let verifyKeys = [currentKey] + allRecipientKeys()
         let verified = Self.verificationCode(binary, keys: verifyKeys) == 0
         return (String(decoding: plain, as: UTF8.self), verified ? .verified : .unverified)
-    }
-
-    nonisolated static func exportCycleTestError() -> String? {
-        func gen(_ eddsa: Bool) -> KeyGenerator {
-            let aes = PGPSymmetricAlgorithm(rawValue: 9)!, sha = PGPHashAlgorithm(rawValue: 8)!
-            return eddsa ? KeyGenerator(algorithm: .edDSA, keyBitsLength: 0, cipherAlgorithm: aes, hashAlgorithm: sha)
-                         : KeyGenerator(algorithm: .RSA, keyBitsLength: 3072, cipherAlgorithm: aes, hashAlgorithm: sha)
-        }
-        func cycle(_ name: String, _ g: KeyGenerator) -> String? {
-            let key = g.generate(for: "My key <m@m>", passphrase: nil)
-            let pubArmored = exportPublicArmored(key)
-            let secArmored = exportSecret(key)
-            if pubArmored.isEmpty { return "\(name):public-empty" }
-            guard let rereadSecret = try? ObjectivePGP.readKeys(from: secArmored).first else { return "\(name):secret-nil" }
-            guard let rereadPublic = try? ObjectivePGP.readKeys(from: Data(pubArmored.utf8)).first else { return "\(name):public-nil" }
-            do {
-                let enc = try ObjectivePGP.encrypt(Data("hi".utf8), addSignature: true, using: [rereadPublic, rereadSecret], passphraseForKey: nil)
-                let dec = try ObjectivePGP.decrypt(enc, andVerifySignature: false, using: [rereadSecret], passphraseForKey: nil)
-                return String(decoding: dec, as: UTF8.self) == "hi" ? nil : "\(name):roundtrip"
-            } catch { return "\(name):\(error)" }
-        }
-        return cycle("curve", gen(true)) ?? cycle("rsa", gen(false))
     }
 
     static func eraseAllStorage() {
@@ -373,21 +442,4 @@ final class PGPService: ObservableObject {
         return verified
     }
 
-    nonisolated static func selfTestError() -> String? {
-        func publicOnly(_ k: Key) -> Key? { (try? ObjectivePGP.readKeys(from: k.export(keyType: .public)))?.first }
-        func trip(_ algo: PGPAlgo) -> String? {
-            do {
-                let alice = generator(for: algo).generate(for: "Alice <a@a>", passphrase: nil)
-                let bob = generator(for: algo).generate(for: "Bob <b@b>", passphrase: nil)
-                guard let alicePub = publicOnly(alice), let bobPub = publicOnly(bob) else { return "\(algo.rawValue):pub" }
-                let enc = try ObjectivePGP.encrypt(Data("secret".utf8), addSignature: true, using: [bobPub, alice], passphraseForKey: nil)
-                let dec = try ObjectivePGP.decrypt(enc, andVerifySignature: false, using: [bob], passphraseForKey: nil)
-                guard String(decoding: dec, as: UTF8.self) == "secret" else { return "\(algo.rawValue):mismatch" }
-                guard verificationCode(enc, keys: [bob, alicePub]) == 0 else { return "\(algo.rawValue):verify" }
-                guard verificationCode(enc, keys: [bob]) != 0 else { return "\(algo.rawValue):falseverify" }
-                return nil
-            } catch { return "\(algo.rawValue):\(error)" }
-        }
-        return trip(.rsa3072)
-    }
 }

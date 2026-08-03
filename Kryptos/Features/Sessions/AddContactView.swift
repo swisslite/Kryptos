@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import AVFoundation
 
 struct AddContactView: View {
     @EnvironmentObject private var signal: SignalService
@@ -9,6 +10,7 @@ struct AddContactView: View {
     @State private var keyText = ""
     @State private var showScanner = false
     @State private var errorText: String?
+    @State private var cameraDenied = false
 
     var body: some View {
         NavigationStack {
@@ -26,12 +28,24 @@ struct AddContactView: View {
                                 .font(.kMono()).frame(minHeight: 90).scrollContentBackground(.hidden)
                                 .padding(8).background(FieldBackground())
 
-                            HStack(spacing: 12) {
-                                Button { showScanner = true } label: { Label("Scan QR", systemImage: "qrcode.viewfinder") }
-                                    .buttonStyle(SecondaryButtonStyle())
-                                Button { if let s = UIPasteboard.general.string { keyText = s } } label: {
-                                    Label("Paste", systemImage: "doc.on.clipboard")
-                                }.buttonStyle(SecondaryButtonStyle())
+                            Button { requestScan() } label: {
+                                Label("Scan QR", systemImage: "qrcode.viewfinder")
+                            }
+                            .buttonStyle(SecondaryButtonStyle(accent: true))
+
+                            Button { if let s = UIPasteboard.general.string { keyText = s } } label: {
+                                Label("Paste", systemImage: "doc.on.clipboard")
+                            }
+                            .buttonStyle(SecondaryButtonStyle(accent: true))
+
+                            if cameraDenied {
+                                Text("Camera access is off, so the QR scanner cannot open. Allow the camera in Settings, or paste the key as text.")
+                                    .font(.kBody()).foregroundStyle(KTheme.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Button(action: openAppSettings) {
+                                    Label("Open app settings", systemImage: "arrow.up.forward.app")
+                                }
+                                .buttonStyle(SecondaryButtonStyle(accent: true))
                             }
                         }
                         .glassCard()
@@ -68,6 +82,28 @@ struct AddContactView: View {
 
     private func fieldLabel(_ t: LocalizedStringKey) -> some View {
         Text(t).font(.kLabel()).foregroundStyle(KTheme.textSecondary)
+    }
+
+    private func requestScan() {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            cameraDenied = false
+            showScanner = true
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                Task { @MainActor in
+                    cameraDenied = !granted
+                    showScanner = granted
+                }
+            }
+        default:
+            cameraDenied = true
+        }
+    }
+
+    private func openAppSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 
     private func add() {

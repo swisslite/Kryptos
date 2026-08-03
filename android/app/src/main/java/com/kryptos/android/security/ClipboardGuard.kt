@@ -9,14 +9,26 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PersistableBundle
 import android.widget.Toast
+import com.kryptos.android.core.CachePurge
 import com.kryptos.android.signal.AppSettingsStore
 
 object ClipboardGuard {
     private val handler = Handler(Looper.getMainLooper())
-    private var pending: Runnable? = null
-    private var lastCopied: String? = null
+    @Volatile private var pending: Runnable? = null
+    @Volatile private var lastCopied: String? = null
+
+    init {
+        CachePurge.register { forget() }
+    }
+
+    fun forget() {
+        pending?.let { handler.removeCallbacks(it) }
+        pending = null
+        lastCopied = null
+    }
 
     fun copy(context: Context, text: String, toast: String? = null) {
+        val app = context.applicationContext
         val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText("Kryptos", text)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -30,8 +42,8 @@ object ClipboardGuard {
             }
         }
         cm.setPrimaryClip(clip)
-        toast?.let { handler.post { Toast.makeText(context.applicationContext, it, Toast.LENGTH_SHORT).show() } }
-        scheduleClear(context, text)
+        toast?.let { message -> handler.post { Toast.makeText(app, message, Toast.LENGTH_SHORT).show() } }
+        scheduleClear(app, text)
     }
 
     private fun scheduleClear(context: Context, text: String) {
@@ -47,8 +59,10 @@ object ClipboardGuard {
 
     fun clearIfOurs(context: Context, text: String) {
         val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val current = cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text?.toString()
-        if (current == text) wipe(cm)
+        val current = runCatching {
+            cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text?.toString()
+        }.getOrNull()
+        if (current == null || current == text) wipe(cm)
         lastCopied = null
     }
 

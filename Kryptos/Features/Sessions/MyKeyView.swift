@@ -7,6 +7,8 @@ struct MyKeyView: View {
     @State private var copied = false
     @State private var key = ""
     @State private var showQR = false
+    @State private var qrImage: UIImage?
+    @State private var qrTried = false
 
     var body: some View {
         NavigationStack {
@@ -26,7 +28,16 @@ struct MyKeyView: View {
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
         }
         .task { if key.isEmpty { key = signal.myKeyString() } }
+        .task(id: qrRequest) {
+            guard showQR, qrImage == nil, !key.isEmpty, !qrTried else { return }
+            let source = key
+            let rendered = await Task.detached(priority: .userInitiated) { QRCode.image(from: source) }.value
+            qrTried = true
+            qrImage = rendered
+        }
     }
+
+    private var qrRequest: String { "\(showQR)|\(key.isEmpty)" }
 
     private var profileChip: some View {
         HStack(spacing: 8) {
@@ -69,8 +80,11 @@ struct MyKeyView: View {
 
     @ViewBuilder private var qrCard: some View {
         Group {
-            if let qr = QRCode.image(from: key) {
-                Image(uiImage: qr).interpolation(.none).resizable().scaledToFit()
+            if let qrImage {
+                Image(uiImage: qrImage).interpolation(.none).resizable().scaledToFit()
+                    .frame(width: 260, height: 260)
+            } else if !qrTried {
+                ProgressView()
                     .frame(width: 260, height: 260)
             } else {
                 VStack(spacing: 10) {
@@ -104,7 +118,7 @@ struct MyKeyView: View {
         HStack(spacing: 12) {
             Button { Clipboard.copy(key); flash() } label: {
                 Label(copied ? "Copied" : "Copy key", systemImage: copied ? "checkmark" : "doc.on.doc")
-            }.buttonStyle(SecondaryButtonStyle())
+            }.buttonStyle(SecondaryButtonStyle(accent: true))
             ShareLink(item: key) { Label("Share", systemImage: "square.and.arrow.up") }
                 .buttonStyle(PrimaryButtonStyle())
         }

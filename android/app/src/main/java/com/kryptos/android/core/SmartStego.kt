@@ -230,7 +230,8 @@ object SmartTextStego {
     }
 
     private class BitWriter {
-        private val out = ArrayList<Byte>()
+        private var out = ByteArray(64)
+        private var size = 0
         private var current = 0
         private var count = 0
 
@@ -240,7 +241,8 @@ object SmartTextStego {
                 current = (current shl 1) or ((value ushr i) and 1)
                 count++
                 if (count == 8) {
-                    out.add(current.toByte())
+                    if (size == out.size) out = out.copyOf(out.size * 2)
+                    out[size++] = current.toByte()
                     current = 0
                     count = 0
                 }
@@ -250,12 +252,11 @@ object SmartTextStego {
 
         fun bytes(): ByteArray {
             if (count > 0) {
-                val padded = ByteArray(out.size + 1)
-                for (i in out.indices) padded[i] = out[i]
-                padded[out.size] = ((current shl (8 - count)) and 0xFF).toByte()
+                val padded = out.copyOf(size + 1)
+                padded[size] = ((current shl (8 - count)) and 0xFF).toByte()
                 return padded
             }
-            return out.toByteArray()
+            return out.copyOf(size)
         }
     }
 }

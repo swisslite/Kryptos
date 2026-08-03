@@ -1,5 +1,11 @@
 package com.kryptos.android.signal
 
+import com.kryptos.android.core.ArchivedContact
+import com.kryptos.android.core.ArchivedPgpIdentity
+import com.kryptos.android.core.ArchivedPgpRecipient
+import com.kryptos.android.core.ArchivedProfile
+import com.kryptos.android.core.ArchivedRetired
+import com.kryptos.android.R
 import com.kryptos.android.core.BinaryReader
 import com.kryptos.android.core.BinaryWriter
 import com.kryptos.android.core.CachePurge
@@ -40,6 +46,7 @@ object SignalService {
     val currentID = MutableStateFlow("")
     val contacts = MutableStateFlow<List<Contact>>(emptyList())
     val messages = MutableStateFlow<Map<String, List<ChatMessage>>>(emptyMap())
+    val autoDelete = MutableStateFlow<Map<String, Double>>(emptyMap())
     val myFingerprint = MutableStateFlow("")
     val mySafetyNumber = MutableStateFlow("")
 
@@ -56,6 +63,8 @@ object SignalService {
 
     @Volatile private var initialized = false
 
+    val isReady: Boolean get() = initialized
+
     fun ensureInitialized() {
         if (initialized) return
         synchronized(lock) {
@@ -66,15 +75,29 @@ object SignalService {
                 index = ProfilesIndex(profiles = listOf(p), currentID = p.id)
                 saveIndex(index)
             }
-            profiles.value = index.profiles
-            currentID.value = if (index.profiles.any { it.id == index.currentID }) index.currentID else index.profiles[0].id
+            val localized = index.profiles.map(::relocalizedDefaultName)
+            profiles.value = localized
+            currentID.value = if (localized.any { it.id == index.currentID }) index.currentID else localized[0].id
             load(currentID.value)
+            if (localized != index.profiles) persistIndex()
             initialized = true
         }
     }
 
     private fun defaultProfileName(n: Int): String =
-        if (java.util.Locale.getDefault().language.startsWith("ru")) "Профиль $n" else "Profile $n"
+        SecureStore.appContext().getString(R.string.profile_n, n)
+
+    private val autoNamePrefixes = listOf("Profile ", "Профиль ")
+
+    private fun relocalizedDefaultName(profile: Profile): Profile {
+        for (prefix in autoNamePrefixes) {
+            if (!profile.name.startsWith(prefix)) continue
+            val n = profile.name.substring(prefix.length).toIntOrNull() ?: continue
+            val localized = defaultProfileName(n)
+            return if (localized == profile.name) profile else profile.copy(name = localized)
+        }
+        return profile
+    }
 
     private fun loadIndex(): ProfilesIndex =
         SecureStore.readStrict(StoreKey.index)?.let {
@@ -93,6 +116,7 @@ object SignalService {
 
     fun switchTo(id: String) = synchronized(lock) {
         if (profiles.value.none { it.id == id }) return
+        CachePurge.purgeAll()
         currentID.value = id
         persistIndex()
         load(id)
@@ -137,6 +161,7 @@ object SignalService {
     }
 
     private fun load(id: String) {
+        lastMetaDigest = null
         val identityBytes = SecureStore.readStrict(StoreKey.identity(id))
         val identity_ = if (identityBytes != null) {
             try {
@@ -161,10 +186,13 @@ object SignalService {
         val regId = loadedMeta?.registrationId ?: (1L + rng.nextInt(0x3FFF))
         store = KryptosSignalStore(identity_, regId.toInt(), StoreKey.store(id))
 
-        meta = loadedMeta ?: provisionInitial(regId)
+        store.batch {
+            meta = loadedMeta ?: provisionInitial(regId)
+            maintainPreKeys()
+        }
+        autoDelete.value = meta.autoDelete
         contacts.value = meta.contacts
         messages.value = meta.messages
-        maintainPreKeys()
         saveMeta()
         purgeExpiredMessages()
     }
@@ -249,14 +277,24 @@ object SignalService {
         return id to priv.getPublicKey().serialize()
     }
 
+    private var lastMetaDigest: ByteArray? = null
+
     private fun saveMeta() {
         meta.contacts = contacts.value
         meta.messages = messages.value
-        SecureStore.write(StoreKey.meta(currentID.value), json.encodeToString(Meta.serializer(), meta).toByteArray())
+        val encoded = json.encodeToString(Meta.serializer(), meta).toByteArray()
+        val digest = java.security.MessageDigest.getInstance("SHA-256").digest(encoded)
+        if (lastMetaDigest?.contentEquals(digest) == true) {
+            encoded.fill(0)
+            return
+        }
+        SecureStore.write(StoreKey.meta(currentID.value), encoded)
+        encoded.fill(0)
+        lastMetaDigest = digest
     }
 
     fun myKeyString(): String = synchronized(lock) {
-        val opk = nextOneTimePreKeyForBundle()
+        val opk = store.batch { nextOneTimePreKeyForBundle() }
         saveMeta()
         val payload = BundlePayload(
             registrationId = meta.registrationId, deviceId = 1,
@@ -313,7 +351,7 @@ object SignalService {
         val peer = runCatching { decodeBundle(blob) }.getOrNull() ?: throw BadKeyStringException()
 
         val fp = SignalFormat.hex(peer.identityKey)
-        if (fp == myFingerprint.value) throw BadKeyStringException()
+        if (fp == myFingerprint.value) throw OwnKeyException()
 
         val ik = IdentityKey(peer.identityKey)
         val spk = ECPublicKey(peer.signedPreKey)
@@ -338,7 +376,7 @@ object SignalService {
 
         val addr = SignalProtocolAddress(fp, 1)
         val myAddr = SignalProtocolAddress(myFingerprint.value, 1)
-        SessionBuilder(store, addr, myAddr).process(bundle)
+        store.batch { SessionBuilder(store, addr, myAddr).process(bundle) }
 
         val name = displayName.ifEmpty { fp.take(8) }
         val list = contacts.value.toMutableList()
@@ -356,13 +394,16 @@ object SignalService {
         contacts.value = contacts.value.filter { it.fingerprint != contact.fingerprint }
         messages.value = messages.value - contact.fingerprint
         meta.autoDelete = meta.autoDelete - contact.fingerprint
+        autoDelete.value = meta.autoDelete
         meta.purgeDecryptCache(contact.fingerprint)
         saveMeta()
     }
 
     fun encrypt(text: String, to: Contact): String = synchronized(lock) {
         ensureInitialized()
-        val armored = SignalWire.encrypt(text, to.fingerprint, myFingerprint.value, store, AppSettingsStore.resolvedStegoLanguage(), AppSettingsStore.resolvedStegoSmart(), AppSettingsStore.lengthPadding)
+        val armored = store.batch {
+            SignalWire.encrypt(text, to.fingerprint, myFingerprint.value, store, AppSettingsStore.resolvedStegoLanguage(), AppSettingsStore.resolvedStegoMode(), AppSettingsStore.lengthPadding)
+        }
         OwnCipherMarker.mark(armored)
         meta.rememberDecrypt(armored, to.fingerprint, text, mine = true)
         append(ChatMessage(text = text, mine = true), to.fingerprint)
@@ -379,7 +420,7 @@ object SignalService {
             }
             return@synchronized hit.text
         }
-        val text = SignalWire.decrypt(armored, from.fingerprint, myFingerprint.value, store)
+        val text = store.batch { SignalWire.decrypt(armored, from.fingerprint, myFingerprint.value, store) }
         meta.rememberDecrypt(armored, from.fingerprint, text)
         append(ChatMessage(text = text, mine = false), from.fingerprint)
         text
@@ -404,15 +445,13 @@ object SignalService {
         saveMeta()
     }
 
-    fun autoDeleteInterval(fingerprint: String): Double? =
-        meta.autoDelete[fingerprint]?.takeIf { it > 0 }
-
     fun setAutoDelete(seconds: Double?, contact: Contact) = synchronized(lock) {
         meta.autoDelete = if (seconds != null && seconds > 0) {
             meta.autoDelete + (contact.fingerprint to seconds)
         } else {
             meta.autoDelete - contact.fingerprint
         }
+        autoDelete.value = meta.autoDelete
         purgeExpired(contact.fingerprint)
         saveMeta()
     }
@@ -427,6 +466,7 @@ object SignalService {
     }
 
     fun purgeExpiredMessages(): Boolean = synchronized(lock) {
+        if (!initialized) return@synchronized false
         var changed = false
         val now = System.currentTimeMillis()
         var map = messages.value
@@ -439,7 +479,11 @@ object SignalService {
             if (kept.size != msgs.size) { map = map + (fp to kept); changed = true }
         }
         if (meta.decryptCache.size != cacheBefore) changed = true
-        if (changed) { messages.value = map; saveMeta() }
+        if (changed) {
+            messages.value = map
+            saveMeta()
+            CachePurge.purgeAll()
+        }
         changed
     }
 
@@ -463,14 +507,141 @@ object SignalService {
         contacts.value = emptyList()
         messages.value = emptyMap()
         meta.autoDelete = emptyMap()
+        autoDelete.value = emptyMap()
         meta.purgeDecryptCache()
         saveMeta()
     }
 
-    fun eraseEverything() = synchronized(lock) {
-        CachePurge.purgeAll()
-        SecureStore.deleteAll()
-        initialized = false
+    fun archivedProfiles(): List<ArchivedProfile>? = synchronized(lock) {
         ensureInitialized()
+        saveMeta()
+        val out = ArrayList<ArchivedProfile>()
+        for (profile in profiles.value) {
+            val identityBytes = runCatching { SecureStore.readStrict(StoreKey.identity(profile.id)) }
+                .getOrNull() ?: return@synchronized null
+            val metaBytes = runCatching { SecureStore.readStrict(StoreKey.meta(profile.id)) }
+                .getOrNull() ?: return@synchronized null
+            val m = runCatching { json.decodeFromString<Meta>(String(metaBytes, Charsets.UTF_8)) }
+                .getOrNull() ?: return@synchronized null
+            val store = KryptosSignalStore.exportArchive(StoreKey.store(profile.id))
+                ?: return@synchronized null
+            out.add(
+                ArchivedProfile(
+                    id = profile.id,
+                    name = profile.name,
+                    identity = Base64.getEncoder().encodeToString(identityBytes),
+                    registrationId = m.registrationId,
+                    signedPreKeyId = m.signedPreKeyId,
+                    signedPreKeyPub = Base64.getEncoder().encodeToString(m.signedPreKeyPub),
+                    signedPreKeySig = Base64.getEncoder().encodeToString(m.signedPreKeySig),
+                    kyberPreKeyId = m.kyberPreKeyId,
+                    kyberPreKeyPub = Base64.getEncoder().encodeToString(m.kyberPreKeyPub),
+                    kyberPreKeySig = Base64.getEncoder().encodeToString(m.kyberPreKeySig),
+                    prekeyCreatedAt = m.prekeyCreatedAt,
+                    nextSignedPreKeyId = m.nextSignedPreKeyId,
+                    nextKyberPreKeyId = m.nextKyberPreKeyId,
+                    nextOneTimePreKeyId = m.nextOneTimePreKeyId,
+                    oneTimePreKeyIds = m.oneTimePreKeyIds,
+                    retired = m.retiredPreKeyGens.map {
+                        ArchivedRetired(it.signedPreKeyId, it.kyberPreKeyId, it.retiredAt)
+                    },
+                    autoDelete = m.autoDelete,
+                    contacts = m.contacts.map { ArchivedContact(it.fingerprint, it.displayName) },
+                    preKeys = store["preKeys"].orEmpty(),
+                    signedPreKeys = store["signedPreKeys"].orEmpty(),
+                    kyberPreKeys = store["kyberPreKeys"].orEmpty(),
+                    sessions = store["sessions"].orEmpty(),
+                    identities = store["identities"].orEmpty(),
+                )
+            )
+        }
+        out
+    }
+
+    fun restoreProfiles(list: List<ArchivedProfile>): Boolean = synchronized(lock) {
+        CachePurge.purgeAll()
+        val previous = profiles.value.map { it.id }
+        val restored = ArrayList<Profile>()
+        val seen = HashSet<String>()
+        for (entry in list) {
+            if (!seen.add(entry.id)) continue
+            if (runCatching { java.util.UUID.fromString(entry.id) }.isFailure) continue
+            val identityBytes = runCatching { Base64.getDecoder().decode(entry.identity) }.getOrNull() ?: continue
+            if (runCatching { IdentityKeyPair(identityBytes) }.isFailure) continue
+            val signedPub = runCatching { Base64.getDecoder().decode(entry.signedPreKeyPub) }.getOrNull() ?: continue
+            val signedSig = runCatching { Base64.getDecoder().decode(entry.signedPreKeySig) }.getOrNull() ?: continue
+            val kyberPub = runCatching { Base64.getDecoder().decode(entry.kyberPreKeyPub) }.getOrNull() ?: continue
+            val kyberSig = runCatching { Base64.getDecoder().decode(entry.kyberPreKeySig) }.getOrNull() ?: continue
+
+            val restoredMeta = Meta(
+                registrationId = entry.registrationId,
+                signedPreKeyId = entry.signedPreKeyId,
+                signedPreKeyPub = signedPub, signedPreKeySig = signedSig,
+                kyberPreKeyId = entry.kyberPreKeyId,
+                kyberPreKeyPub = kyberPub, kyberPreKeySig = kyberSig,
+                contacts = entry.contacts.map { Contact(it.fingerprint, it.displayName) },
+                messages = emptyMap(),
+                prekeyCreatedAt = entry.prekeyCreatedAt,
+                retiredPreKeyGens = entry.retired.map {
+                    RetiredPreKeyGen(it.signedPreKeyId, it.kyberPreKeyId, it.retiredAt)
+                },
+                nextSignedPreKeyId = entry.nextSignedPreKeyId,
+                nextKyberPreKeyId = entry.nextKyberPreKeyId,
+                nextOneTimePreKeyId = entry.nextOneTimePreKeyId,
+                oneTimePreKeyIds = entry.oneTimePreKeyIds,
+                autoDelete = entry.autoDelete,
+                decryptCache = emptyMap(),
+            )
+            val ok = runCatching {
+                SecureStore.write(StoreKey.identity(entry.id), identityBytes)
+                SecureStore.write(
+                    StoreKey.meta(entry.id),
+                    json.encodeToString(Meta.serializer(), restoredMeta).toByteArray(Charsets.UTF_8),
+                )
+                KryptosSignalStore.writeArchive(
+                    StoreKey.store(entry.id),
+                    mapOf(
+                        "preKeys" to entry.preKeys,
+                        "signedPreKeys" to entry.signedPreKeys,
+                        "kyberPreKeys" to entry.kyberPreKeys,
+                        "sessions" to entry.sessions,
+                        "identities" to entry.identities,
+                    ),
+                )
+            }.isSuccess
+            if (ok) restored.add(relocalizedDefaultName(Profile(id = entry.id, name = entry.name)))
+        }
+
+        if (restored.isEmpty()) return@synchronized false
+        val keep = restored.map { it.id }.toSet()
+        for (old in previous) if (old !in keep) wipeStorage(old)
+        profiles.value = restored
+        currentID.value = restored[0].id
+        persistIndex()
+        load(currentID.value)
+        initialized = true
+        true
+    }
+
+    fun eraseStorage() = synchronized(lock) {
+        CachePurge.purgeAll()
+        initialized = false
+        lastMetaDigest = null
+        SecureStore.deleteAll()
+        SecureStore.prefs().edit().clear().commit()
+        AppSettingsStore.invalidateCaches()
+        contacts.value = emptyList()
+        messages.value = emptyMap()
+        autoDelete.value = emptyMap()
+        profiles.value = emptyList()
+        currentID.value = ""
+        myFingerprint.value = ""
+        mySafetyNumber.value = ""
+    }
+
+    fun eraseAndReinit(between: () -> Unit) = synchronized(lock) {
+        eraseStorage()
+        runCatching { between() }
+        runCatching { ensureInitialized() }
     }
 }

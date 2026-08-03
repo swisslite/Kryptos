@@ -94,7 +94,7 @@ around a different idea:
 | Mode | Key exchange | Best for |
 |------|--------------|----------|
 | **Signal chat** | one-time key swap (QR or text), then automatic | ongoing private conversations with a contact |
-| **Password (Quick)** | none — just a shared passphrase | a quick secret with someone new (PBKDF2-HMAC-SHA256, 210k iterations → AES-256-GCM) |
+| **Password (Quick)** | none — just a shared passphrase | a quick secret with someone new (Argon2id 64 MiB / t=3 / p=1 → AES-256-GCM) |
 | **PGP** | exchange public keys | interop with existing OpenPGP setups (sign + encrypt) |
 
 ## How it works
@@ -107,13 +107,15 @@ around a different idea:
 ## Under the hood
 
 - **Signal Protocol** via official `libsignal` v0.96.4 (PQXDH + Double Ratchet, Kyber prekeys,
-  one-time prekeys, rotation) — built from source and linked into each app, round-trip self-verified
-  at runtime.
+  one-time prekeys, rotation) — built from source and linked into each app.
 - **Wire format v2** — `salt ‖ AES-256-CTR(HKDF-SHA256(pairKey, salt) → key/IV, header ‖ body)`,
   base64url, no prefix; optional DEFLATE compression and fixed-bucket padding, all negotiated by a
   single header byte.
-- **Password mode** — PBKDF2-HMAC-SHA256 (210 000 iterations) → AES-256-GCM, per-message random salt,
-  DEFLATE where it helps.
+- **Password mode** — Argon2id (64 MiB, t=3, p=1, the RFC 9106 profile) → AES-256-GCM, per-message
+  random salt, DEFLATE where it helps.
+- **Photo steganography** — keyed adaptive LSB matching in the blue channel, with the carrier
+  positions chosen from the untouched red and green channels so both sides agree, a masked length and
+  no plaintext marker of any kind, so a container holds nothing testable without the password.
 - **Wire-compatible across platforms** — messages, key strings, password blobs, hidden-in-words text
   and stego photos cross-decrypt between iOS and Android, proven by unit tests that decode vectors
   produced by the other platform.

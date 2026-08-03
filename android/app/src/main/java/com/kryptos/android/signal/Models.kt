@@ -1,8 +1,11 @@
 package com.kryptos.android.signal
 
+import com.kryptos.android.core.CachePurge
+import com.kryptos.android.core.LetterStego
 import com.kryptos.android.core.SmartTextStego
 import com.kryptos.android.core.TextStego
 import com.kryptos.android.core.WireFormat
+import com.kryptos.android.store.SecureStore
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.PrimitiveKind
@@ -73,19 +76,55 @@ data class CachedDecrypt(
 )
 
 object DecryptCacheKey {
+    private val STEGO_CHARS = 40..64_000
+
     fun of(armored: String): String {
-        val payload = TextStego.decode(armored)
-            ?: SmartTextStego.decode(armored)
-            ?: WireFormat.tokenBytes(armored)
+        val payload = stegoPayload(armored)
+            ?: tokenPayload(armored)
             ?: armored.trim().toByteArray(Charsets.UTF_8)
         return MessageDigest.getInstance("SHA-256").digest(payload).joinToString("") { "%02x".format(it) }
+    }
+
+    private fun tokenPayload(armored: String): ByteArray? =
+        WireFormat.extractToken(armored)?.let { WireFormat.tokenBytes(it) }
+
+    private fun stegoPayload(armored: String): ByteArray? {
+        if (armored.length !in STEGO_CHARS) return null
+        return TextStego.decode(armored) ?: SmartTextStego.decode(armored) ?: LetterStego.decode(armored)
     }
 }
 
 object OwnCipherMarker {
+    private const val STORE_KEY = "clip.own"
+
     @Volatile private var hash: String? = null
-    fun mark(cipher: String) { hash = DecryptCacheKey.of(cipher) }
-    fun matches(text: String): Boolean = hash?.equals(DecryptCacheKey.of(text)) == true
+    @Volatile private var loaded = false
+
+    init {
+        CachePurge.register { synchronized(this) { hash = null; loaded = false } }
+    }
+
+    fun mark(cipher: String) {
+        val key = DecryptCacheKey.of(cipher)
+        synchronized(this) {
+            hash = key
+            loaded = true
+        }
+        runCatching { SecureStore.write(STORE_KEY, key.toByteArray(Charsets.UTF_8)) }
+    }
+
+    fun matches(text: String): Boolean {
+        val stored = stored() ?: return false
+        return stored == DecryptCacheKey.of(text)
+    }
+
+    private fun stored(): String? = synchronized(this) {
+        if (!loaded) {
+            hash = runCatching { SecureStore.read(STORE_KEY)?.toString(Charsets.UTF_8) }.getOrNull()
+            loaded = true
+        }
+        hash
+    }
 }
 
 class DecryptedForOtherContactException(val displayName: String) :
@@ -113,7 +152,7 @@ data class Meta(
 ) {
     fun rememberDecrypt(armored: String, fingerprint: String, text: String, mine: Boolean = false) {
         var cache = decryptCache + (DecryptCacheKey.of(armored) to CachedDecrypt(fingerprint, text, mine = mine))
-        val cap = 64
+        val cap = 300
         if (cache.size > cap) {
             val evict = cache.entries.sortedBy { it.value.date }.take(cache.size - cap).map { it.key }.toSet()
             cache = cache.filterKeys { it !in evict }
@@ -138,3 +177,5 @@ data class Meta(
 data class ProfilesIndex(var profiles: List<Profile>, var currentID: String)
 
 class BadKeyStringException : Exception("This is not a valid Kryptos key.")
+
+class OwnKeyException : Exception("This is your own key.")

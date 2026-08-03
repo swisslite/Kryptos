@@ -47,9 +47,10 @@ import androidx.compose.ui.unit.sp
 import com.kryptos.android.R
 import com.kryptos.android.core.CipherException
 import com.kryptos.android.core.ImageBridge
-import com.kryptos.android.core.LsbStego
-import com.kryptos.android.core.PasswordCipher
+import com.kryptos.android.core.ImageStego
+import com.kryptos.android.signal.AppSettingsStore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -79,7 +80,9 @@ fun StegoScreen(modifier: Modifier = Modifier) {
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { onPicked(it) }
     val saver = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("image/png")) { uri ->
         val bytes = pngToSave
-        if (uri != null && bytes != null) {
+        if (uri == null) {
+            pngToSave = null
+        } else if (bytes != null) {
             val ok = runCatching {
                 context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) } != null
             }.getOrDefault(false)
@@ -142,7 +145,6 @@ fun StegoScreen(modifier: Modifier = Modifier) {
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.AddPhotoAlternate, null, tint = K.accent)
-                        Spacer(Modifier.height(0.dp))
                         Text(
                             "  " + stringResource(R.string.pick_photo),
                             fontSize = 15.sp,
@@ -180,48 +182,54 @@ fun StegoScreen(modifier: Modifier = Modifier) {
             ) {
                 status = null
                 val uri = pickedUri ?: return@PrimaryButton
+                val isHiding = hiding
+                val secret = password
+                val body = message
                 busy = true
-                scope.launch(Dispatchers.Default) {
-                    try {
-                        val degrees = if (hiding) exifRotation(context, uri) else 0f
-                        val pixels = (
-                            if (degrees != 0f) {
-                                context.contentResolver.openInputStream(uri)?.use { stream ->
-                                    BitmapFactory.decodeStream(stream)?.rotated(degrees)?.let { ImageBridge.rgba(it) }
-                                }
+                scope.launch {
+                    val outcome = withContext(Dispatchers.Default + NonCancellable) {
+                        runCatching {
+                            val degrees = if (isHiding) exifRotation(context, uri) else 0f
+                            val shrink = if (isHiding) ImageBridge.COVER_TARGET_PIXELS else null
+                            val pixels = readPixels(context, uri, degrees, shrink)
+                                ?: throw CipherException(CipherException.Kind.INVALID_INPUT)
+                            if (isHiding) {
+                                val stego = ImageStego.hide(
+                                    body.toByteArray(Charsets.UTF_8), secret,
+                                    pixels.rgba, pixels.width, pixels.height,
+                                    AppSettingsStore.lengthPadding,
+                                )
+                                StegoResult(ImageBridge.pngData(stego, pixels.width, pixels.height), null)
                             } else {
-                                context.contentResolver.openInputStream(uri)?.use { ImageBridge.rgba(it) }
+                                val plain = ImageStego.reveal(pixels.rgba, pixels.width, pixels.height, secret)
+                                StegoResult(null, String(plain, Charsets.UTF_8))
                             }
-                        ) ?: throw CipherException(CipherException.Kind.INVALID_INPUT)
-                        if (hiding) {
-                            val blob = PasswordCipher.encrypt(message.toByteArray(Charsets.UTF_8), password)
-                            if (blob.size > LsbStego.capacity(pixels.rgba.size / 4)) {
-                                throw CipherException(CipherException.Kind.STEGO_CAPACITY_EXCEEDED)
-                            }
-                            val stego = LsbStego.embed(blob, pixels.rgba)
-                            pngToSave = ImageBridge.pngData(stego, pixels.width, pixels.height)
-                            withContext(Dispatchers.Main) { saver.launch("kryptos.png") }
+                        }
+                    }
+                    busy = false
+                    outcome.onSuccess {
+                        if (it.png != null) {
+                            pngToSave = it.png
+                            saver.launch("kryptos.png")
                         } else {
-                            val blob = LsbStego.extract(pixels.rgba)
-                            revealed = String(PasswordCipher.decrypt(blob, password), Charsets.UTF_8)
+                            revealed = it.text.orEmpty()
                             isError = false
                         }
-                    } catch (e: CipherException) {
+                    }.onFailure { e ->
                         isError = true
-                        status = when (e.kind) {
-                            CipherException.Kind.STEGO_CAPACITY_EXCEEDED -> context.getString(R.string.capacity_exceeded)
-                            CipherException.Kind.NO_HIDDEN_DATA -> context.getString(R.string.no_hidden_data)
-                            CipherException.Kind.DECRYPTION_FAILED -> context.getString(R.string.wrong_password)
-                            else -> e.kind.name
-                        }
-                    } catch (e: OutOfMemoryError) {
-                        isError = true
-                        status = context.getString(R.string.capacity_exceeded)
-                    } catch (e: Exception) {
-                        isError = true
-                        status = e.message
-                    } finally {
-                        busy = false
+                        status = context.getString(
+                            when {
+                                e is OutOfMemoryError -> R.string.low_memory
+                                e is CipherException &&
+                                    e.kind == CipherException.Kind.STEGO_CAPACITY_EXCEEDED ->
+                                    R.string.capacity_exceeded
+                                e is CipherException &&
+                                    e.kind == CipherException.Kind.DECRYPTION_FAILED ->
+                                    R.string.stego_not_found
+                                isHiding -> R.string.encrypt_failed
+                                else -> R.string.stego_not_found
+                            }
+                        )
                     }
                 }
             }
@@ -245,7 +253,41 @@ fun StegoScreen(modifier: Modifier = Modifier) {
                 SecondaryButton(
                     stringResource(R.string.copy),
                     Modifier.fillMaxWidth(),
+                    accent = true,
                 ) { copySensitive(context, revealed, context.getString(R.string.copied)) }
+            }
+        }
+    }
+}
+
+private class StegoResult(val png: ByteArray?, val text: String?)
+
+private fun readPixels(context: Context, uri: Uri, degrees: Float, shrinkTo: Long? = null): ImageBridge.Pixels? {
+    val sample = shrinkTo?.let { target ->
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        ImageBridge.sampleSizeFor(bounds.outWidth, bounds.outHeight, target)
+    } ?: 1
+    return context.contentResolver.openInputStream(uri)?.use { stream ->
+        if (degrees == 0f && sample == 1) {
+            ImageBridge.rgba(stream)
+        } else {
+            val options = BitmapFactory.Options().apply {
+                inPreferredConfig = Bitmap.Config.ARGB_8888
+                inSampleSize = sample
+            }
+            val decoded = BitmapFactory.decodeStream(stream, null, options) ?: return@use null
+            val rotated = try {
+                decoded.rotated(degrees)
+            } catch (t: Throwable) {
+                decoded.recycle()
+                throw t
+            }
+            try {
+                ImageBridge.rgba(rotated)
+            } finally {
+                if (rotated !== decoded) rotated.recycle()
+                decoded.recycle()
             }
         }
     }

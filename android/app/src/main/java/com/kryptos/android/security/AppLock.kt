@@ -16,11 +16,21 @@ object AppLock {
     private var backgroundedAt = 0L
     private var authInFlight = false
 
+    private fun authenticators(): Int =
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        } else {
+            BiometricManager.Authenticators.BIOMETRIC_WEAK or
+                BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        }
+
     fun canUseLock(context: android.content.Context): Boolean {
         val bm = BiometricManager.from(context)
-        val authenticators = BiometricManager.Authenticators.BIOMETRIC_WEAK or
+        if (bm.canAuthenticate(authenticators()) == BiometricManager.BIOMETRIC_SUCCESS) return true
+        val fallback = BiometricManager.Authenticators.BIOMETRIC_WEAK or
             BiometricManager.Authenticators.DEVICE_CREDENTIAL
-        return bm.canAuthenticate(authenticators) == BiometricManager.BIOMETRIC_SUCCESS
+        return bm.canAuthenticate(fallback) == BiometricManager.BIOMETRIC_SUCCESS
     }
 
     @Volatile var hasLaunched = false
@@ -72,20 +82,46 @@ object AppLock {
         val info = BiometricPrompt.PromptInfo.Builder()
             .setTitle("Kryptos")
             .setSubtitle("Unlock Kryptos")
-            .setAllowedAuthenticators(
-                BiometricManager.Authenticators.BIOMETRIC_WEAK or
-                    BiometricManager.Authenticators.DEVICE_CREDENTIAL
-            )
+            .setAllowedAuthenticators(promptAuthenticators(activity))
             .build()
         runCatching { prompt.authenticate(info) }.onFailure { authInFlight = false }
     }
 
-    fun tryDuress(pin: String, onWiped: () -> Unit): Boolean {
-        if (pin.isEmpty() || !AppSettingsStore.checkDuressPin(pin)) return false
-        com.kryptos.android.signal.SignalService.eraseEverything()
-        com.kryptos.android.pgp.PgpService.eraseAllStorage()
-        sessionValidated = true
-        onWiped()
-        return true
+    private fun promptAuthenticators(context: android.content.Context): Int {
+        val bm = BiometricManager.from(context)
+        val strong = authenticators()
+        if (bm.canAuthenticate(strong) == BiometricManager.BIOMETRIC_SUCCESS) return strong
+        return BiometricManager.Authenticators.BIOMETRIC_WEAK or
+            BiometricManager.Authenticators.DEVICE_CREDENTIAL
+    }
+
+    enum class CodeOutcome { REJECTED, UNLOCKED, WIPED }
+
+    @Volatile private var codeFailures = 0
+
+    fun codeThrottleMillis(): Long {
+        val over = codeFailures - 4
+        if (over <= 0) return 0L
+        return minOf(30_000L, 1_000L shl minOf(over - 1, 5))
+    }
+
+    fun submitCode(context: android.content.Context, code: String): CodeOutcome {
+        if (code.length < AppSettingsStore.CODE_MIN_LENGTH) return CodeOutcome.REJECTED
+        val check = AppSettingsStore.verifyCodes(code)
+        if (check.panic) {
+            codeFailures = 0
+            DataWipe.wipe(context)
+            sessionValidated = true
+            backgroundedAt = 0L
+            return CodeOutcome.WIPED
+        }
+        if (check.app) {
+            codeFailures = 0
+            sessionValidated = true
+            backgroundedAt = 0L
+            return CodeOutcome.UNLOCKED
+        }
+        if (codeFailures < Int.MAX_VALUE) codeFailures++
+        return CodeOutcome.REJECTED
     }
 }

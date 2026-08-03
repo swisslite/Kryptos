@@ -4,33 +4,60 @@ import Security
 enum AppReset {
     @MainActor
     static func eraseEverythingAndQuit() -> Never {
+        eraseAllStorage()
+        exit(0)
+    }
+
+    @MainActor
+    static func eraseAllStorage() {
+        Clipboard.clear()
+        PGPService.eraseAllStorage()
         SharedStore.eraseAll()
         Keychain.eraseAll()
-        PGPService.eraseAllStorage()
         if let bundle = Bundle.main.bundleIdentifier {
             UserDefaults.standard.removePersistentDomain(forName: bundle)
         }
-        for probeService in ["kryptos.teamid.probe"] {
-            SecItemDelete([kSecClass as String: kSecClassGenericPassword,
-                           kSecAttrService as String: probeService] as CFDictionary)
-        }
+        SecItemDelete([kSecClass as String: kSecClassGenericPassword,
+                       kSecAttrService as String: KeychainProbe.probeAccount] as CFDictionary)
+        KeychainProbe.forget()
         sweepFiles()
-        exit(0)
+        ConfigCaches.invalidateAll()
+        OwnCipherMarker.forget()
     }
 
     private static func sweepFiles() {
         let fm = FileManager.default
-        var dirs = [AppGroup.container, fm.temporaryDirectory]
+        var scoped = [AppGroup.container]
         if let support = try? fm.url(for: .applicationSupportDirectory, in: .userDomainMask,
                                      appropriateFor: nil, create: false) {
-            dirs.append(support)
+            scoped.append(support)
         }
         let prefixes = ["kryptos-", "kcfallback-", "signal-"]
-        for dir in dirs {
+        for dir in scoped {
             guard let files = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else { continue }
             for url in files where prefixes.contains(where: { url.lastPathComponent.hasPrefix($0) }) {
                 try? fm.removeItem(at: url)
             }
         }
+
+        var emptied = [fm.temporaryDirectory]
+        if let caches = try? fm.url(for: .cachesDirectory, in: .userDomainMask,
+                                    appropriateFor: nil, create: false) {
+            emptied.append(caches)
+        }
+        for dir in emptied {
+            guard let files = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else { continue }
+            for url in files { try? fm.removeItem(at: url) }
+        }
+    }
+}
+
+@MainActor
+enum PanicWipe {
+    static func run(signal: SignalService, pgp: PGPService, settings: AppSettings) {
+        AppReset.eraseAllStorage()
+        signal.resetAfterWipe()
+        pgp.resetAfterWipe()
+        settings.reloadAfterWipe()
     }
 }

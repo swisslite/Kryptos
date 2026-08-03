@@ -10,9 +10,19 @@ extension Color {
 }
 
 enum KTheme {
-    static let bg = Color(
-        light: UIColor(red: 0.945, green: 0.953, blue: 0.965, alpha: 1),
-        dark: UIColor(red: 0.043, green: 0.051, blue: 0.063, alpha: 1))
+    static let bgUI = UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.043, green: 0.051, blue: 0.063, alpha: 1)
+            : UIColor(red: 0.945, green: 0.953, blue: 0.965, alpha: 1)
+    }
+
+    static let accentUI = UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.420, green: 0.520, blue: 0.980, alpha: 1)
+            : UIColor(red: 0.216, green: 0.286, blue: 0.760, alpha: 1)
+    }
+
+    static let bg = Color(bgUI)
 
     static let textPrimary = Color(
         light: UIColor(red: 0.07, green: 0.08, blue: 0.10, alpha: 1),
@@ -22,9 +32,7 @@ enum KTheme {
         light: UIColor(red: 0.07, green: 0.08, blue: 0.10, alpha: 0.55),
         dark: UIColor(red: 1, green: 1, blue: 1, alpha: 0.58))
 
-    static let accent = Color(
-        light: UIColor(red: 0.216, green: 0.286, blue: 0.760, alpha: 1),
-        dark: UIColor(red: 0.420, green: 0.520, blue: 0.980, alpha: 1))
+    static let accent = Color(accentUI)
 
     static let accentBright = Color(
         light: UIColor(red: 0.310, green: 0.390, blue: 0.880, alpha: 1),
@@ -32,6 +40,10 @@ enum KTheme {
 
     static let accentGradient = LinearGradient(colors: [accentBright, accent],
                                                startPoint: .top, endPoint: .bottom)
+
+    static let accentInk = Color(
+        light: UIColor(red: 0.216, green: 0.286, blue: 0.760, alpha: 1),
+        dark: UIColor(red: 0.560, green: 0.650, blue: 1.000, alpha: 1))
 
     static let danger = Color(
         light: UIColor(red: 0.78, green: 0.18, blue: 0.22, alpha: 1),

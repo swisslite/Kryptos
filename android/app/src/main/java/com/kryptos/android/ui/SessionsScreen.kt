@@ -1,8 +1,15 @@
 package com.kryptos.android.ui
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -26,11 +33,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -44,11 +53,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
+import androidx.compose.material.icons.filled.ArrowBackIosNew
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Lock
@@ -66,10 +78,14 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -95,13 +111,23 @@ import com.google.zxing.qrcode.QRCodeWriter
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.kryptos.android.R
+import com.kryptos.android.core.LetterStego
 import com.kryptos.android.core.SmartTextStego
 import com.kryptos.android.core.TextStego
 import com.kryptos.android.signal.Contact
 import com.kryptos.android.signal.SignalService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
-fun SessionsScreen(modifier: Modifier = Modifier) {
+fun SessionsScreen(
+    modifier: Modifier = Modifier,
+    homeSignal: Int = 0,
+    onChatOpenChanged: (Boolean) -> Unit = {},
+) {
+    val bgScope = rememberCoroutineScope()
     val contacts by SignalService.contacts.collectAsState()
     val profiles by SignalService.profiles.collectAsState()
     val currentID by SignalService.currentID.collectAsState()
@@ -113,6 +139,17 @@ fun SessionsScreen(modifier: Modifier = Modifier) {
 
     val selected = openContact
     BackHandler(enabled = selected != null) { openContact = null }
+
+    LaunchedEffect(selected) { onChatOpenChanged(selected != null) }
+    DisposableEffect(Unit) { onDispose { onChatOpenChanged(false) } }
+
+    var seenHomeSignal by remember { mutableIntStateOf(homeSignal) }
+    LaunchedEffect(homeSignal) {
+        if (homeSignal != seenHomeSignal) {
+            seenHomeSignal = homeSignal
+            openContact = null
+        }
+    }
 
     AnimatedContent(
         targetState = selected,
@@ -159,7 +196,9 @@ fun SessionsScreen(modifier: Modifier = Modifier) {
             confirmLabel = stringResource(R.string.delete),
             onConfirm = {
                 if (openContact?.fingerprint == contact.fingerprint) openContact = null
-                SignalService.removeContact(contact)
+                bgScope.launch(Dispatchers.Default + NonCancellable) {
+                    SignalService.removeContact(contact)
+                }
             },
             onDismiss = { confirmDelete = null },
         )
@@ -177,6 +216,8 @@ private fun SessionsList(
     onAdd: () -> Unit,
     onProfiles: () -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
+    val autoDeleteMap by SignalService.autoDelete.collectAsState()
     Column(
         Modifier
             .fillMaxSize()
@@ -211,7 +252,12 @@ private fun SessionsList(
                                 )
                             },
                             text = { Text(p.name, color = K.textPrimary) },
-                            onClick = { menu = false; SignalService.switchTo(p.id) },
+                            onClick = {
+                                menu = false
+                                scope.launch(Dispatchers.Default + NonCancellable) {
+                                    SignalService.switchTo(p.id)
+                                }
+                            },
                         )
                     }
                     DropdownMenuItem(
@@ -228,27 +274,27 @@ private fun SessionsList(
 
         if (contacts.isEmpty()) {
             GlassCard {
-                Icon(Icons.Default.QrCode, null, Modifier.size(26.dp), tint = K.accent)
+                Icon(Icons.AutoMirrored.Filled.Chat, null, Modifier.size(26.dp), tint = K.accent)
                 Text(
                     stringResource(R.string.empty_title),
                     fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = K.textPrimary,
                 )
                 Text(
-                    stringResource(R.string.no_contacts),
-                    fontSize = 14.sp, lineHeight = 19.sp, color = K.textSecondary,
+                    stringResource(R.string.empty_hint),
+                    fontSize = 14.sp, lineHeight = 20.sp, color = K.textSecondary,
                 )
             }
         } else {
             contacts.forEach { contact ->
                 ContactCard(
                     contact,
-                    autoDelete = SignalService.autoDeleteInterval(contact.fingerprint) != null,
+                    autoDelete = autoDeleteMap[contact.fingerprint]?.let { it > 0 } == true,
                     onOpen = { onOpen(contact) },
                     onDelete = { onDelete(contact) },
                 )
             }
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(8.dp + LocalTabBarInset.current))
     }
 }
 
@@ -310,30 +356,45 @@ private fun ContactCard(contact: Contact, autoDelete: Boolean, onOpen: () -> Uni
 private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: () -> Unit) {
     val context = LocalContext.current
     val messages by SignalService.messages.collectAsState()
-    var draft by remember { mutableStateOf("") }
     var lastCipher by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var menuOpen by remember { mutableStateOf(false) }
     var autoDeleteOpen by remember { mutableStateOf(false) }
     var confirmClear by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var decrypting by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
     val msgs = messages[contact.fingerprint] ?: emptyList()
-    val autoDeleteSecs = SignalService.autoDeleteInterval(contact.fingerprint)
+    val autoDeleteMap by SignalService.autoDelete.collectAsState()
+    val autoDeleteSecs = autoDeleteMap[contact.fingerprint]?.takeIf { it > 0 }
+
+    LaunchedEffect(autoDeleteSecs) {
+        if (autoDeleteSecs == null) return@LaunchedEffect
+        while (true) {
+            kotlinx.coroutines.delay(5_000)
+            withContext(Dispatchers.Default) { SignalService.purgeExpiredMessages() }
+        }
+    }
 
     LaunchedEffect(msgs.size) {
         if (msgs.isNotEmpty()) listState.animateScrollToItem(0)
     }
 
-    Column(modifier.fillMaxSize().imePadding()) {
+    Column(
+        modifier
+            .fillMaxSize()
+            .navigationBarsPadding()
+            .imePadding(),
+    ) {
         Row(
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            GlassIconButton(Icons.AutoMirrored.Filled.ArrowBackIos, null, size = 40.dp) { onBack() }
+            GlassIconButton(Icons.Default.ArrowBackIosNew, null, size = 40.dp) { onBack() }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
@@ -414,7 +475,7 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
         }
 
         val shownError = remember { mutableStateOf("") }
-        error?.let { shownError.value = it }
+        LaunchedEffect(error) { error?.let { shownError.value = it } }
         AnimatedVisibility(
             visible = error != null,
             enter = expandVertically() + fadeIn(),
@@ -427,14 +488,17 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
         }
 
         val shownCipher = remember { mutableStateOf("") }
-        lastCipher?.let { shownCipher.value = it }
+        LaunchedEffect(lastCipher) { lastCipher?.let { shownCipher.value = it } }
         AnimatedVisibility(
             visible = lastCipher != null,
             enter = expandVertically(spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
             exit = shrinkVertically() + fadeOut(),
         ) {
             val cipher = shownCipher.value
-            val hidden = remember(cipher) { TextStego.looksLikeStego(cipher) || SmartTextStego.looksLikeStego(cipher) }
+            val hidden = remember(cipher) {
+                TextStego.looksLikeStego(cipher) || SmartTextStego.looksLikeStego(cipher) ||
+                    LetterStego.looksLikeStego(cipher)
+            }
             Row(
                 Modifier
                     .padding(horizontal = 12.dp)
@@ -477,56 +541,55 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
             Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
-            GlassIconButton(Icons.Default.Archive, stringResource(R.string.paste_and_decrypt), size = 48.dp) {
+            GlassIconButton(
+                Icons.Default.Archive, stringResource(R.string.paste_and_decrypt),
+                size = 48.dp, enabled = !decrypting,
+            ) {
                 error = null
                 val clip = clipboardText(context)
                 if (clip.isBlank()) {
                     error = context.getString(R.string.clipboard_empty)
                     return@GlassIconButton
                 }
-                try {
-                    SignalService.decrypt(clip, contact)
-                    if (com.kryptos.android.signal.AppSettingsStore.clearClipboardOnDecrypt) {
-                        com.kryptos.android.security.ClipboardGuard.clearIfOurs(context, clip)
+                decrypting = true
+                scope.launch {
+                    val outcome = withContext(Dispatchers.Default + NonCancellable) {
+                        runCatching { SignalService.decrypt(clip, contact) }.also { result ->
+                            if (result.isSuccess &&
+                                com.kryptos.android.signal.AppSettingsStore.clearClipboardOnDecrypt
+                            ) {
+                                com.kryptos.android.security.ClipboardGuard.clearIfOurs(context, clip)
+                            }
+                        }
                     }
-                } catch (e: Exception) {
-                    error = context.getString(R.string.decrypt_failed)
+                    outcome.onFailure { e ->
+                        val other = e as? com.kryptos.android.signal.DecryptedForOtherContactException
+                        error = if (other != null) {
+                            context.getString(R.string.decrypted_other_contact, other.displayName)
+                        } else {
+                            context.getString(R.string.decrypt_failed)
+                        }
+                    }
+                    decrypting = false
                 }
             }
-            Spacer(Modifier.width(10.dp))
-            BasicTextField(
-                draft, { draft = it },
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(K.card)
-                    .border(1.dp, K.hairline, RoundedCornerShape(24.dp))
-                    .padding(horizontal = 18.dp, vertical = 14.dp),
-                textStyle = TextStyle(fontSize = 16.sp, color = K.textPrimary),
-                cursorBrush = SolidColor(K.accent),
-                maxLines = 4,
-                decorationBox = { inner ->
-                    Box {
-                        if (draft.isEmpty()) Text(stringResource(R.string.message), fontSize = 16.sp, color = K.textSecondary)
-                        inner()
-                    }
-                },
-            )
-            Spacer(Modifier.width(10.dp))
-            GlassIconButton(
-                Icons.Default.Lock, stringResource(R.string.encrypt_and_copy),
-                size = 48.dp, filled = true,
-                enabled = draft.isNotBlank(),
-            ) {
+            ChatInput { text ->
                 error = null
-                try {
-                    val armored = SignalService.encrypt(draft.trim(), contact)
-                    copySensitive(context, armored, null)
-                    lastCipher = armored
-                    draft = ""
-                } catch (e: Exception) {
-                    error = e.message
+                val outcome = withContext(Dispatchers.Default + NonCancellable) {
+                    runCatching {
+                        SignalService.encrypt(text, contact).also { copySensitive(context, it, null) }
+                    }
                 }
+                outcome.fold(
+                    onSuccess = { armored ->
+                        lastCipher = armored
+                        true
+                    },
+                    onFailure = {
+                        error = context.getString(R.string.encrypt_failed)
+                        false
+                    },
+                )
             }
         }
     }
@@ -536,7 +599,9 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
             title = stringResource(R.string.confirm_clear_chat_title),
             text = stringResource(R.string.confirm_clear_chat_text),
             confirmLabel = stringResource(R.string.clear_chat),
-            onConfirm = { SignalService.clearChat(contact) },
+            onConfirm = {
+                scope.launch(Dispatchers.Default + NonCancellable) { SignalService.clearChat(contact) }
+            },
             onDismiss = { confirmClear = false },
         )
     }
@@ -545,7 +610,10 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
             title = stringResource(R.string.confirm_delete_contact_title),
             text = stringResource(R.string.confirm_delete_contact_text),
             confirmLabel = stringResource(R.string.delete),
-            onConfirm = { SignalService.removeContact(contact); onBack() },
+            onConfirm = {
+                scope.launch(Dispatchers.Default + NonCancellable) { SignalService.removeContact(contact) }
+                onBack()
+            },
             onDismiss = { confirmDelete = false },
         )
     }
@@ -588,6 +656,12 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
 @Composable
 private fun Bubble(text: String, mine: Boolean, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(18.dp)
+    val bright = K.accentBright
+    val accent = K.accent
+    val incoming = K.incomingBubble
+    val fill = remember(mine, bright, accent, incoming) {
+        if (mine) Brush.verticalGradient(listOf(bright, accent)) else SolidColor(incoming)
+    }
     Box(
         modifier.fillMaxWidth(),
         contentAlignment = if (mine) Alignment.CenterEnd else Alignment.CenterStart,
@@ -600,10 +674,7 @@ private fun Bubble(text: String, mine: Boolean, modifier: Modifier = Modifier) {
             modifier = Modifier
                 .widthIn(max = 300.dp)
                 .clip(shape)
-                .background(
-                    if (mine) Brush.verticalGradient(listOf(K.accentBright, K.accent))
-                    else SolidColor(K.incomingBubble)
-                )
+                .background(fill)
                 .then(if (mine) Modifier else Modifier.border(1.dp, K.hairline, shape))
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         )
@@ -633,9 +704,12 @@ private fun qrBitmap(text: String): Bitmap? = runCatching {
 @Composable
 private fun MyKeySheet(onDismiss: () -> Unit) {
     val context = LocalContext.current
-    val keyString = remember { SignalService.myKeyString() }
+    val keyString by produceState(initialValue = "") {
+        value = withContext(Dispatchers.Default) { SignalService.myKeyString() }
+    }
     val safety by SignalService.mySafetyNumber.collectAsState()
     val profiles by SignalService.profiles.collectAsState()
+    val scope = rememberCoroutineScope()
     val currentID by SignalService.currentID.collectAsState()
     var showQR by remember { mutableStateOf(false) }
 
@@ -683,7 +757,7 @@ private fun MyKeySheet(onDismiss: () -> Unit) {
                 }
             }
         } else {
-            GlassCard(onClick = { showQR = true }) {
+            GlassCard(onClick = { if (keyString.isNotEmpty()) showQR = true }) {
                 Column(
                     Modifier
                         .fillMaxWidth()
@@ -722,12 +796,16 @@ private fun MyKeySheet(onDismiss: () -> Unit) {
                 stringResource(R.string.copy_key),
                 Modifier.weight(1f),
                 icon = Icons.Outlined.FileCopy,
+                accent = true,
+                enabled = keyString.isNotEmpty(),
             ) { copySensitive(context, keyString, context.getString(R.string.copied)) }
             Spacer(Modifier.width(12.dp))
             PrimaryButton(
                 stringResource(R.string.share),
                 Modifier.weight(1f),
                 icon = Icons.Default.Share,
+                enabled = keyString.isNotEmpty(),
+                busy = keyString.isEmpty(),
             ) { shareText(context, keyString) }
         }
     }
@@ -739,8 +817,25 @@ private fun AddContactSheet(onDismiss: () -> Unit) {
     var name by remember { mutableStateOf("") }
     var key by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    var cameraDenied by remember { mutableStateOf(false) }
+    var adding by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
     val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
         result.contents?.let { key = it }
+    }
+    val startScan = {
+        cameraDenied = false
+        scanLauncher.launch(
+            ScanOptions()
+                .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                .setBeepEnabled(false)
+                .setCaptureActivity(PortraitCaptureActivity::class.java)
+                .addExtra("TRY_HARDER", true)
+        )
+    }
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) startScan() else cameraDenied = true
     }
 
     KSheet(stringResource(R.string.add_contact), onDismiss) {
@@ -749,43 +844,78 @@ private fun AddContactSheet(onDismiss: () -> Unit) {
             KTextField(name, { name = it }, maxLines = 1)
             FieldLabel(stringResource(R.string.paste_key))
             KTextField(key, { key = it }, mono = true, minLines = 3, maxLines = 6)
-            Row {
-                SecondaryButton(
-                    stringResource(R.string.scan_qr),
-                    Modifier.weight(1f),
-                    icon = Icons.Default.QrCodeScanner,
+            SecondaryButton(
+                stringResource(R.string.scan_qr),
+                Modifier.fillMaxWidth(),
+                icon = Icons.Default.QrCodeScanner,
+                accent = true,
+            ) {
+                if (context.checkSelfPermission(Manifest.permission.CAMERA) ==
+                    PackageManager.PERMISSION_GRANTED
                 ) {
-                    scanLauncher.launch(
-                        ScanOptions()
-                            .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                            .setBeepEnabled(false)
-                            .setCaptureActivity(PortraitCaptureActivity::class.java)
-                            .addExtra("TRY_HARDER", true)
-                    )
+                    startScan()
+                } else {
+                    cameraLauncher.launch(Manifest.permission.CAMERA)
                 }
-                Spacer(Modifier.width(12.dp))
-                PrimaryButton(
-                    stringResource(R.string.add),
-                    Modifier.weight(1f),
-                    icon = Icons.Default.Add,
-                    enabled = key.isNotBlank(),
-                ) {
-                    try {
-                        SignalService.addContact(key, name.trim())
-                        onDismiss()
-                    } catch (e: Exception) {
-                        error = context.getString(R.string.not_a_kryptos_message)
+            }
+            SecondaryButton(
+                stringResource(R.string.paste),
+                Modifier.fillMaxWidth(),
+                icon = Icons.Default.ContentPaste,
+                accent = true,
+            ) { key = clipboardText(context) }
+            PrimaryButton(
+                stringResource(R.string.add),
+                Modifier.fillMaxWidth(),
+                icon = Icons.Default.Add,
+                enabled = key.isNotBlank() && !adding,
+                busy = adding,
+            ) {
+                val raw = key
+                val display = name.trim()
+                error = null
+                adding = true
+                scope.launch {
+                    val outcome = withContext(Dispatchers.Default + NonCancellable) {
+                        runCatching { SignalService.addContact(raw, display) }
+                    }
+                    adding = false
+                    outcome.onSuccess { onDismiss() }.onFailure { e ->
+                        error = context.getString(
+                            if (e is com.kryptos.android.signal.OwnKeyException) R.string.add_own_key
+                            else R.string.not_a_kryptos_message
+                        )
                     }
                 }
+            }
+            if (cameraDenied) {
+                Banner(stringResource(R.string.camera_denied), BannerKind.Warning)
+                SecondaryButton(
+                    stringResource(R.string.open_app_settings),
+                    Modifier.fillMaxWidth(),
+                    icon = Icons.AutoMirrored.Filled.OpenInNew,
+                ) { openAppSettings(context) }
             }
             error?.let { Banner(it, BannerKind.Error) }
         }
     }
 }
 
+private fun openAppSettings(context: Context) {
+    runCatching {
+        context.startActivity(
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts("package", context.packageName, null),
+            )
+        )
+    }
+}
+
 @Composable
 private fun ProfilesSheet(onDismiss: () -> Unit) {
     val profiles by SignalService.profiles.collectAsState()
+    val scope = rememberCoroutineScope()
     val currentID by SignalService.currentID.collectAsState()
     var newName by remember { mutableStateOf("") }
     var confirmRegenerate by remember { mutableStateOf(false) }
@@ -797,7 +927,9 @@ private fun ProfilesSheet(onDismiss: () -> Unit) {
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .quietClickable { SignalService.switchTo(p.id) }
+                        .quietClickable {
+                            scope.launch(Dispatchers.Default + NonCancellable) { SignalService.switchTo(p.id) }
+                        }
                         .padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -837,8 +969,9 @@ private fun ProfilesSheet(onDismiss: () -> Unit) {
                     icon = Icons.Default.Add,
                     enabled = newName.isNotBlank(),
                 ) {
-                    SignalService.createProfile(newName)
+                    val name = newName
                     newName = ""
+                    scope.launch(Dispatchers.Default + NonCancellable) { SignalService.createProfile(name) }
                 }
             }
         }
@@ -848,7 +981,9 @@ private fun ProfilesSheet(onDismiss: () -> Unit) {
                 title = stringResource(R.string.confirm_delete_profile_title),
                 text = stringResource(R.string.confirm_delete_profile_text),
                 confirmLabel = stringResource(R.string.delete),
-                onConfirm = { SignalService.deleteProfile(p.id) },
+                onConfirm = {
+                    scope.launch(Dispatchers.Default + NonCancellable) { SignalService.deleteProfile(p.id) }
+                },
                 onDismiss = { confirmDeleteProfile = null },
             )
         }
@@ -863,7 +998,9 @@ private fun ProfilesSheet(onDismiss: () -> Unit) {
                     Modifier.weight(1f),
                     danger = true,
                 ) {
-                    SignalService.regenerateCurrentIdentity()
+                    scope.launch(Dispatchers.Default + NonCancellable) {
+                        SignalService.regenerateCurrentIdentity()
+                    }
                     confirmRegenerate = false
                 }
             }
@@ -872,6 +1009,47 @@ private fun ProfilesSheet(onDismiss: () -> Unit) {
                 stringResource(R.string.regenerate_key),
                 Modifier.fillMaxWidth(),
             ) { confirmRegenerate = true }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.ChatInput(onSend: suspend (String) -> Boolean) {
+    var draft by remember { mutableStateOf("") }
+    var sending by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val shape = RoundedCornerShape(24.dp)
+    Spacer(Modifier.width(10.dp))
+    BasicTextField(
+        draft, { draft = it },
+        modifier = Modifier
+            .weight(1f)
+            .clip(shape)
+            .background(K.card)
+            .border(1.dp, K.hairline, shape)
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        textStyle = TextStyle(fontSize = 16.sp, color = K.textPrimary),
+        cursorBrush = SolidColor(K.accent),
+        maxLines = 4,
+        decorationBox = { inner ->
+            Box {
+                if (draft.isEmpty()) Text(stringResource(R.string.message), fontSize = 16.sp, color = K.textSecondary)
+                inner()
+            }
+        },
+    )
+    Spacer(Modifier.width(10.dp))
+    GlassIconButton(
+        Icons.Default.Lock, stringResource(R.string.encrypt_and_copy),
+        size = 48.dp, filled = true,
+        enabled = draft.isNotBlank() && !sending,
+    ) {
+        if (sending) return@GlassIconButton
+        val text = draft.trim()
+        sending = true
+        scope.launch {
+            if (onSend(text)) draft = ""
+            sending = false
         }
     }
 }

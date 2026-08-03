@@ -1,5 +1,6 @@
 package com.kryptos.android.keyboard
 
+import com.kryptos.android.core.CachePurge
 import com.kryptos.android.store.SecureStore
 
 object EmojiData {
@@ -96,22 +97,47 @@ object EmojiData {
     private const val PREF_RECENTS = "kb.emoji.recents"
     private const val MAX_RECENTS = 40
 
-    fun recents(): List<String> =
-        runCatching {
+    @Volatile private var cached: List<String>? = null
+    @Volatile private var generation = 0
+
+    private val writer = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+        Thread(r, "kryptos-emoji").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }
+    }
+
+    init {
+        CachePurge.register { cached = null; generation++ }
+    }
+
+    fun prefetch() {
+        if (cached != null) return
+        runCatching { writer.execute { recents() } }
+    }
+
+    fun recents(): List<String> {
+        cached?.let { return it }
+        val list = runCatching {
             migrateLegacy()
             SecureStore.read(STORE_RECENTS)?.let { blob ->
                 String(blob, Charsets.UTF_8).split(' ').filter { it.isNotBlank() }
             } ?: emptyList()
         }.getOrDefault(emptyList())
+        cached = list
+        return list
+    }
 
     fun addRecent(emoji: String) {
+        val list = (listOf(emoji) + recents().filter { it != emoji }).take(MAX_RECENTS)
+        cached = list
+        val gen = generation
+        val blob = list.joinToString(" ").toByteArray(Charsets.UTF_8)
         runCatching {
-            val list = (listOf(emoji) + recents().filter { it != emoji }).take(MAX_RECENTS)
-            SecureStore.write(STORE_RECENTS, list.joinToString(" ").toByteArray(Charsets.UTF_8))
+            writer.execute {
+                if (gen == generation) runCatching { SecureStore.write(STORE_RECENTS, blob) }
+            }
         }
     }
 
-    private fun migrateLegacy() {
+    @Synchronized fun migrateLegacy() {
         val prefs = SecureStore.prefs()
         val legacy = prefs.getString(PREF_RECENTS, null) ?: return
         if (SecureStore.read(STORE_RECENTS) == null && legacy.isNotBlank()) {

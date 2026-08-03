@@ -1,26 +1,79 @@
 import UIKit
 import SwiftUI
 import AudioToolbox
+import CryptoKit
 import LocalAuthentication
 import CipherCore
 
 let kryptosTextDidChange = Notification.Name("kryptos.textDidChange")
 
+enum KeyboardMetrics {
+    static let cryptoBarTop: CGFloat = 4
+    static let cryptoBarHeight: CGFloat = 46
+    static let barGap: CGFloat = 6
+    static let composeHeight: CGFloat = 98
+    static let suggestionHeight: CGFloat = 34
+    private static let baseHeight: CGFloat = 258
+    private static let composeBaseHeight: CGFloat = 356
+
+    static func panelHeight(compose: Bool, suggestions: Bool) -> CGFloat {
+        (compose ? composeBaseHeight : baseHeight) + (suggestions ? suggestionHeight : 0)
+    }
+
+    static func keyAreaTop(compose: Bool, suggestions: Bool) -> CGFloat {
+        var top = cryptoBarTop + cryptoBarHeight + barGap
+        if compose { top += composeHeight }
+        if suggestions { top += suggestionHeight }
+        return top
+    }
+}
+
 final class KeyboardViewController: UIInputViewController {
+    private var heightConstraint: NSLayoutConstraint?
+    private var suggestionsEnabled = true
+
+    private static func applyAppLanguage() {
+        let code = InterfaceConfig.language
+        let defaults = UserDefaults.standard
+        if InterfaceConfig.supportedLanguages.contains(code) {
+            if (defaults.array(forKey: "AppleLanguages") as? [String])?.first != code {
+                defaults.set([code], forKey: "AppleLanguages")
+            }
+        } else if defaults.object(forKey: "AppleLanguages") != nil {
+            defaults.removeObject(forKey: "AppleLanguages")
+        }
+    }
+
+    static func warmSuggestions(_ config: KeyboardConfig.Snapshot) {
+        SuggestionEngine.shared.warmUp(languages: Set(config.languages),
+                                       typingAids: config.suggestions || config.autocorrect)
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
+        Self.applyAppLanguage()
         view.backgroundColor = .clear
-        SuggestionEngine.shared.warmUp()
+        let config = KeyboardConfig.snapshot()
+        suggestionsEnabled = config.suggestions
+        Self.warmSuggestions(config)
 
         let backdrop = UIInputView(frame: .zero, inputViewStyle: .keyboard)
         backdrop.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(backdrop)
 
         let panel = KryptosKeyboardView(
+            config: config,
             proxy: textDocumentProxy,
             hasFullAccess: hasFullAccess,
             nextKeyboard: { [weak self] in self?.advanceToNextInputMode() },
-            playClick: { AudioServicesPlaySystemSound(1104) }
+            playClick: { AudioServicesPlaySystemSound(1104) },
+            composeHeightChanged: { [weak self] compose in
+                guard let self, let constraint = self.heightConstraint else { return }
+                let target = KeyboardMetrics.panelHeight(compose: compose, suggestions: self.suggestionsEnabled)
+                guard constraint.constant != target else { return }
+                constraint.constant = target
+                UIView.animate(withDuration: 0.18) { self.view.superview?.layoutIfNeeded() }
+            }
         )
         let host = UIHostingController(rootView: panel)
         host.view.backgroundColor = .clear
@@ -28,8 +81,9 @@ final class KeyboardViewController: UIInputViewController {
         view.addSubview(host.view)
         host.view.translatesAutoresizingMaskIntoConstraints = false
 
-        var height: CGFloat = KeyboardConfig.compose ? 356 : 258
-        if KeyboardConfig.suggestions { height += 34 }
+        let height = KeyboardMetrics.panelHeight(compose: config.compose, suggestions: config.suggestions)
+        let heightAnchor = view.heightAnchor.constraint(equalToConstant: height)
+        heightConstraint = heightAnchor
         NSLayoutConstraint.activate([
             backdrop.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             backdrop.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -39,7 +93,7 @@ final class KeyboardViewController: UIInputViewController {
             host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             host.view.topAnchor.constraint(equalTo: view.topAnchor),
             host.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            view.heightAnchor.constraint(equalToConstant: height)
+            heightAnchor
         ])
         host.didMove(toParent: self)
     }
@@ -106,16 +160,20 @@ private enum KB {
 
 private struct DecryptedMessage { let name: String; let text: String; let date: Date }
 
+private struct RevealedText { let name: String; let text: String }
+
 private enum KeyLayout { case english, russian, numbers, symbols }
 private enum ShiftState { case off, on, locked }
 private enum Special: Hashable { case shift, backspace, space, ret, digits, letters, symbols, lang, emoji }
 private enum Cap: Hashable { case ch(String); case sp(Special) }
 
 private struct KryptosKeyboardView: View {
+    let config: KeyboardConfig.Snapshot
     let proxy: UITextDocumentProxy
     let hasFullAccess: Bool
     let nextKeyboard: () -> Void
     let playClick: () -> Void
+    let composeHeightChanged: (Bool) -> Void
 
     @State private var profiles: [Profile] = []
     @State private var store: SharedSignalStore?
@@ -137,6 +195,7 @@ private struct KryptosKeyboardView: View {
     @State private var haptics = true
     @State private var sounds = true
     @State private var compose = false
+    @State private var composeToggleEnabled = true
     @State private var autoDecrypt = true
     @State private var suggestionsOn = true
     @State private var autocorrectOn = true
@@ -165,10 +224,11 @@ private struct KryptosKeyboardView: View {
     private let clipTimer = Timer.publish(every: 0.6, on: .main, in: .common).autoconnect()
     @State private var draft = ""
     @State private var caret = 0
-    @State private var revealed: String?
+    @State private var revealed: RevealedText?
     @State private var feedback = UIImpactFeedbackGenerator(style: .soft)
     @State private var cryptoUnlocked = false
     @State private var authInFlight = false
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         VStack(spacing: 6) {
@@ -180,37 +240,76 @@ private struct KryptosKeyboardView: View {
         .padding(.top, 4)
         .padding(.bottom, 2)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .overlay(alignment: .top) { if let status { statusToast(status) } }
+        .overlay(alignment: .top) { if let status, revealed == nil { statusToast(status) } }
         .overlay { if let revealed { resultPanel(revealed) } }
         .onAppear(perform: loadOnce)
         .onReceive(clipTimer) { _ in scanClipboard() }
         .onReceive(NotificationCenter.default.publisher(for: kryptosTextDidChange)) { _ in hostTextChanged() }
     }
 
-    private func resultPanel(_ text: String) -> some View {
-        ZStack(alignment: .top) {
-            Color.black.opacity(0.14).ignoresSafeArea().onTapGesture { revealed = nil }
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Label("Decrypted", systemImage: "lock.open.fill")
-                        .font(.system(size: 13, weight: .semibold)).foregroundStyle(KB.accent)
-                    Spacer()
-                    Button { revealed = nil } label: {
-                        Image(systemName: "xmark.circle.fill").font(.system(size: 21)).foregroundStyle(KB.textSecondary)
+    private var keyAreaTop: CGFloat {
+        KeyboardMetrics.keyAreaTop(compose: compose, suggestions: suggestionsOn && !showEmoji)
+    }
+
+    private var panelTotalHeight: CGFloat {
+        KeyboardMetrics.panelHeight(compose: compose, suggestions: suggestionsOn)
+    }
+
+    private func resultPanel(_ reveal: RevealedText) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+        let dim = scheme == .dark ? 0.42 : 0.20
+        let fade = min(0.85, max(0.12, keyAreaTop / panelTotalHeight))
+        return ZStack {
+            LinearGradient(
+                stops: [
+                    Gradient.Stop(color: .black.opacity(0), location: 0),
+                    Gradient.Stop(color: .black.opacity(dim), location: fade),
+                    Gradient.Stop(color: .black.opacity(dim), location: 1)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .contentShape(Rectangle())
+            .onTapGesture { revealed = nil }
+
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 10) {
+                        Label(String(localized: "Decrypted · \(reveal.name)"), systemImage: "lock.open.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(KB.accent)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        Button { revealed = nil } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundStyle(KB.textSecondary)
+                        }
                     }
+                    ScrollView {
+                        Text(reveal.text)
+                            .font(.system(size: 16))
+                            .lineSpacing(2)
+                            .foregroundStyle(KB.keyText)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(maxHeight: 120)
                 }
-                ScrollView {
-                    Text(text).font(.system(size: 16)).foregroundStyle(KB.keyText)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background {
+                    shape
+                        .fill(KB.calloutFill)
+                        .overlay(shape.strokeBorder(KB.stroke, lineWidth: 0.5))
+                        .compositingGroup()
+                        .shadow(color: .black.opacity(0.28), radius: 16, y: 6)
                 }
-                .frame(maxHeight: 120)
+                .fixedSize(horizontal: false, vertical: true)
+                .contentShape(shape)
+                Spacer(minLength: 0)
             }
-            .padding(16)
-            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(KB.calloutFill))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(KB.stroke, lineWidth: 0.5))
-            .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
-            .padding(.horizontal, 12)
-            .padding(.top, 46)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 10)
         }
     }
 
@@ -218,6 +317,7 @@ private struct KryptosKeyboardView: View {
         VStack(spacing: 6) {
             HStack(spacing: 8) {
                 Image(systemName: "lock.shield.fill").foregroundStyle(KB.accent).font(.system(size: 15, weight: .semibold))
+                if composeToggleEnabled { composeToggleButton }
                 if let store {
                     if !profiles.isEmpty { profileMenu(store) }
                     if store.contacts.isEmpty {
@@ -351,6 +451,24 @@ private struct KryptosKeyboardView: View {
         updateAutoShift()
         updateSuggestions()
         status = nil
+    }
+
+    private var composeToggleButton: some View {
+        Button {
+            let next = !compose
+            compose = next
+            KeyboardConfig.setCompose(next)
+            composeHeightChanged(next)
+            press()
+        } label: {
+            Image(systemName: "rectangle.and.pencil.and.ellipsis")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(compose ? Color.white : KB.accent)
+                .frame(width: 34, height: 26)
+                .background(Capsule().fill(compose ? KB.accent : KB.accent.opacity(0.16)))
+                .contentShape(Capsule())
+        }
+        .accessibilityLabel(Text("Compose field"))
     }
 
     private func iconButton(_ icon: String, accent: Bool, action: @escaping () -> Void) -> some View {
@@ -901,14 +1019,14 @@ private struct KryptosKeyboardView: View {
 
     private func loadOnce() {
         guard !loaded else { return }
-        haptics = KeyboardConfig.haptics
-        sounds = KeyboardConfig.sounds
-        compose = KeyboardConfig.compose
-        autoDecrypt = KeyboardConfig.autoDecrypt
-        suggestionsOn = KeyboardConfig.suggestions
-        autocorrectOn = KeyboardConfig.autocorrect
-        emojiOn = KeyboardConfig.emoji
-        SuggestionEngine.shared.warmUp()
+        haptics = config.haptics
+        sounds = config.sounds
+        compose = config.compose
+        composeToggleEnabled = config.composeToggle
+        autoDecrypt = config.autoDecrypt
+        suggestionsOn = config.suggestions
+        autocorrectOn = config.autocorrect
+        emojiOn = config.emoji
         if haptics { feedback.prepare() }
         profiles = SharedSignalStore.profiles()
         let savedID = KeyboardSelection.profileID()
@@ -919,7 +1037,7 @@ private struct KryptosKeyboardView: View {
             select(profile: p)
         }
         loaded = true
-        let langs = KeyboardConfig.languages
+        let langs = config.languages
         langEnEnabled = langs.contains("en")
         langRuEnabled = langs.contains("ru")
         var lang = UserDefaults.standard.string(forKey: "kb.lang")
@@ -958,44 +1076,66 @@ private struct KryptosKeyboardView: View {
     }
 
     private func scanClipboard() {
-        guard autoDecrypt, hasFullAccess, let store, revealed == nil, !cryptoLocked else { return }
+        guard hasFullAccess else { return }
         let pb = UIPasteboard.general
         clipHint = pb.hasStrings
+        guard autoDecrypt, let store, revealed == nil else { return }
         guard pb.changeCount != lastClipCount else { return }
-        lastClipCount = pb.changeCount
-        UserDefaults.standard.set(pb.changeCount, forKey: "kb.clipGeneration")
+        guard !cryptoLocked else { return }
+        let generation = pb.changeCount
+        lastClipCount = generation
+        UserDefaults.standard.set(generation, forKey: "kb.clipGeneration")
         guard !RemoteClipboard.isRemote else { return }
         guard pb.hasStrings, let clip = pb.string, !clip.isEmpty else { return }
-        let stegoSized = clip.utf16.count >= 40 && clip.utf16.count <= 64_000
-        guard WireFormat.isToken(clip) || (stegoSized && (TextStego.looksLikeStego(clip) || SmartTextStego.looksLikeStego(clip))) else { return }
-        guard !OwnCipherMarker.matches(clip) else { return }
-        reveal(clip, using: store, manual: false)
-        if UIPasteboard.general.changeCount != lastClipCount { revealed = nil; status = nil }
+        let marker = OwnCipherMarker.storedKey()
+        Task { @MainActor in
+            let worth = await Task.detached(priority: .userInitiated) {
+                ClipProbe.isWorthDecrypting(clip, ownMarker: marker)
+            }.value
+            guard worth, revealed == nil, !cryptoLocked,
+                  UIPasteboard.general.changeCount == generation else { return }
+            reveal(clip, using: store, manual: false)
+            if UIPasteboard.general.changeCount != generation { revealed = nil; status = nil }
+        }
+    }
+
+    private static func cacheKey(_ clip: String) -> String {
+        SHA256.hash(data: Data(clip.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func cached(_ clip: String) -> DecryptedMessage? {
+        guard let hit = decryptCache[Self.cacheKey(clip)],
+              Date().timeIntervalSince(hit.date) < Self.cacheTTL else { return nil }
+        return hit
     }
 
     private func reveal(_ clip: String, using store: SharedSignalStore, manual: Bool) {
-        if let cached = decryptCache[clip], Date().timeIntervalSince(cached.date) < Self.cacheTTL {
-            revealed = cached.text
-            flash(String(localized: "Decrypted · \(cached.name)"), error: false)
+        if let hit = cached(clip) {
+            status = nil
+            revealed = RevealedText(name: hit.name, text: hit.text)
             return
         }
-        decryptCache[clip] = nil
+        decryptCache[Self.cacheKey(clip)] = nil
         if let result = store.decryptFromAnyContact(clip) {
             cache(clip, name: result.contact.displayName, text: result.text)
-            revealed = result.text
-            flash(String(localized: "Decrypted · \(result.contact.displayName)"), error: false)
+            status = nil
+            revealed = RevealedText(name: result.contact.displayName, text: result.text)
         } else if manual {
             flash(String(localized: "Could not decrypt — different profile/contact, or the message is damaged"), error: true)
         }
     }
 
     private static let cacheTTL: TimeInterval = 5 * 60
+    private static let cacheLimit = 40
 
     private func cache(_ clip: String, name: String, text: String) {
         let now = Date()
         decryptCache = decryptCache.filter { now.timeIntervalSince($0.value.date) < Self.cacheTTL }
-        if decryptCache.count >= 40 { decryptCache.removeAll() }
-        decryptCache[clip] = DecryptedMessage(name: name, text: text, date: now)
+        while decryptCache.count >= Self.cacheLimit {
+            guard let oldest = decryptCache.min(by: { $0.value.date < $1.value.date })?.key else { break }
+            decryptCache.removeValue(forKey: oldest)
+        }
+        decryptCache[Self.cacheKey(clip)] = DecryptedMessage(name: name, text: text, date: now)
     }
 
     private func select(profile: Profile, remember: Bool = false) {
@@ -1012,13 +1152,32 @@ private struct KryptosKeyboardView: View {
 
     private func encrypt(_ store: SharedSignalStore) {
         guard let selected else { return flash(String(localized: "Choose a contact first"), error: true) }
-        let text = compose ? draft : fullText()
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return flash(String(localized: "Enter some text."), error: true) }
+        if compose {
+            guard !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return flash(String(localized: "Enter some text."), error: true)
+            }
+            do {
+                let cipher = try store.encrypt(draft, to: selected.fingerprint)
+                proxy.insertText(cipher)
+                clearDraft()
+                flash(String(localized: "Encrypted for \(selected.displayName)"), error: false)
+            } catch {
+                flash(String(localized: "Could not encrypt"), error: true)
+            }
+            return
+        }
+        guard proxy.hasText else { return flash(String(localized: "Enter some text."), error: true) }
+        let text = harvestHostField()
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            if !text.isEmpty { proxy.insertText(text) }
+            return flash(String(localized: "Enter some text."), error: true)
+        }
         do {
             let cipher = try store.encrypt(text, to: selected.fingerprint)
-            if compose { proxy.insertText(cipher); clearDraft() } else { replaceAll(with: cipher) }
+            proxy.insertText(cipher)
             flash(String(localized: "Encrypted for \(selected.displayName)"), error: false)
         } catch {
+            proxy.insertText(text)
             flash(String(localized: "Could not encrypt"), error: true)
         }
     }
@@ -1031,16 +1190,18 @@ private struct KryptosKeyboardView: View {
             return flash(String(localized: "No message — paste it into the field or copy it"), error: true)
         }
         for src in sources {
-            if let cached = decryptCache[src] {
-                revealed = cached.text
-                return flash(String(localized: "Decrypted · \(cached.name)"), error: false)
+            if let hit = cached(src) {
+                status = nil
+                revealed = RevealedText(name: hit.name, text: hit.text)
+                return
             }
         }
         for src in sources {
             guard let result = store.decryptFromAnyContact(src) else { continue }
             cache(src, name: result.contact.displayName, text: result.text)
-            revealed = result.text
-            return flash(String(localized: "Decrypted · \(result.contact.displayName)"), error: false)
+            status = nil
+            revealed = RevealedText(name: result.contact.displayName, text: result.text)
+            return
         }
         flash(String(localized: "Could not decrypt — check the profile and contact"), error: true)
     }
@@ -1060,12 +1221,27 @@ private struct KryptosKeyboardView: View {
         (proxy.documentContextBeforeInput ?? "") + (proxy.documentContextAfterInput ?? "")
     }
 
-    private func replaceAll(with newText: String) {
-        let before = proxy.documentContextBeforeInput ?? ""
-        let after = proxy.documentContextAfterInput ?? ""
-        proxy.adjustTextPosition(byCharacterOffset: after.count)
-        for _ in 0 ..< (before.count + after.count) { proxy.deleteBackward() }
-        proxy.insertText(newText)
+    private static let fieldHarvestRounds = 64
+
+    private func harvestHostField() -> String {
+        var rounds = 0
+        while rounds < Self.fieldHarvestRounds {
+            let after = proxy.documentContextAfterInput ?? ""
+            if after.isEmpty { break }
+            proxy.adjustTextPosition(byCharacterOffset: after.count)
+            rounds += 1
+        }
+        var chunks: [String] = []
+        rounds = 0
+        while rounds < Self.fieldHarvestRounds {
+            let before = proxy.documentContextBeforeInput ?? ""
+            if before.isEmpty { break }
+            chunks.append(before)
+            for _ in 0 ..< before.count { proxy.deleteBackward() }
+            if (proxy.documentContextBeforeInput ?? "") == before { break }
+            rounds += 1
+        }
+        return chunks.reversed().joined()
     }
 }
 
@@ -1116,6 +1292,7 @@ private struct GridKey {
 
 private final class KeyTouch {
     enum Origin { case char, backspace, space, special }
+    let id: Int
     let origin: Origin
     var cellIndex: Int
     var startTime = Date()
@@ -1126,7 +1303,7 @@ private final class KeyTouch {
     var moved = false
     var initialTimer: Timer?
     var repeatTimer: Timer?
-    init(origin: Origin, cellIndex: Int) { self.origin = origin; self.cellIndex = cellIndex }
+    init(id: Int, origin: Origin, cellIndex: Int) { self.id = id; self.origin = origin; self.cellIndex = cellIndex }
     func stopTimers() { initialTimer?.invalidate(); initialTimer = nil; repeatTimer?.invalidate(); repeatTimer = nil }
 }
 
@@ -1140,7 +1317,8 @@ private final class KeyGridView: UIView {
 
     private let touchYBias: CGFloat = 5
 
-    private var active: [UITouch: KeyTouch] = [:]
+    private var active: [ObjectIdentifier: KeyTouch] = [:]
+    private var touchSeq = 0
     private var pressedCells: Set<Int> = []
     private var popupChar: (index: Int, char: String)?
     private let popupView = KeyPopupView()
@@ -1148,7 +1326,7 @@ private final class KeyGridView: UIView {
     private var trackpadActive = false
     private var labelAlpha: CGFloat = 1
     private var labelFadeTarget: CGFloat = 1
-    private var labelFadeLink: CADisplayLink?
+    private nonisolated(unsafe) var labelFadeLink: CADisplayLink?
 
     deinit { labelFadeLink?.invalidate() }
 
@@ -1331,36 +1509,41 @@ private final class KeyGridView: UIView {
             let p = t.location(in: self)
             guard let idx = cellIndex(at: p) else { continue }
             let cap = keys[idx].cap
+            touchSeq &+= 1
+            let touchID = touchSeq
             let info: KeyTouch
             switch cap {
             case .ch(let s):
-                info = KeyTouch(origin: .char, cellIndex: idx)
+                info = KeyTouch(id: touchID, origin: .char, cellIndex: idx)
                 onPressFeedback()
                 onChar(s)
                 popupChar = (idx, s)
             case .sp(.backspace):
-                info = KeyTouch(origin: .backspace, cellIndex: idx)
+                info = KeyTouch(id: touchID, origin: .backspace, cellIndex: idx)
                 onBackspaceFirst()
+                active[ObjectIdentifier(t)] = info
                 startBackspaceRepeat(info)
             case .sp(.space):
-                info = KeyTouch(origin: .space, cellIndex: idx)
+                info = KeyTouch(id: touchID, origin: .space, cellIndex: idx)
                 info.startTime = Date()
                 info.startX = p.x; info.lastX = p.x
                 info.startY = p.y; info.lastY = p.y
                 if spaceMovable {
-                    info.initialTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: false) { [weak self, weak info] _ in
-                        guard let self, let info, !info.moved, self.active.values.contains(where: { $0 === info }) else { return }
-                        info.moved = true
-                        self.onPressFeedback()
-                        self.setTrackpad(true)
+                    info.initialTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: false) { [weak self] _ in
+                        MainActor.assumeIsolated {
+                            guard let self, let live = self.touch(id: touchID), !live.moved else { return }
+                            live.moved = true
+                            self.onPressFeedback()
+                            self.setTrackpad(true)
+                        }
                     }
                 }
             default:
-                info = KeyTouch(origin: .special, cellIndex: idx)
+                info = KeyTouch(id: touchID, origin: .special, cellIndex: idx)
                 onPressFeedback()
             }
             pressedCells.insert(idx)
-            active[t] = info
+            active[ObjectIdentifier(t)] = info
         }
         updatePopup()
         setNeedsDisplay()
@@ -1369,7 +1552,7 @@ private final class KeyGridView: UIView {
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         var changed = false
         for t in touches {
-            guard let info = active[t] else { continue }
+            guard let info = active[ObjectIdentifier(t)] else { continue }
             let p = t.location(in: self)
             switch info.origin {
             case .char:
@@ -1416,7 +1599,7 @@ private final class KeyGridView: UIView {
     }
 
     private func finish(_ t: UITouch, cancelled: Bool) {
-        guard let info = active[t] else { return }
+        guard let info = active[ObjectIdentifier(t)] else { return }
         if !cancelled {
             switch info.origin {
             case .char:
@@ -1434,7 +1617,7 @@ private final class KeyGridView: UIView {
         }
         info.stopTimers()
         pressedCells.remove(info.cellIndex)
-        active[t] = nil
+        active[ObjectIdentifier(t)] = nil
         if info.origin == .space, !active.values.contains(where: { $0.origin == .space }) {
             setTrackpad(false)
         }
@@ -1444,12 +1627,19 @@ private final class KeyGridView: UIView {
         }
     }
 
+    private func touch(id: Int) -> KeyTouch? {
+        active.values.first { $0.id == id }
+    }
+
     private func startBackspaceRepeat(_ info: KeyTouch) {
         info.stopTimers()
-        info.initialTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: false) { [weak self, weak info] _ in
-            guard let self, let info else { return }
-            info.repeatTimer = Timer.scheduledTimer(withTimeInterval: 0.09, repeats: true) { [weak self] _ in
-                self?.onBackspaceRepeat()
+        let touchID = info.id
+        info.initialTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, let live = self.touch(id: touchID) else { return }
+                live.repeatTimer = Timer.scheduledTimer(withTimeInterval: 0.09, repeats: true) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.onBackspaceRepeat() }
+                }
             }
         }
     }

@@ -17,6 +17,7 @@ import org.signal.libsignal.protocol.state.PreKeyRecord
 import org.signal.libsignal.protocol.state.SessionRecord
 import org.signal.libsignal.protocol.state.SignalProtocolStore
 import org.signal.libsignal.protocol.state.SignedPreKeyRecord
+import java.util.Base64
 import java.util.UUID
 
 class KryptosSignalStore(
@@ -48,8 +49,32 @@ class KryptosSignalStore(
         }
     }
 
+    private var batchDepth = 0
+    private var pendingWrite = false
+
     private fun persist() {
+        if (batchDepth > 0) {
+            pendingWrite = true
+            return
+        }
+        writeSnapshot()
+    }
+
+    private fun writeSnapshot() {
         SecureStore.write(storageKey, json.encodeToString(Snapshot.serializer(), snap).toByteArray(Charsets.UTF_8))
+    }
+
+    fun <T> batch(body: () -> T): T {
+        batchDepth++
+        try {
+            return body()
+        } finally {
+            batchDepth--
+            if (batchDepth == 0 && pendingWrite) {
+                pendingWrite = false
+                writeSnapshot()
+            }
+        }
     }
 
     private fun addrKey(a: SignalProtocolAddress) = "${a.name}|${a.deviceId}"
@@ -187,5 +212,46 @@ class KryptosSignalStore(
         snap.sessions.clear()
         snap.identities.clear()
         persist()
+    }
+
+    companion object {
+        private val archiveJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+
+        fun exportArchive(storageKey: String): Map<String, Map<String, String>>? {
+            val raw = runCatching { SecureStore.readStrict(storageKey) }.getOrElse { return null }
+                ?: return emptyMap()
+            val snap = runCatching {
+                archiveJson.decodeFromString<Snapshot>(String(raw, Charsets.UTF_8))
+            }.getOrNull() ?: return null
+            fun enc(m: Map<String, Blob>) = m.mapValues { Base64.getEncoder().encodeToString(it.value) }
+            return mapOf(
+                "preKeys" to enc(snap.preKeys),
+                "signedPreKeys" to enc(snap.signedPreKeys),
+                "kyberPreKeys" to enc(snap.kyberPreKeys),
+                "sessions" to enc(snap.sessions),
+                "identities" to enc(snap.identities),
+            )
+        }
+
+        fun writeArchive(storageKey: String, parts: Map<String, Map<String, String>>) {
+            fun dec(name: String): MutableMap<String, Blob> {
+                val out = mutableMapOf<String, Blob>()
+                parts[name]?.forEach { (k, v) ->
+                    runCatching { Base64.getDecoder().decode(v) }.getOrNull()?.let { out[k] = it }
+                }
+                return out
+            }
+            val snap = Snapshot(
+                preKeys = dec("preKeys"),
+                signedPreKeys = dec("signedPreKeys"),
+                kyberPreKeys = dec("kyberPreKeys"),
+                sessions = dec("sessions"),
+                identities = dec("identities"),
+            )
+            SecureStore.write(
+                storageKey,
+                archiveJson.encodeToString(Snapshot.serializer(), snap).toByteArray(Charsets.UTF_8),
+            )
+        }
     }
 }

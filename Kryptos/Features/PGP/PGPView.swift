@@ -2,7 +2,8 @@ import SwiftUI
 import UIKit
 
 struct PGPView: View {
-    @StateObject private var pgp = PGPService()
+    @EnvironmentObject private var pgp: PGPService
+    @EnvironmentObject private var lock: LockGate
 
     enum Mode { case encrypt, decrypt }
     @State private var mode: Mode = .encrypt
@@ -39,6 +40,12 @@ struct PGPView: View {
         .sheet(isPresented: $showMyKey) { MyPGPKeyView(armoredKey: pgp.myPublicKey, title: pgp.currentIdentity?.name ?? "My key") }
         .sheet(isPresented: $showRecipients) { PGPRecipientsView().environmentObject(pgp) }
         .sheet(isPresented: $showKeys) { PGPKeysView().environmentObject(pgp) }
+        .onChange(of: lock.isLocked) { _, locked in
+            guard locked else { return }
+            showMyKey = false
+            showRecipients = false
+            showKeys = false
+        }
     }
 
     private var generatingCard: some View {
@@ -123,7 +130,7 @@ struct PGPView: View {
             HStack(spacing: 12) {
                 Button { if let s = UIPasteboard.general.string { input = s } } label: {
                     Label("Paste", systemImage: "doc.on.clipboard")
-                }.buttonStyle(SecondaryButtonStyle())
+                }.buttonStyle(SecondaryButtonStyle(accent: true))
                 Button(action: run) {
                     Label(mode == .encrypt ? "Encrypt" : "Decrypt", systemImage: mode == .encrypt ? "lock.fill" : "lock.open.fill")
                 }.buttonStyle(PrimaryButtonStyle())
@@ -157,9 +164,12 @@ struct PGPView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }.frame(maxHeight: 220)
             HStack(spacing: 12) {
-                Button { Clipboard.copy(output); flash() } label: {
+                Button {
+                    if mode == .encrypt { Clipboard.copyCipher(output) } else { Clipboard.copy(output) }
+                    flash()
+                } label: {
                     Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
-                }.buttonStyle(SecondaryButtonStyle())
+                }.buttonStyle(SecondaryButtonStyle(accent: true))
                 ShareLink(item: output) { Label("Share", systemImage: "square.and.arrow.up") }
                     .buttonStyle(PrimaryButtonStyle())
             }
@@ -188,7 +198,7 @@ struct PGPView: View {
             if mode == .encrypt {
                 guard let recipient else { errorText = String(localized: "Choose a recipient."); return }
                 output = try pgp.encrypt(input, to: recipient)
-                Clipboard.copy(output)
+                Clipboard.copyCipher(output)
                 autoCopied = true
             } else {
                 let result = try pgp.decrypt(input)
@@ -226,7 +236,7 @@ private struct MyPGPKeyView: View {
                         HStack(spacing: 12) {
                             Button { Clipboard.copy(armoredKey); flash() } label: {
                                 Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
-                            }.buttonStyle(SecondaryButtonStyle())
+                            }.buttonStyle(SecondaryButtonStyle(accent: true))
                             ShareLink(item: armoredKey) { Label("Share", systemImage: "square.and.arrow.up") }
                                 .buttonStyle(PrimaryButtonStyle())
                         }
@@ -234,7 +244,7 @@ private struct MyPGPKeyView: View {
                     .padding(20)
                 }
             }
-            .navigationTitle(LocalizedStringKey(title))
+            .navigationTitle(Text(verbatim: title))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
         }
@@ -354,7 +364,7 @@ private struct PGPRecipientsView: View {
                             HStack(spacing: 12) {
                                 Button { if let s = UIPasteboard.general.string { keyText = s } } label: {
                                     Label("Paste", systemImage: "doc.on.clipboard")
-                                }.buttonStyle(SecondaryButtonStyle())
+                                }.buttonStyle(SecondaryButtonStyle(accent: true))
                                 Button(action: add) { Label("Add", systemImage: "plus") }
                                     .buttonStyle(PrimaryButtonStyle())
                             }

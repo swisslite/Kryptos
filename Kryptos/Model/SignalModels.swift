@@ -60,25 +60,73 @@ struct CachedDecrypt: Codable {
 }
 
 enum DecryptCacheKey {
+    private static let stegoChars = 40 ... 64_000
+
     static func key(for armored: String) -> String {
-        let payload = TextStego.decode(armored)
-            ?? SmartTextStego.decode(armored)
-            ?? WireFormat.tokenBytes(armored)
+        let payload = stegoPayload(armored)
+            ?? tokenPayload(armored)
             ?? Data(armored.trimmingCharacters(in: .whitespacesAndNewlines).utf8)
         return SHA256.hash(data: payload).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func stegoPayload(_ armored: String) -> Data? {
+        guard stegoChars.contains(armored.utf16.count) else { return nil }
+        return TextStego.decode(armored) ?? SmartTextStego.decode(armored) ?? LetterStego.decode(armored)
+    }
+
+    private static func tokenPayload(_ armored: String) -> Data? {
+        guard let run = WireFormat.extractToken(armored) else { return nil }
+        return WireFormat.tokenBytes(run)
     }
 }
 
 enum OwnCipherMarker {
     private static let storeKey = "clip.own.hash"
+    private static let markLock = NSLock()
+    private nonisolated(unsafe) static var lastMarked: String?
 
     static func mark(_ text: String) {
+        markLock.lock()
+        let alreadyMarked = lastMarked == text
+        markLock.unlock()
+        guard !alreadyMarked else { return }
         SharedStore.write(storeKey, Data(DecryptCacheKey.key(for: text).utf8))
+        markLock.lock()
+        lastMarked = text
+        markLock.unlock()
+    }
+
+    static func forget() {
+        markLock.lock()
+        lastMarked = nil
+        markLock.unlock()
+    }
+
+    static func storedKey() -> String? {
+        guard let d = SharedStore.read(storeKey) else { return nil }
+        return String(data: d, encoding: .utf8)
     }
 
     static func matches(_ text: String) -> Bool {
-        guard let d = SharedStore.read(storeKey), let h = String(data: d, encoding: .utf8) else { return false }
-        return h == DecryptCacheKey.key(for: text)
+        guard let stored = storedKey() else { return false }
+        return stored == DecryptCacheKey.key(for: text)
+    }
+}
+
+enum ClipProbe: Sendable {
+    private static let stegoChars = 40 ... 64_000
+
+    static func looksEncrypted(_ text: String) -> Bool {
+        if WireFormat.isToken(text) { return true }
+        guard stegoChars.contains(text.utf16.count) else { return false }
+        return TextStego.looksLikeStego(text) || SmartTextStego.looksLikeStego(text)
+            || LetterStego.looksLikeStego(text)
+    }
+
+    static func isWorthDecrypting(_ text: String, ownMarker: String?) -> Bool {
+        guard looksEncrypted(text) else { return false }
+        guard let ownMarker else { return true }
+        return ownMarker != DecryptCacheKey.key(for: text)
     }
 }
 

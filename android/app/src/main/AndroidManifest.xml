@@ -6,21 +6,6 @@
     <uses-permission android:name="android.permission.HIDE_OVERLAY_WINDOWS" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
-    <queries>
-        <package android:name="com.topjohnwu.magisk" />
-        <package android:name="io.github.huskydg.magisk" />
-        <package android:name="me.weishu.kernelsu" />
-        <package android:name="eu.chainfire.supersu" />
-        <package android:name="com.koushikdutta.superuser" />
-        <package android:name="com.noshufou.android.su" />
-        <package android:name="com.thirdparty.superuser" />
-        <package android:name="com.yellowes.su" />
-        <package android:name="com.kingroot.kinguser" />
-        <package android:name="de.robv.android.xposed.installer" />
-        <package android:name="org.lsposed.manager" />
-        <package android:name="io.va.exposed" />
-        <package android:name="com.saurik.substrate" />
-    </queries>
 
     <application
         android:name=".KryptosApp"
@@ -28,6 +13,7 @@
         android:icon="@mipmap/ic_launcher"
         android:theme="@style/Theme.Kryptos"
         android:allowBackup="false"
+        android:largeHeap="true"
         android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:memtagMode="sync"

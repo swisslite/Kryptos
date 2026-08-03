@@ -31,7 +31,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
+import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.material.icons.filled.Warning
@@ -47,6 +47,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,7 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -77,7 +78,11 @@ import androidx.compose.ui.unit.sp
 object KShape {
     val corner = 20.dp
     val cornerSmall = 14.dp
+    val cardShape = RoundedCornerShape(corner)
+    val smallShape = RoundedCornerShape(cornerSmall)
 }
+
+val LocalTabBarInset = compositionLocalOf { 0.dp }
 
 @Composable
 fun ScreenBackground(modifier: Modifier = Modifier) {
@@ -87,14 +92,13 @@ fun ScreenBackground(modifier: Modifier = Modifier) {
         modifier
             .fillMaxSize()
             .background(bg)
-            .drawBehind {
-                drawRect(
-                    Brush.radialGradient(
-                        colors = listOf(accent.copy(alpha = 0.16f), Color.Transparent),
-                        center = Offset(size.width, 0f),
-                        radius = size.width * 1.05f,
-                    )
+            .drawWithCache {
+                val glow = Brush.radialGradient(
+                    colors = listOf(accent.copy(alpha = 0.16f), Color.Transparent),
+                    center = Offset(size.width, 0f),
+                    radius = size.width * 1.05f,
                 )
+                onDrawBehind { drawRect(glow) }
             }
     )
 }
@@ -123,7 +127,7 @@ fun KScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    Icons.AutoMirrored.Filled.ArrowBackIos, null,
+                    Icons.Default.ArrowBackIosNew, null,
                     Modifier.size(15.dp), tint = K.accent,
                 )
                 Spacer(Modifier.width(3.dp))
@@ -145,7 +149,7 @@ fun KScreen(
             Text(subtitle, fontSize = 14.sp, lineHeight = 19.sp, color = K.textSecondary)
         }
         content()
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(8.dp + LocalTabBarInset.current))
     }
 }
 
@@ -157,7 +161,7 @@ fun GlassCard(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val shape = RoundedCornerShape(KShape.corner)
+    val shape = KShape.cardShape
     Column(
         modifier
             .fillMaxWidth()
@@ -216,7 +220,7 @@ fun KTextField(
     maxLines: Int = Int.MAX_VALUE,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
 ) {
-    val shape = RoundedCornerShape(KShape.cornerSmall)
+    val shape = KShape.smallShape
     val singleLine = minLines == 1 && (password || maxLines == 1)
     val style = TextStyle(
         fontSize = if (mono) 13.sp else 16.sp,
@@ -303,14 +307,16 @@ fun PrimaryButton(
     busy: Boolean = false,
     onClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(KShape.cornerSmall)
+    val shape = KShape.smallShape
     val active = enabled && !busy
     val interaction = remember { MutableInteractionSource() }
     val scale = rememberPressScale(interaction, active)
     val dim by animateFloatAsState(if (active) 1f else 0.45f, tween(200), label = "dim")
-    val gradient = Brush.verticalGradient(
-        listOf(K.accentBright.copy(alpha = dim), K.accent.copy(alpha = dim))
-    )
+    val bright = K.accentBright
+    val base = K.accent
+    val gradient = remember(dim, bright, base) {
+        Brush.verticalGradient(listOf(bright.copy(alpha = dim), base.copy(alpha = dim)))
+    }
     Row(
         modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
@@ -336,7 +342,14 @@ fun PrimaryButton(
                 Icon(icon, null, Modifier.size(18.dp), tint = Color.White)
                 Spacer(Modifier.width(8.dp))
             }
-            Text(text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1)
+            Text(
+                text,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -348,10 +361,15 @@ fun SecondaryButton(
     icon: ImageVector? = null,
     enabled: Boolean = true,
     danger: Boolean = false,
+    accent: Boolean = false,
     onClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(KShape.cornerSmall)
-    val tint = if (danger) K.danger else K.textPrimary
+    val shape = KShape.smallShape
+    val tint = when {
+        danger -> K.danger
+        accent -> K.accentInk
+        else -> K.textPrimary
+    }
     val interaction = remember { MutableInteractionSource() }
     val scale = rememberPressScale(interaction, enabled)
     Row(
@@ -360,8 +378,12 @@ fun SecondaryButton(
             .heightIn(min = 50.dp)
             .alpha(if (enabled) 1f else 0.5f)
             .clip(shape)
-            .background(K.card)
-            .border(1.dp, K.hairline, shape)
+            .background(if (accent) K.accent.copy(alpha = 0.14f) else K.card)
+            .border(
+                if (accent) 1.5.dp else 1.dp,
+                if (accent) K.accent.copy(alpha = 0.45f) else K.hairline,
+                shape,
+            )
             .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.Center,
@@ -371,7 +393,14 @@ fun SecondaryButton(
             Icon(icon, null, Modifier.size(18.dp), tint = tint)
             Spacer(Modifier.width(8.dp))
         }
-        Text(text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = tint, maxLines = 1)
+        Text(
+            text,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = tint,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -389,6 +418,12 @@ fun GlassIconButton(
     val interaction = remember { MutableInteractionSource() }
     val scale = rememberPressScale(interaction, enabled, pressedScale = 0.9f)
     val dim by animateFloatAsState(if (enabled) 1f else 0.55f, tween(200), label = "dim")
+    val bright = K.accentBright
+    val base = K.accent
+    val card = K.card
+    val fill = remember(filled, bright, base, card) {
+        if (filled) Brush.verticalGradient(listOf(bright, base)) else SolidColor(card)
+    }
     Box(
         modifier
             .size(size)
@@ -402,10 +437,7 @@ fun GlassIconButton(
                 ) else Modifier
             )
             .clip(CircleShape)
-            .background(
-                if (filled) Brush.verticalGradient(listOf(K.accentBright, K.accent))
-                else SolidColor(K.card)
-            )
+            .background(fill)
             .border(1.dp, if (filled) Color.Transparent else K.hairline, CircleShape)
             .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -427,7 +459,7 @@ fun Banner(text: String, kind: BannerKind, modifier: Modifier = Modifier) {
         BannerKind.Error, BannerKind.Warning -> Icons.Default.Warning
         BannerKind.Success -> Icons.Default.CheckCircle
     }
-    val shape = RoundedCornerShape(KShape.cornerSmall)
+    val shape = KShape.smallShape
     Row(
         modifier
             .fillMaxWidth()
@@ -445,16 +477,16 @@ fun Banner(text: String, kind: BannerKind, modifier: Modifier = Modifier) {
 
 @Composable
 fun Avatar(name: String, size: Dp = 44.dp) {
+    val accent = K.accent
+    val fill = remember(accent) {
+        Brush.linearGradient(listOf(accent.copy(alpha = 0.26f), accent.copy(alpha = 0.12f)))
+    }
     Box(
         Modifier
             .size(size)
             .clip(CircleShape)
-            .background(
-                Brush.linearGradient(
-                    listOf(K.accent.copy(alpha = 0.26f), K.accent.copy(alpha = 0.12f))
-                )
-            )
-            .border(1.dp, K.accent.copy(alpha = 0.25f), CircleShape),
+            .background(fill)
+            .border(1.dp, accent.copy(alpha = 0.25f), CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -671,20 +703,6 @@ fun Modifier.quietClickable(enabled: Boolean = true, onClick: () -> Unit): Modif
         enabled = enabled,
         onClick = onClick,
     )
-
-@Composable
-fun Modifier.bouncyClickable(enabled: Boolean = true, pressedScale: Float = 0.94f, onClick: () -> Unit): Modifier {
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed && enabled) pressedScale else 1f,
-        animationSpec = spring(dampingRatio = 0.55f, stiffness = Spring.StiffnessMediumLow),
-        label = "pressScale",
-    )
-    return this
-        .graphicsLayer { scaleX = scale; scaleY = scale }
-        .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
-}
 
 @Composable
 fun rememberPressScale(interaction: MutableInteractionSource, enabled: Boolean = true, pressedScale: Float = 0.97f): Float {

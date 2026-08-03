@@ -52,9 +52,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kryptos.android.R
 import com.kryptos.android.pgp.PgpAlgo
+import com.kryptos.android.pgp.PgpDecryption
+import com.kryptos.android.pgp.PgpException
 import com.kryptos.android.pgp.PgpService
 import com.kryptos.android.pgp.PgpVerification
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -74,6 +77,7 @@ fun PgpScreen(modifier: Modifier = Modifier) {
     var selectedRecipient by remember { mutableStateOf<String?>(null) }
     var result by remember { mutableStateOf("") }
     var verification by remember { mutableStateOf<PgpVerification?>(null) }
+    var signer by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var autoCopied by remember { mutableStateOf(false) }
     var showKeys by remember { mutableStateOf(false) }
@@ -123,7 +127,10 @@ fun PgpScreen(modifier: Modifier = Modifier) {
         KSegmented(
             listOf(stringResource(R.string.encrypt), stringResource(R.string.decrypt)),
             selected = if (encrypting) 0 else 1,
-            onSelect = { encrypting = it == 0; result = ""; error = null; verification = null; autoCopied = false },
+            onSelect = {
+                encrypting = it == 0
+                result = ""; error = null; verification = null; signer = null; autoCopied = false
+            },
         )
 
         GlassCard(spacing = 14.dp) {
@@ -142,6 +149,7 @@ fun PgpScreen(modifier: Modifier = Modifier) {
                     stringResource(R.string.paste),
                     Modifier.weight(1f),
                     icon = Icons.Default.ContentPaste,
+                    accent = true,
                 ) { text = clipboardText(context) }
                 Spacer(Modifier.width(12.dp))
                 PrimaryButton(
@@ -150,23 +158,38 @@ fun PgpScreen(modifier: Modifier = Modifier) {
                     icon = if (encrypting) Icons.Default.Lock else Icons.Default.LockOpen,
                     enabled = text.isNotBlank() && !busy && (!encrypting || selectedRecipient != null),
                 ) {
-                    error = null; verification = null; autoCopied = false
-                    scope.launch(Dispatchers.Default) {
-                        try {
-                            if (encrypting) {
-                                val recipient = recipients.firstOrNull { it.id == selectedRecipient }
-                                    ?: throw Exception(context.getString(R.string.pgp_choose_recipient))
-                                result = PgpService.encrypt(text, recipient)
-                                copySensitive(context, result, null)
-                                autoCopied = true
-                            } else {
-                                val (plain, ver) = PgpService.decrypt(text)
-                                result = plain
-                                verification = ver
+                    error = null; verification = null; signer = null; autoCopied = false
+                    val enc = encrypting
+                    val body = text
+                    val target = recipients.firstOrNull { it.id == selectedRecipient }
+                    scope.launch {
+                        val outcome = withContext(Dispatchers.Default + NonCancellable) {
+                            runCatching {
+                                if (enc) {
+                                    val recipient = target
+                                        ?: throw PgpException(R.string.pgp_choose_recipient)
+                                    PgpService.encrypt(body, recipient)
+                                        .also { copySensitive(context, it, null) }
+                                } else {
+                                    PgpService.decrypt(body)
+                                }
                             }
-                        } catch (e: Exception) {
+                        }
+                        outcome.onSuccess { value ->
+                            if (value is PgpDecryption) {
+                                result = value.text
+                                verification = value.verification
+                                signer = value.signer
+                            } else {
+                                result = value as String
+                                autoCopied = true
+                            }
+                        }.onFailure { e ->
                             result = ""
-                            error = e.message
+                            error = context.getString(
+                                (e as? PgpException)?.res
+                                    ?: if (enc) R.string.encrypt_failed else R.string.pgp_no_message
+                            )
                         }
                     }
                 }
@@ -177,7 +200,12 @@ fun PgpScreen(modifier: Modifier = Modifier) {
         if (!encrypting && result.isNotEmpty()) {
             verification?.let {
                 if (it == PgpVerification.VERIFIED) {
-                    Banner(stringResource(R.string.pgp_verified_banner), BannerKind.Success)
+                    val name = signer
+                    Banner(
+                        if (name != null) stringResource(R.string.pgp_verified_by, name)
+                        else stringResource(R.string.pgp_verified_banner),
+                        BannerKind.Success,
+                    )
                 } else {
                     Banner(stringResource(R.string.pgp_unverified_banner), BannerKind.Warning)
                 }
@@ -202,6 +230,7 @@ fun PgpScreen(modifier: Modifier = Modifier) {
                         stringResource(R.string.copy),
                         Modifier.weight(1f),
                         icon = Icons.Outlined.FileCopy,
+                        accent = true,
                     ) { copySensitive(context, result, context.getString(R.string.copied)) }
                     Spacer(Modifier.width(12.dp))
                     PrimaryButton(
@@ -394,6 +423,7 @@ private fun PgpShareSheet(onDismiss: () -> Unit) {
                 Modifier.weight(1f),
                 icon = Icons.Outlined.FileCopy,
                 enabled = key.isNotEmpty(),
+                accent = true,
             ) { copySensitive(context, key, context.getString(R.string.copied)) }
             Spacer(Modifier.width(12.dp))
             PrimaryButton(
@@ -408,6 +438,7 @@ private fun PgpShareSheet(onDismiss: () -> Unit) {
 
 @Composable
 private fun PgpRecipientsSheet(onDismiss: () -> Unit) {
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val recipients by PgpService.recipients.collectAsState()
     var name by remember { mutableStateOf("") }
@@ -425,6 +456,7 @@ private fun PgpRecipientsSheet(onDismiss: () -> Unit) {
                     stringResource(R.string.paste),
                     Modifier.weight(1f),
                     icon = Icons.Default.ContentPaste,
+                    accent = true,
                 ) { keyText = clipboardText(context) }
                 Spacer(Modifier.width(12.dp))
                 PrimaryButton(
@@ -434,11 +466,15 @@ private fun PgpRecipientsSheet(onDismiss: () -> Unit) {
                     enabled = name.isNotBlank() && keyText.isNotBlank(),
                 ) {
                     error = null
-                    try {
-                        PgpService.addRecipient(name.trim(), keyText.trim())
-                        name = ""; keyText = ""
-                    } catch (e: Exception) {
-                        error = e.message ?: context.getString(R.string.pgp_invalid_key)
+                    val n = name.trim()
+                    val k = keyText.trim()
+                    scope.launch(Dispatchers.Default + NonCancellable) {
+                        try {
+                            PgpService.addRecipient(n, k)
+                            name = ""; keyText = ""
+                        } catch (e: Exception) {
+                            error = context.getString((e as? PgpException)?.res ?: R.string.pgp_invalid_key)
+                        }
                     }
                 }
             }

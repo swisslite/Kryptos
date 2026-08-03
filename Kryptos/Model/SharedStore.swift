@@ -1,15 +1,86 @@
 import Foundation
 import Security
 
+enum KeychainProbe {
+    private static let account = "kryptos.teamid.probe"
+    private static let lock = NSLock()
+    private nonisolated(unsafe) static var cached: String?
+
+    static var probeAccount: String { account }
+
+    static func defaultAccessGroup() -> String? {
+        lock.lock()
+        if let cached {
+            lock.unlock()
+            return cached
+        }
+        lock.unlock()
+        let resolved = resolve()
+        lock.lock()
+        if let resolved { cached = resolved }
+        lock.unlock()
+        return resolved
+    }
+
+    static func teamPrefix() -> String? {
+        guard let group = defaultAccessGroup(), let team = group.split(separator: ".").first else { return nil }
+        return String(team)
+    }
+
+    static func forget() {
+        lock.lock()
+        cached = nil
+        lock.unlock()
+    }
+
+    private static func resolve() -> String? {
+        let base: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                   kSecAttrAccount as String: account,
+                                   kSecAttrService as String: account]
+        var query = base
+        query[kSecReturnAttributes as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: AnyObject?
+        var status = SecItemCopyMatching(query as CFDictionary, &result)
+        if status == errSecItemNotFound {
+            SecItemAdd(base as CFDictionary, nil)
+            status = SecItemCopyMatching(query as CFDictionary, &result)
+        }
+        guard status == errSecSuccess, let attrs = result as? [String: Any] else { return nil }
+        return attrs[kSecAttrAccessGroup as String] as? String
+    }
+}
+
 enum SharedStore {
     enum Backend: Equatable { case keychain(group: String); case appGroupFile; case localFile }
     enum ReadResult { case found(Data); case absent; case unavailable }
 
-    static let backend: Backend = {
-        if let group = sharedKeychainGroup, keychainUsable(group: group) { return .keychain(group: group) }
+    private static let backendLock = NSLock()
+    private nonisolated(unsafe) static var resolvedBackend: Backend?
+
+    static var backend: Backend {
+        backendLock.lock()
+        defer { backendLock.unlock() }
+        if let resolved = resolvedBackend { return resolved }
+        let fresh = resolveBackend()
+        resolvedBackend = fresh
+        return fresh
+    }
+
+    static func revalidateBackend() {
+        backendLock.lock()
+        defer { backendLock.unlock() }
+        if let resolved = resolvedBackend, case .keychain = resolved { return }
+        let fresh = resolveBackend()
+        guard case .keychain = fresh else { return }
+        resolvedBackend = fresh
+    }
+
+    private static func resolveBackend() -> Backend {
+        if let group = sharedKeychainGroup(), keychainUsable(group: group) { return .keychain(group: group) }
         if AppGroup.isShared { return .appGroupFile }
         return .localFile
-    }()
+    }
 
     static func read(_ name: String) -> Data? {
         switch backend {
@@ -59,7 +130,7 @@ enum SharedStore {
         var q: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
                                 kSecAttrService as String: kcService]
         SecItemDelete(q as CFDictionary)
-        if let group = sharedKeychainGroup {
+        if let group = sharedKeychainGroup() {
             q[kSecAttrAccessGroup as String] = group
             SecItemDelete(q as CFDictionary)
         }
@@ -70,28 +141,25 @@ enum SharedStore {
         }
     }
 
-    static let sharedKeychainGroup: String? = {
-        guard let def = defaultAccessGroup() else { return nil }
-        if let team = def.split(separator: ".").first {
-            let wildcard = "\(team).*"
-            if keychainUsable(group: wildcard) { return wildcard }
-        }
-        return def
-    }()
+    private static let groupLock = NSLock()
+    private nonisolated(unsafe) static var cachedKeychainGroup: String?
 
-    private static func defaultAccessGroup() -> String? {
-        let account = "kryptos.teamid.probe"
-        let base: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
-                                   kSecAttrAccount as String: account,
-                                   kSecAttrService as String: account]
-        var q = base
-        q[kSecReturnAttributes as String] = true
-        q[kSecMatchLimit as String] = kSecMatchLimitOne
-        var result: AnyObject?
-        var status = SecItemCopyMatching(q as CFDictionary, &result)
-        if status == errSecItemNotFound { SecItemAdd(base as CFDictionary, nil); status = SecItemCopyMatching(q as CFDictionary, &result) }
-        guard status == errSecSuccess, let attrs = result as? [String: Any] else { return nil }
-        return attrs[kSecAttrAccessGroup as String] as? String
+    static func sharedKeychainGroup() -> String? {
+        groupLock.lock()
+        if let cached = cachedKeychainGroup {
+            groupLock.unlock()
+            return cached
+        }
+        groupLock.unlock()
+        guard let def = KeychainProbe.defaultAccessGroup() else { return nil }
+        var resolved = def
+        if let team = def.split(separator: ".").first, keychainUsable(group: "\(team).*") {
+            resolved = "\(team).*"
+        }
+        groupLock.lock()
+        cachedKeychainGroup = resolved
+        groupLock.unlock()
+        return resolved
     }
 
     private static func keychainUsable(group: String) -> Bool {

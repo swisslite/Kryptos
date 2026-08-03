@@ -85,13 +85,14 @@ with its own key). To produce a signed sideload APK:
 ## 5. Reproducing the published builds
 
 The binaries distributed at <https://datakeeper.pages.dev/kryptos> are built exactly this way:
-`libsignal` at `v0.96.4` + the patch above, `versionName` **2.1.1** (`versionCode` 6). SHA-256
+`libsignal` at `v0.96.4` + the patch above, `versionName` **2.3** (`versionCode` 8). SHA-256
 checksums of the current release are shown on that page.
 
 ## Android security hardening (reference)
 
 - App lock (biometrics / device PIN) with auto-lock grace and an opaque app-switcher cover.
-- Panic PIN that wipes all keys, chats and contacts (also destroys the Keystore key — crypto-erasure).
+- Panic password that wipes all keys, chats, contacts and settings (destroys the Keystore key first,
+  so an interrupted wipe leaves nothing decryptable).
 - Screenshot blocking (`FLAG_SECURE`) for the app and the keyboard window.
 - Clipboard auto-clear; clips flagged sensitive to stay out of clipboard history.
 - Device-integrity warnings (root / emulator / debugger / hooking framework / re-signed APK).

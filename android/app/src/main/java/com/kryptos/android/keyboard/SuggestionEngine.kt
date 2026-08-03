@@ -125,11 +125,12 @@ object SuggestionEngine {
             fun build(dictSorted: Array<String>, rankOf: (String) -> Int, vocabBlob: ByteArray): Lexicon {
                 val text = String(vocabBlob, Charsets.UTF_8)
                 var lineCount = 0
+                var vocabChars = 0
                 var scanPos = 0
                 while (scanPos < text.length) {
                     var e = text.indexOf('\n', scanPos)
                     if (e < 0) e = text.length
-                    if (e > scanPos) lineCount++
+                    if (e > scanPos) { lineCount++; vocabChars += e - scanPos }
                     scanPos = e + 1
                 }
                 val maxWords = dictSorted.size + lineCount
@@ -137,7 +138,7 @@ object SuggestionEngine {
                 val ranks = IntArray(maxWords)
                 var dictChars = 0
                 for (w in dictSorted) dictChars += w.length
-                val chars = CharArray(text.length + dictChars)
+                val chars = CharArray(vocabChars + dictChars)
                 var n = 0
                 var cp = 0
                 var di = 0
@@ -185,7 +186,7 @@ object SuggestionEngine {
                     }
                 }
                 starts[n] = cp
-                return Lexicon(chars.copyOf(cp), starts.copyOf(n + 1), ranks.copyOf(n))
+                return Lexicon(chars, starts.copyOf(n + 1), ranks.copyOf(n))
             }
         }
     }
@@ -252,28 +253,56 @@ object SuggestionEngine {
     @Volatile private var ruBigrams: Bigrams? = null
     @Volatile private var enLex: Lexicon? = null
     @Volatile private var ruLex: Lexicon? = null
-    private val loading = AtomicBoolean(false)
 
     private fun buildLexicon(dict: Dict, vocabBlob: ByteArray): Lexicon =
         Lexicon.build(dict.sorted, { dict.rank[it] ?: Lexicon.NO_RANK }, vocabBlob)
 
-    fun warmUp(context: Context) {
-        if (en != null || !loading.compareAndSet(false, true)) return
+    private val claimed = java.util.Collections.synchronizedSet(HashSet<String>())
+    private val personalLoaded = AtomicBoolean(false)
+
+    @Volatile private var loadGeneration = 0
+
+    private fun release(code: String) {
+        if (code == "ru") {
+            ru = null; ruBigrams = null; ruLex = null
+        } else {
+            en = null; enBigrams = null; enLex = null
+        }
+    }
+
+    fun warmUp(context: Context, languages: Set<String>, typingAids: Boolean) {
+        val wanted = if (typingAids) languages.intersect(setOf("en", "ru")) else emptySet()
+        val toLoad: List<String>
+        synchronized(claimed) {
+            val stale = claimed.filter { it !in wanted }
+            if (stale.isNotEmpty()) {
+                loadGeneration++
+                stale.forEach { claimed.remove(it); release(it) }
+            }
+            toLoad = wanted.filter { claimed.add(it) }
+        }
+        val needPersonal = personalLoaded.compareAndSet(false, true)
+        if (toLoad.isEmpty() && !needPersonal) return
         val app = context.applicationContext
+        val generation = loadGeneration
         Thread({
-            runCatching {
-                fun read(name: String) = app.assets.open(name).bufferedReader(Charsets.UTF_8)
-                    .readLines().filter { it.isNotBlank() }
-                fun readBytes(name: String) = app.assets.open(name).readBytes()
-                val ruDict = Dict(read("dict/ru.txt"))
-                val enDict = Dict(read("dict/en.txt"))
-                ruBigrams = Bigrams(read("dict/bigrams-ru.txt"))
-                enBigrams = Bigrams(read("dict/bigrams-en.txt"))
-                ruLex = buildLexicon(ruDict, readBytes("dict/vocab-ru.txt"))
-                enLex = buildLexicon(enDict, readBytes("dict/vocab-en.txt"))
-                ru = ruDict
-                en = enDict
-                loadPersonal()
+            if (needPersonal) runCatching { loadPersonal() }
+            for (code in toLoad.sorted()) {
+                runCatching {
+                    fun read(name: String) = app.assets.open(name).bufferedReader(Charsets.UTF_8)
+                        .readLines().filter { it.isNotBlank() }
+                    val dict = Dict(read("dict/$code.txt"))
+                    val pairs = Bigrams(read("dict/bigrams-$code.txt"))
+                    val lex = buildLexicon(dict, app.assets.open("dict/vocab-$code.txt").readBytes())
+                    synchronized(claimed) {
+                        if (generation != loadGeneration || code !in claimed) return@synchronized
+                        if (code == "ru") {
+                            ruBigrams = pairs; ruLex = lex; ru = dict
+                        } else {
+                            enBigrams = pairs; enLex = lex; en = dict
+                        }
+                    }
+                }.onFailure { synchronized(claimed) { claimed.remove(code) } }
             }
         }, "kryptos-dict").apply { priority = Thread.MIN_PRIORITY }.start()
     }
@@ -290,6 +319,8 @@ object SuggestionEngine {
         enLex = buildLexicon(enDict, enForms.toByteArray(Charsets.UTF_8))
         ru = ruDict
         en = enDict
+        claimed.addAll(listOf("en", "ru"))
+        personalLoaded.set(true)
     }
 
     private const val MAX_WORDS = 800
@@ -301,7 +332,8 @@ object SuggestionEngine {
 
     private val userWords = HashMap<String, Int>()
     private val userBigrams = HashMap<String, Int>()
-    private var dirty = false
+    private var wordsDirty = false
+    private var bigramsDirty = false
 
     init {
         CachePurge.register { clearMemory() }
@@ -311,7 +343,8 @@ object SuggestionEngine {
         userWords.clear()
         userBigrams.clear()
         sessionSkip.clear()
-        dirty = false
+        wordsDirty = false
+        bigramsDirty = false
     }
 
     @Synchronized private fun loadPersonal() {
@@ -329,7 +362,7 @@ object SuggestionEngine {
         }
     }
 
-    private fun migrateLegacyPlaintext() {
+    @Synchronized fun migrateLegacyPlaintext() {
         val prefs = SecureStore.prefs()
         val words = prefs.getString(PREF_WORDS, null)
         val bigrams = prefs.getString(PREF_BIGRAMS, null)
@@ -343,25 +376,42 @@ object SuggestionEngine {
         prefs.edit().remove(PREF_WORDS).remove(PREF_BIGRAMS).apply()
     }
 
+    private val writer = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+        Thread(r, "kryptos-kbdict").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }
+    }
+
+    fun persistAsync() {
+        synchronized(this) { if (!wordsDirty && !bigramsDirty) return }
+        runCatching { writer.execute { persist() } }
+    }
+
     @Synchronized fun persist() {
-        if (!dirty) return
-        dirty = false
+        val words = wordsDirty
+        val bigrams = bigramsDirty
+        if (!words && !bigrams) return
+        wordsDirty = false
+        bigramsDirty = false
         runCatching {
-            SecureStore.write(
-                STORE_WORDS,
-                userWords.entries.joinToString("\n") { "${it.key} ${it.value}" }.toByteArray(Charsets.UTF_8),
-            )
-            SecureStore.write(
-                STORE_BIGRAMS,
-                userBigrams.entries.joinToString("\n") { "${it.key} ${it.value}" }.toByteArray(Charsets.UTF_8),
-            )
+            if (words) {
+                SecureStore.write(
+                    STORE_WORDS,
+                    userWords.entries.joinToString("\n") { "${it.key} ${it.value}" }.toByteArray(Charsets.UTF_8),
+                )
+            }
+            if (bigrams) {
+                SecureStore.write(
+                    STORE_BIGRAMS,
+                    userBigrams.entries.joinToString("\n") { "${it.key} ${it.value}" }.toByteArray(Charsets.UTF_8),
+                )
+            }
         }
     }
 
     @Synchronized fun clearPersonal() {
         userWords.clear()
         userBigrams.clear()
-        dirty = false
+        wordsDirty = false
+        bigramsDirty = false
         runCatching {
             SecureStore.delete(STORE_WORDS)
             SecureStore.delete(STORE_BIGRAMS)
@@ -387,7 +437,8 @@ object SuggestionEngine {
         val key = if (prev != null) "$prev $word" else "$START_TOKEN $word"
         userBigrams[key] = (userBigrams[key] ?: 0) + 1
         if (userBigrams.size > MAX_BIGRAMS) decay(userBigrams)
-        dirty = true
+        wordsDirty = true
+        bigramsDirty = true
     }
 
     @Synchronized fun noteUndoneCorrection(rawWord: String) {
@@ -400,7 +451,7 @@ object SuggestionEngine {
         val word = normalize(rawWord) ?: return
         if (word.length < 2) return
         userWords[word] = (userWords[word] ?: 0) + 2
-        dirty = true
+        wordsDirty = true
     }
 
     private fun normalize(raw: String): String? {
@@ -422,15 +473,16 @@ object SuggestionEngine {
     }
 
     private fun langFor(firstChar: Char?, russianPlane: Boolean): Lang? {
-        val ruDict = ru ?: return null
-        val enDict = en ?: return null
         val useRu = when {
             firstChar != null && (firstChar in 'а'..'я' || firstChar == 'ё') -> true
             firstChar != null && firstChar in 'a'..'z' -> false
             else -> russianPlane
         }
-        return if (useRu) Lang(ruDict, ruBigrams, ruLex, RU_ALPHABET, RU_NEIGHBORS)
-        else Lang(enDict, enBigrams, enLex, EN_ALPHABET, EN_NEIGHBORS)
+        return if (useRu) {
+            ru?.let { Lang(it, ruBigrams, ruLex, RU_ALPHABET, RU_NEIGHBORS) }
+        } else {
+            en?.let { Lang(it, enBigrams, enLex, EN_ALPHABET, EN_NEIGHBORS) }
+        }
     }
 
     private const val OOV_LM = -12.0

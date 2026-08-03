@@ -2,6 +2,11 @@ import SwiftUI
 import UIKit
 import CipherCore
 
+enum PasswordOutcome: Sendable {
+    case done(String)
+    case failed(String)
+}
+
 struct QuickEncryptView: View {
     enum Mode {
         case encrypt, decrypt
@@ -16,6 +21,7 @@ struct QuickEncryptView: View {
     @State private var errorText: String?
     @State private var copied = false
     @State private var autoCopied = false
+    @State private var busy = false
 
     var body: some View {
         ScreenScaffold("Password",
@@ -59,12 +65,13 @@ struct QuickEncryptView: View {
                 Button { paste() } label: {
                     Label("Paste", systemImage: "doc.on.clipboard")
                 }
-                .buttonStyle(SecondaryButtonStyle())
+                .buttonStyle(SecondaryButtonStyle(accent: true))
 
                 Button(action: run) {
-                    Label(mode.title, systemImage: mode.icon)
+                    Label(busy ? "Working…" : mode.title, systemImage: busy ? "hourglass" : mode.icon)
                 }
                 .buttonStyle(PrimaryButtonStyle())
+                .disabled(busy)
             }
         }
         .glassCard()
@@ -87,7 +94,7 @@ struct QuickEncryptView: View {
                     Label(copied ? "Copied" : "Copy",
                           systemImage: copied ? "checkmark" : "doc.on.doc")
                 }
-                .buttonStyle(SecondaryButtonStyle())
+                .buttonStyle(SecondaryButtonStyle(accent: true))
 
                 ShareLink(item: output) { Label("Share", systemImage: "square.and.arrow.up") }
                     .buttonStyle(PrimaryButtonStyle())
@@ -121,18 +128,36 @@ struct QuickEncryptView: View {
         autoCopied = false
         guard !passphrase.isEmpty else { errorText = String(localized: "Enter a password."); return }
         guard !input.isEmpty else { errorText = String(localized: "Enter some text."); return }
-        do {
-            switch mode {
-            case .encrypt:
-                output = try Kryptos.encrypt(text: input, password: passphrase, pad: PrivacyConfig.lengthPadding)
-                Clipboard.copy(output)
-                autoCopied = true
-            case .decrypt:
-                output = try Kryptos.decrypt(armored: input, password: passphrase)
+        let text = input
+        let secret = passphrase
+        let current = mode
+        let pad = PrivacyConfig.lengthPadding
+        busy = true
+        Task {
+            let outcome = await Task.detached(priority: .userInitiated) {
+                do {
+                    switch current {
+                    case .encrypt:
+                        return PasswordOutcome.done(try Kryptos.encrypt(text: text, password: secret, pad: pad))
+                    case .decrypt:
+                        return PasswordOutcome.done(try Kryptos.decrypt(armored: text, password: secret))
+                    }
+                } catch {
+                    return PasswordOutcome.failed(Self.friendlyMessage(for: error))
+                }
+            }.value
+            busy = false
+            switch outcome {
+            case .done(let value):
+                output = value
+                if current == .encrypt {
+                    Clipboard.copyCipher(value)
+                    autoCopied = true
+                }
+            case .failed(let message):
+                output = ""
+                errorText = message
             }
-        } catch {
-            output = ""
-            errorText = friendlyMessage(for: error)
         }
     }
 
@@ -141,7 +166,7 @@ struct QuickEncryptView: View {
     }
 
     private func copy() {
-        Clipboard.copy(output)
+        if mode == .encrypt { Clipboard.copyCipher(output) } else { Clipboard.copy(output) }
         withAnimation { copied = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             withAnimation { copied = false }
@@ -155,7 +180,7 @@ struct QuickEncryptView: View {
         }
     }
 
-    private func friendlyMessage(for error: Error) -> String {
+    nonisolated private static func friendlyMessage(for error: Error) -> String {
         guard let error = error as? CipherError else {
             return String(localized: "Could not process the message.")
         }

@@ -31,7 +31,9 @@ import com.kryptos.android.R
 import com.kryptos.android.core.KryptosCore
 import com.kryptos.android.signal.AppSettingsStore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun QuickScreen(modifier: Modifier = Modifier) {
@@ -85,6 +87,7 @@ fun QuickScreen(modifier: Modifier = Modifier) {
                     stringResource(R.string.paste),
                     Modifier.weight(1f),
                     icon = Icons.Default.ContentPaste,
+                    accent = true,
                 ) {
                     text = clipboardText(context)
                     autoCopied = false
@@ -101,23 +104,33 @@ fun QuickScreen(modifier: Modifier = Modifier) {
                     error = null
                     autoCopied = false
                     busy = true
-                    scope.launch(Dispatchers.Default) {
-                        try {
-                            result = if (encrypting) {
-                                KryptosCore.encrypt(text, password, AppSettingsStore.lengthPadding).also {
-                                    copySensitive(context, it, null)
-                                    autoCopied = true
+                    val enc = encrypting
+                    val body = text
+                    val secret = password
+                    scope.launch {
+                        val outcome = withContext(Dispatchers.Default + NonCancellable) {
+                            runCatching {
+                                if (enc) {
+                                    KryptosCore.encrypt(body, secret, AppSettingsStore.lengthPadding)
+                                        .also { copySensitive(context, it, null) }
+                                } else {
+                                    KryptosCore.decrypt(body, secret)
                                 }
-                            } else {
-                                KryptosCore.decrypt(text, password)
                             }
-                        } catch (e: Exception) {
+                        }
+                        busy = false
+                        outcome.onSuccess {
+                            result = it
+                            autoCopied = enc
+                        }.onFailure { e ->
                             result = ""
                             error = context.getString(
-                                if (encrypting) R.string.not_a_kryptos_message else R.string.wrong_password
+                                when {
+                                    e is OutOfMemoryError -> R.string.low_memory
+                                    enc -> R.string.encrypt_failed
+                                    else -> R.string.wrong_password
+                                }
                             )
-                        } finally {
-                            busy = false
                         }
                     }
                 }
@@ -128,31 +141,38 @@ fun QuickScreen(modifier: Modifier = Modifier) {
         if (autoCopied) Banner(stringResource(R.string.copied_banner), BannerKind.Success)
 
         if (result.isNotEmpty()) {
-            GlassCard {
-                FieldLabel(stringResource(if (encrypting) R.string.label_ready else R.string.label_decrypted))
-                Text(
-                    result,
-                    fontSize = if (encrypting) 13.sp else 16.sp,
-                    fontFamily = if (encrypting) FontFamily.Monospace else null,
-                    color = K.textPrimary,
-                    modifier = Modifier
-                        .heightIn(max = 220.dp)
-                        .verticalScroll(rememberScrollState()),
-                )
-                Row {
-                    SecondaryButton(
-                        stringResource(R.string.copy),
-                        Modifier.weight(1f),
-                        icon = Icons.Outlined.FileCopy,
-                    ) { copySensitive(context, result, context.getString(R.string.copied)) }
-                    Spacer(Modifier.width(12.dp))
-                    PrimaryButton(
-                        stringResource(R.string.share),
-                        Modifier.weight(1f),
-                        icon = Icons.Default.Share,
-                    ) { shareText(context, result) }
-                }
-            }
+            ResultCard(result, encrypting)
+        }
+    }
+}
+
+@Composable
+private fun ResultCard(result: String, encrypting: Boolean) {
+    val context = LocalContext.current
+    GlassCard {
+        FieldLabel(stringResource(if (encrypting) R.string.label_ready else R.string.label_decrypted))
+        Text(
+            result,
+            fontSize = if (encrypting) 13.sp else 16.sp,
+            fontFamily = if (encrypting) FontFamily.Monospace else null,
+            color = K.textPrimary,
+            modifier = Modifier
+                .heightIn(max = 220.dp)
+                .verticalScroll(rememberScrollState()),
+        )
+        Row {
+            SecondaryButton(
+                stringResource(R.string.copy),
+                Modifier.weight(1f),
+                icon = Icons.Outlined.FileCopy,
+                accent = true,
+            ) { copySensitive(context, result, context.getString(R.string.copied)) }
+            Spacer(Modifier.width(12.dp))
+            PrimaryButton(
+                stringResource(R.string.share),
+                Modifier.weight(1f),
+                icon = Icons.Default.Share,
+            ) { shareText(context, result) }
         }
     }
 }

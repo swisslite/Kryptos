@@ -8,6 +8,47 @@ enum RemoteClipboard {
     static var isRemote: Bool { UIPasteboard.general.contains(pasteboardTypes: [marker]) }
 }
 
+final class ConfigCache<T>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: T?
+    private var at: TimeInterval = 0
+    private let ttl: TimeInterval
+
+    init(ttl: TimeInterval = 0.5) { self.ttl = ttl }
+
+    func get(_ make: () -> T) -> T {
+        let now = ProcessInfo.processInfo.systemUptime
+        lock.lock()
+        if let stored, now - at < ttl {
+            lock.unlock()
+            return stored
+        }
+        lock.unlock()
+        let fresh = make()
+        lock.lock()
+        stored = fresh
+        at = now
+        lock.unlock()
+        return fresh
+    }
+
+    func invalidate() {
+        lock.lock()
+        stored = nil
+        at = 0
+        lock.unlock()
+    }
+}
+
+enum ConfigCaches {
+    static func invalidateAll() {
+        ChatStego.invalidateCache()
+        PrivacyConfig.invalidateCache()
+        InterfaceConfig.invalidateCache()
+        KeyboardConfig.invalidateCache()
+    }
+}
+
 enum AppGroup {
     static let fallbackIdentifier = "group.com.kryptos.app"
 
@@ -21,7 +62,7 @@ enum AppGroup {
 
     private static func allCandidateGroups() -> [String] {
         var groups = provisionedGroups()
-        if let team = teamIdentifierPrefix() {
+        if let team = KeychainProbe.teamPrefix() {
             groups.append("group.\(team).com.kryptos.app")
         }
         groups.append(fallbackIdentifier)
@@ -41,27 +82,6 @@ enum AppGroup {
         return groups
     }
 
-    private static func teamIdentifierPrefix() -> String? {
-        let account = "kryptos.teamid.probe"
-        let base: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
-                                   kSecAttrAccount as String: account,
-                                   kSecAttrService as String: account]
-        var query = base
-        query[kSecReturnAttributes as String] = true
-        query[kSecMatchLimit as String] = kSecMatchLimitOne
-        var result: AnyObject?
-        var status = SecItemCopyMatching(query as CFDictionary, &result)
-        if status == errSecItemNotFound {
-            SecItemAdd(base as CFDictionary, nil)
-            status = SecItemCopyMatching(query as CFDictionary, &result)
-        }
-        guard status == errSecSuccess,
-              let attrs = result as? [String: Any],
-              let group = attrs[kSecAttrAccessGroup as String] as? String,
-              let team = group.split(separator: ".").first else { return nil }
-        return String(team)
-    }
-
     static var container: URL {
         if let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: identifier) {
             return url
@@ -77,35 +97,49 @@ enum AppGroup {
 
 enum ChatStego {
     private static let key = "stego"
-    private struct Config: Codable { var enabled = false; var lang = "auto"; var smart: Bool? = false }
-
-    private static func config() -> Config {
-        guard let d = SharedStore.read(key), let c = try? JSONDecoder().decode(Config.self, from: d) else { return Config() }
-        return c
+    private struct Config: Codable {
+        var enabled = false
+        var lang = "auto"
+        var smart: Bool? = false
+        var mode: String?
     }
 
-    static func save(enabled: Bool, language: String, smart: Bool) {
-        if let d = try? JSONEncoder().encode(Config(enabled: enabled, lang: language, smart: smart)) { SharedStore.write(key, d) }
+    private static let cache = ConfigCache<Config>()
+
+    static func invalidateCache() { cache.invalidate() }
+
+    private static func config() -> Config {
+        cache.get {
+            guard let d = SharedStore.read(key), let c = try? JSONDecoder().decode(Config.self, from: d) else { return Config() }
+            return c
+        }
+    }
+
+    private static func mode(of c: Config) -> StegoMode {
+        StegoMode.resolve(c.mode, legacySmart: c.smart ?? false)
+    }
+
+    static func save(enabled: Bool, language: String, mode: StegoMode) {
+        let c = Config(enabled: enabled, lang: language, smart: mode == .smart, mode: mode.rawValue)
+        if let d = try? JSONEncoder().encode(c) { SharedStore.write(key, d) }
+        cache.invalidate()
+    }
+
+    static func resolvedCover() -> (language: StegoLanguage?, mode: StegoMode) {
+        let c = config()
+        guard c.enabled else { return (nil, .words) }
+        let language: StegoLanguage
+        switch c.lang {
+        case "english": language = .english
+        case "russian": language = .russian
+        default: language = .forSystem()
+        }
+        return (language, mode(of: c))
     }
 
     static var isEnabled: Bool { config().enabled }
     static var languageRaw: String { config().lang }
-    static var isSmart: Bool { config().smart ?? false }
-
-    static func resolvedLanguage() -> StegoLanguage? {
-        let c = config()
-        guard c.enabled else { return nil }
-        switch c.lang {
-        case "english": return .english
-        case "russian": return .russian
-        default: return .forSystem()
-        }
-    }
-
-    static func resolvedSmart() -> Bool {
-        let c = config()
-        return c.enabled && (c.smart ?? false)
-    }
+    static var storedMode: StegoMode { mode(of: config()) }
 }
 
 enum PrivacyConfig {
@@ -119,9 +153,15 @@ enum PrivacyConfig {
         var lengthPadding: Bool? = false
     }
 
+    private static let cache = ConfigCache<Config>()
+
+    static func invalidateCache() { cache.invalidate() }
+
     private static func config() -> Config {
-        guard let d = SharedStore.read(key), let c = try? JSONDecoder().decode(Config.self, from: d) else { return Config() }
-        return c
+        cache.get {
+            guard let d = SharedStore.read(key), let c = try? JSONDecoder().decode(Config.self, from: d) else { return Config() }
+            return c
+        }
     }
 
     static func save(appLock: Bool, shield: Bool, clipboardLocalOnly: Bool, clipboardExpiry: Double, clipboardAutoDecrypt: Bool, lengthPadding: Bool) {
@@ -130,6 +170,17 @@ enum PrivacyConfig {
                                                     clipboardAutoDecrypt: clipboardAutoDecrypt, lengthPadding: lengthPadding)) {
             SharedStore.write(key, d)
         }
+        cache.invalidate()
+    }
+
+    static func clipboardOptions() -> (localOnly: Bool, expiry: Double) {
+        let c = config()
+        return (c.clipboardLocalOnly, c.clipboardExpiry)
+    }
+
+    static func coverState() -> (shield: Bool, appLock: Bool) {
+        let c = config()
+        return (c.shield, c.appLock)
     }
 
     static var appLock: Bool { config().appLock }
@@ -138,6 +189,41 @@ enum PrivacyConfig {
     static var clipboardExpiry: Double { config().clipboardExpiry }
     static var clipboardAutoDecrypt: Bool { config().clipboardAutoDecrypt ?? true }
     static var lengthPadding: Bool { config().lengthPadding ?? false }
+}
+
+enum InterfaceConfig {
+    static let supportedLanguages = ["en", "ru"]
+
+    private static let key = "interface"
+    private struct Config: Codable {
+        var theme = "auto"
+        var language = "auto"
+        var hiddenTabs: [String] = []
+    }
+
+    private static let cache = ConfigCache<Config>()
+
+    static func invalidateCache() { cache.invalidate() }
+
+    private static func config() -> Config {
+        cache.get {
+            guard let d = SharedStore.read(key), let c = try? JSONDecoder().decode(Config.self, from: d) else { return Config() }
+            return c
+        }
+    }
+
+    private static func save(_ c: Config) {
+        if let d = try? JSONEncoder().encode(c) { SharedStore.write(key, d) }
+        cache.invalidate()
+    }
+
+    static var theme: String { config().theme }
+    static var language: String { config().language }
+    static var hiddenTabs: [String] { config().hiddenTabs }
+
+    static func setTheme(_ v: String) { var c = config(); c.theme = v; save(c) }
+    static func setLanguage(_ v: String) { var c = config(); c.language = v; save(c) }
+    static func setHiddenTabs(_ v: [String]) { var c = config(); c.hiddenTabs = v; save(c) }
 }
 
 enum KeyboardConfig {
@@ -150,22 +236,64 @@ enum KeyboardConfig {
         var suggestions: Bool? = true
         var emoji: Bool? = true
         var autocorrect: Bool? = true
+        var composeToggle: Bool? = true
         var langs: [String]? = nil
     }
 
+    private static let cache = ConfigCache<Config>()
+
+    static func invalidateCache() { cache.invalidate() }
+
     private static func config() -> Config {
-        guard let d = SharedStore.read(key), let c = try? JSONDecoder().decode(Config.self, from: d) else { return Config() }
-        return c
+        cache.get {
+            guard let d = SharedStore.read(key), let c = try? JSONDecoder().decode(Config.self, from: d) else { return Config() }
+            return c
+        }
     }
 
     static func save(haptics: Bool, compose: Bool, sounds: Bool, autoDecrypt: Bool, suggestions: Bool,
-                     emoji: Bool, autocorrect: Bool, languages: [String]?) {
+                     emoji: Bool, autocorrect: Bool, composeToggle: Bool, languages: [String]?) {
         if let d = try? JSONEncoder().encode(Config(haptics: haptics, compose: compose, sounds: sounds,
                                                     autoDecrypt: autoDecrypt, suggestions: suggestions,
                                                     emoji: emoji, autocorrect: autocorrect,
+                                                    composeToggle: composeToggle,
                                                     langs: languages.map(cleaned))) {
             SharedStore.write(key, d)
         }
+        cache.invalidate()
+    }
+
+    static func setCompose(_ value: Bool) {
+        var c = config()
+        c.compose = value
+        if let d = try? JSONEncoder().encode(c) { SharedStore.write(key, d) }
+        cache.invalidate()
+    }
+
+    struct Snapshot: Sendable {
+        var haptics: Bool
+        var compose: Bool
+        var composeToggle: Bool
+        var sounds: Bool
+        var autoDecrypt: Bool
+        var suggestions: Bool
+        var autocorrect: Bool
+        var emoji: Bool
+        var languages: [String]
+    }
+
+    static func snapshot() -> Snapshot {
+        let c = config()
+        let langs = c.langs.map(cleaned) ?? []
+        return Snapshot(haptics: c.haptics,
+                        compose: c.compose,
+                        composeToggle: c.composeToggle ?? true,
+                        sounds: c.sounds,
+                        autoDecrypt: c.autoDecrypt ?? true,
+                        suggestions: c.suggestions ?? true,
+                        autocorrect: c.autocorrect ?? true,
+                        emoji: c.emoji ?? true,
+                        languages: langs.isEmpty ? (systemPrefersRussian ? ["en", "ru"] : ["en"]) : langs)
     }
 
     static var haptics: Bool { config().haptics }
@@ -175,6 +303,7 @@ enum KeyboardConfig {
     static var suggestions: Bool { config().suggestions ?? true }
     static var emoji: Bool { config().emoji ?? true }
     static var autocorrect: Bool { config().autocorrect ?? true }
+    static var composeToggle: Bool { config().composeToggle ?? true }
     static var languages: [String] { storedLanguages ?? (systemPrefersRussian ? ["en", "ru"] : ["en"]) }
 
     static var storedLanguages: [String]? {

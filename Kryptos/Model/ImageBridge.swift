@@ -13,7 +13,30 @@ extension UIImage {
 
 enum ImageBridge {
     private static let bitmapInfo = CGImageAlphaInfo.noneSkipLast.rawValue
-    private static let maxPixels = 100_000_000
+    static let maxPixels = 50_000_000
+    static let coverTargetPixels = 20_000_000
+
+    static func isWithinLimits(_ image: UIImage) -> Bool {
+        guard let cg = image.cgImage else { return true }
+        return cg.width * cg.height <= maxPixels
+    }
+
+    static func preparedCover(_ image: UIImage) -> UIImage {
+        let upright = image.normalizedUp
+        guard let cg = upright.cgImage else { return upright }
+        let pixels = cg.width * cg.height
+        guard pixels > coverTargetPixels else { return upright }
+        let scale = (Double(coverTargetPixels) / Double(pixels)).squareRoot()
+        let width = max(1, Int((Double(cg.width) * scale).rounded(.down)))
+        let height = max(1, Int((Double(cg.height) * scale).rounded(.down)))
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        format.opaque = true
+        let size = CGSize(width: width, height: height)
+        return UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            upright.draw(in: CGRect(origin: .zero, size: size))
+        }
+    }
 
     static func rgba(from image: UIImage) -> (pixels: [UInt8], width: Int, height: Int)? {
         guard let cg = image.cgImage else { return nil }

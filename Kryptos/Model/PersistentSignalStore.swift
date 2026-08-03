@@ -22,6 +22,38 @@ final class PersistentSignalStore: InMemorySignalProtocolStore {
 
     private struct GenerationProbe: Codable { var generation: UInt64? }
 
+    struct Archive: Codable {
+        var preKeys: [String: Data] = [:]
+        var signedPreKeys: [String: Data] = [:]
+        var kyberPreKeys: [String: Data] = [:]
+        var sessions: [String: Data] = [:]
+        var identities: [String: Data] = [:]
+    }
+
+    static func exportArchive(storageKey: String, cryptKey: SymmetricKey) -> Archive? {
+        guard let enc = SharedStore.read(storageKey),
+              let box = try? AES.GCM.SealedBox(combined: enc),
+              let dec = try? AES.GCM.open(box, using: cryptKey),
+              let s = try? JSONDecoder().decode(Snapshot.self, from: dec) else { return nil }
+        return Archive(preKeys: s.preKeys, signedPreKeys: s.signedPreKeys, kyberPreKeys: s.kyberPreKeys,
+                       sessions: s.sessions, identities: s.identities)
+    }
+
+    @discardableResult
+    static func writeArchive(_ archive: Archive, storageKey: String, cryptKey: SymmetricKey) -> Bool {
+        var s = Snapshot()
+        s.generation = 1
+        s.preKeys = archive.preKeys
+        s.signedPreKeys = archive.signedPreKeys
+        s.kyberPreKeys = archive.kyberPreKeys
+        s.sessions = archive.sessions
+        s.identities = archive.identities
+        guard let json = try? JSONEncoder().encode(s),
+              let box = try? AES.GCM.seal(json, using: cryptKey),
+              let combined = box.combined else { return false }
+        return SharedStore.write(storageKey, combined)
+    }
+
     private var snap = Snapshot()
     private var expectedGeneration: UInt64 = 0
     private(set) var hadStaleConflict = false
@@ -80,7 +112,40 @@ final class PersistentSignalStore: InMemorySignalProtocolStore {
         for (k, v) in s.identities { if let a = parseAddr(k), let ik = try? IdentityKey(bytes: v) { _ = try? super.saveIdentity(ik, for: a, context: ctx) } }
     }
 
+    private var batchDepth = 0
+    private var pendingWrite = false
+
+    func batch<T>(_ body: () throws -> T) throws -> T {
+        batchDepth += 1
+        let result: T
+        do {
+            result = try body()
+        } catch {
+            batchDepth -= 1
+            if batchDepth == 0, pendingWrite {
+                pendingWrite = false
+                try? writeSnapshot()
+            }
+            throw error
+        }
+        batchDepth -= 1
+        if batchDepth == 0, pendingWrite {
+            pendingWrite = false
+            try writeSnapshot()
+        }
+        return result
+    }
+
     private func persist() throws {
+        if batchDepth > 0 {
+            guard !loadFailed else { throw PersistError.staleSnapshot }
+            pendingWrite = true
+            return
+        }
+        try writeSnapshot()
+    }
+
+    private func writeSnapshot() throws {
         guard !loadFailed else { throw PersistError.staleSnapshot }
         let diskGeneration: UInt64 = {
             guard let dec = decryptedBlob() else { return 0 }
@@ -152,16 +217,16 @@ final class PersistentSignalStore: InMemorySignalProtocolStore {
         if snap.kyberPreKeys.removeValue(forKey: String(id)) != nil { try? persist() }
     }
 
-    func removeAllSessionsAndPeerIdentities() {
+    func removeAllSessionsAndPeerIdentities() throws {
         snap.sessions = [:]
         snap.identities = [:]
-        try? persist()
+        try persist()
     }
 
-    func removeSessionAndIdentity(forName name: String) {
+    func removeSessionAndIdentity(forName name: String) throws {
         let prefix = name + "|"
         snap.sessions = snap.sessions.filter { !$0.key.hasPrefix(prefix) }
         snap.identities = snap.identities.filter { !$0.key.hasPrefix(prefix) }
-        try? persist()
+        try persist()
     }
 }

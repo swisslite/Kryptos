@@ -1,5 +1,5 @@
 import SwiftUI
-import AVFoundation
+@preconcurrency import AVFoundation
 import CoreImage.CIFilterBuiltins
 import UIKit
 
@@ -42,28 +42,38 @@ struct QRScannerView: UIViewControllerRepresentable {
 
 final class ScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
     var onFound: ((String) -> Void)?
-    private let session = AVCaptureSession()
+    private nonisolated(unsafe) let session = AVCaptureSession()
     private var preview: AVCaptureVideoPreviewLayer?
     private let sessionQueue = DispatchQueue(label: "kryptos.qr.session", qos: .userInitiated)
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
-        guard let device = AVCaptureDevice.default(for: .video),
-              let input = try? AVCaptureDeviceInput(device: device),
-              session.canAddInput(input) else { return }
-        session.addInput(input)
-        let output = AVCaptureMetadataOutput()
-        guard session.canAddOutput(output) else { return }
-        session.addOutput(output)
-        output.setMetadataObjectsDelegate(self, queue: .main)
-        output.metadataObjectTypes = [.qr]
         let layer = AVCaptureVideoPreviewLayer(session: session)
         layer.videoGravity = .resizeAspectFill
         layer.frame = view.bounds
         view.layer.addSublayer(layer)
         preview = layer
-        sessionQueue.async { [session] in session.startRunning() }
+        sessionQueue.async { [session, weak self] in
+            session.beginConfiguration()
+            guard let device = AVCaptureDevice.default(for: .video),
+                  let input = try? AVCaptureDeviceInput(device: device),
+                  session.canAddInput(input) else {
+                session.commitConfiguration()
+                return
+            }
+            session.addInput(input)
+            let output = AVCaptureMetadataOutput()
+            guard session.canAddOutput(output) else {
+                session.commitConfiguration()
+                return
+            }
+            session.addOutput(output)
+            output.setMetadataObjectsDelegate(self, queue: .main)
+            output.metadataObjectTypes = [.qr]
+            session.commitConfiguration()
+            if !session.isRunning { session.startRunning() }
+        }
     }
 
     override func viewDidLayoutSubviews() {
@@ -73,16 +83,18 @@ final class ScannerViewController: UIViewController, AVCaptureMetadataOutputObje
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        stop()
+    }
+
+    private nonisolated func stop() {
         sessionQueue.async { [session] in
             if session.isRunning { session.stopRunning() }
         }
     }
 
-    func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput objects: [AVMetadataObject], from connection: AVCaptureConnection) {
+    nonisolated func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput objects: [AVMetadataObject], from connection: AVCaptureConnection) {
         guard let obj = objects.first as? AVMetadataMachineReadableCodeObject, let value = obj.stringValue else { return }
-        sessionQueue.async { [session] in
-            if session.isRunning { session.stopRunning() }
-        }
-        onFound?(value)
+        stop()
+        MainActor.assumeIsolated { onFound?(value) }
     }
 }

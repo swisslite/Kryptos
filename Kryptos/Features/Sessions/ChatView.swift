@@ -9,7 +9,6 @@ struct ChatView: View {
     @Environment(\.dismiss) private var dismiss
     let contact: Contact
 
-    @State private var draft = ""
     @State private var lastCipher: String?
     @State private var errorText: String?
     @State private var confirmClear = false
@@ -74,8 +73,11 @@ struct ChatView: View {
         .confirmationDialog("Delete this contact and your conversation? Their key and session are erased from this device; your own key stays. This can't be undone.",
                             isPresented: $confirmDeleteContact, titleVisibility: .visible) {
             Button("Delete contact & chat", role: .destructive) {
-                signal.removeContact(contact)
-                dismiss()
+                if signal.removeContact(contact) {
+                    dismiss()
+                } else {
+                    errorText = String(localized: "Could not delete this contact — try again.")
+                }
             }
         }
         .onAppear { signal.reloadCurrentFromDisk() }
@@ -94,11 +96,12 @@ struct ChatView: View {
 
     private func sentBanner(_ cipher: String) -> some View {
         let hidden = TextStego.looksLikeStego(cipher) || SmartTextStego.looksLikeStego(cipher)
+            || LetterStego.looksLikeStego(cipher)
         return HStack(spacing: 10) {
             Image(systemName: hidden ? "text.word.spacing" : "checkmark.circle.fill")
                 .foregroundStyle(Color(red: 0.2, green: 0.72, blue: 0.45))
             Text(hidden
-                 ? "Hidden in words & copied — paste it to your contact."
+                 ? "Hidden in text & copied — paste it to your contact."
                  : "Encrypted & copied — paste it to your contact.")
                 .font(.kBody()).foregroundStyle(KTheme.textPrimary)
             Spacer(minLength: 0)
@@ -136,46 +139,21 @@ struct ChatView: View {
     }
 
     private var inputBar: some View {
-        let empty = draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        return HStack(spacing: 10) {
-            Button { decryptClipboard() } label: {
-                Image(systemName: "tray.and.arrow.down.fill")
-                    .font(.system(size: 19, weight: .semibold)).foregroundStyle(KTheme.accent)
-                    .frame(width: 48, height: 48)
-            }
-            .glassSurface(Circle())
-
-            TextField("Message", text: $draft, axis: .vertical)
-                .lineLimit(1 ... 4)
-                .padding(.horizontal, 18).padding(.vertical, 14)
-                .glassSurface(Capsule())
-
-            Button { encrypt() } label: {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 19, weight: .semibold)).foregroundStyle(.white)
-                    .frame(width: 48, height: 48)
-            }
-            .glassSurface(Circle(), tint: KTheme.accent)
-            .shadow(color: KTheme.accent.opacity(empty ? 0 : 0.35), radius: 10, y: 3)
-            .opacity(empty ? 0.55 : 1)
-            .disabled(empty)
-        }
-        .padding(.horizontal, 12)
-        .padding(.top, 6)
-        .padding(.bottom, 4)
+        ChatInputBar(onPaste: decryptClipboard, onSend: encrypt)
     }
 
-    private func encrypt() {
+    private func encrypt(_ raw: String) -> Bool {
         errorText = nil
-        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return false }
         do {
             let armored = try signal.encrypt(text, to: contact)
-            draft = ""
-            Clipboard.copy(armored)
+            Clipboard.copyCipher(armored)
             lastCipher = armored
+            return true
         } catch {
             errorText = String(localized: "Could not encrypt the message.")
+            return false
         }
     }
 
@@ -193,8 +171,7 @@ struct ChatView: View {
     }
 
     static func decryptFailureMessage(for error: Error, in clip: String) -> String {
-        let stegoSized = clip.utf16.count >= 40 && clip.utf16.count <= 64_000
-        if !WireFormat.isToken(clip) && !(stegoSized && (TextStego.looksLikeStego(clip) || SmartTextStego.looksLikeStego(clip))) {
+        if !ClipProbe.looksEncrypted(clip) {
             return String(localized: "The clipboard has no Kryptos message — copy the encrypted text first.")
         }
         switch error {
@@ -209,5 +186,42 @@ struct ChatView: View {
             — that repairs the conversation.
             """)
         }
+    }
+}
+
+private struct ChatInputBar: View {
+    let onPaste: () -> Void
+    let onSend: (String) -> Bool
+
+    @State private var draft = ""
+
+    var body: some View {
+        let empty = draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return HStack(spacing: 10) {
+            Button { onPaste() } label: {
+                Image(systemName: "tray.and.arrow.down.fill")
+                    .font(.system(size: 19, weight: .semibold)).foregroundStyle(KTheme.accent)
+                    .frame(width: 48, height: 48)
+            }
+            .glassSurface(Circle())
+
+            TextField("Message", text: $draft, axis: .vertical)
+                .lineLimit(1 ... 4)
+                .padding(.horizontal, 18).padding(.vertical, 14)
+                .glassSurface(Capsule())
+
+            Button { if onSend(draft) { draft = "" } } label: {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 19, weight: .semibold)).foregroundStyle(.white)
+                    .frame(width: 48, height: 48)
+            }
+            .glassSurface(Circle(), tint: KTheme.accent)
+            .shadow(color: KTheme.accent.opacity(empty ? 0 : 0.35), radius: 10, y: 3)
+            .opacity(empty ? 0.55 : 1)
+            .disabled(empty)
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 6)
+        .padding(.bottom, 4)
     }
 }

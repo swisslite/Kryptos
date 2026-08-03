@@ -1,13 +1,23 @@
 package com.kryptos.android.signal
 
 import android.util.Base64
+import com.kryptos.android.core.Argon2id
 import com.kryptos.android.core.StegoLanguage
+import com.kryptos.android.core.StegoMode
 import com.kryptos.android.core.randomBytes
 import com.kryptos.android.store.SecureStore
 import java.security.MessageDigest
 
 object AppSettingsStore {
     private val prefs get() = SecureStore.prefs()
+
+    private const val OBSOLETE_HANDLED_CLIP = "kb.clip.handled"
+
+    init {
+        runCatching {
+            if (prefs.contains(OBSOLETE_HANDLED_CLIP)) prefs.edit().remove(OBSOLETE_HANDLED_CLIP).apply()
+        }
+    }
 
     var chatStegoEnabled: Boolean
         get() = prefs.getBoolean("stego.enabled", false)
@@ -17,9 +27,14 @@ object AppSettingsStore {
         get() = prefs.getString("stego.lang", "auto") ?: "auto"
         set(v) { prefs.edit().putString("stego.lang", v).apply() }
 
-    var chatStegoSmart: Boolean
-        get() = prefs.getBoolean("stego.smart", false)
-        set(v) { prefs.edit().putBoolean("stego.smart", v).apply() }
+    var chatStegoMode: StegoMode
+        get() = StegoMode.resolve(prefs.getString("stego.mode", null), prefs.getBoolean("stego.smart", false))
+        set(v) {
+            prefs.edit()
+                .putString("stego.mode", v.key)
+                .putBoolean("stego.smart", v == StegoMode.SMART)
+                .apply()
+        }
 
     fun resolvedStegoLanguage(): StegoLanguage? {
         if (!chatStegoEnabled) return null
@@ -30,7 +45,7 @@ object AppSettingsStore {
         }
     }
 
-    fun resolvedStegoSmart(): Boolean = chatStegoEnabled && chatStegoSmart
+    fun resolvedStegoMode(): StegoMode = if (chatStegoEnabled) chatStegoMode else StegoMode.WORDS
 
     var keyboardHaptics: Boolean
         get() = prefs.getBoolean("kb.haptics", true)
@@ -44,13 +59,15 @@ object AppSettingsStore {
         get() = prefs.getBoolean("kb.compose", false)
         set(v) { prefs.edit().putBoolean("kb.compose", v).apply() }
 
+    var keyboardComposeToggle: Boolean
+        get() = prefs.getBoolean("kb.composetoggle", true)
+        set(v) { prefs.edit().putBoolean("kb.composetoggle", v).apply() }
+
     var keyboardAutoDecrypt: Boolean
         get() = prefs.getBoolean("kb.autodecrypt", true)
         set(v) { prefs.edit().putBoolean("kb.autodecrypt", v).apply() }
 
-    var keyboardHandledClip: String?
-        get() = prefs.getString("kb.clip.handled", null)
-        set(v) { prefs.edit().putString("kb.clip.handled", v).apply() }
+    @Volatile var keyboardHandledClip: String? = null
 
     var keyboardSuggestions: Boolean
         get() = prefs.getBoolean("kb.suggestions", true)
@@ -136,64 +153,193 @@ object AppSettingsStore {
         get() = prefs.getBoolean("privacy.lengthpad", false)
         set(v) { prefs.edit().putBoolean("privacy.lengthpad", v).apply() }
 
-    private const val DURESS_HASH = "privacy.duresspin.hash"
-    private const val DURESS_SALT = "privacy.duresspin.salt"
-    private const val DURESS_ITER = "privacy.duresspin.iter"
-    private const val DURESS_LEGACY = "privacy.duresspin"
-    private const val DURESS_ITERATIONS = 210_000
+    enum class AppTab(val key: String) {
+        CHATS("chats"), PGP("pgp"), QUICK("quick"), STEGO("stego"), SETTINGS("settings");
 
-    val hasDuressPin: Boolean
+        val canHide: Boolean get() = this != SETTINGS
+
+        companion object {
+            fun of(key: String): AppTab? = entries.firstOrNull { it.key == key }
+        }
+    }
+
+    data class UiState(
+        val theme: String = "auto",
+        val language: String = "auto",
+        val hiddenTabs: Set<AppTab> = emptySet(),
+    ) {
+        val visibleTabs: List<AppTab>
+            get() = AppTab.entries.filter { !it.canHide || it !in hiddenTabs }
+    }
+
+    private const val UI_THEME = "ui.theme"
+    private const val UI_LANG = "ui.lang"
+    private const val UI_TABS_HIDDEN = "ui.tabs.hidden"
+
+    private fun readUiState(): UiState = runCatching {
+        UiState(
+            theme = prefs.getString(UI_THEME, "auto") ?: "auto",
+            language = prefs.getString(UI_LANG, "auto") ?: "auto",
+            hiddenTabs = (prefs.getString(UI_TABS_HIDDEN, "") ?: "")
+                .split(',').mapNotNull { AppTab.of(it.trim()) }
+                .filter { it.canHide }
+                .toSet(),
+        )
+    }.getOrDefault(UiState())
+
+    val ui = kotlinx.coroutines.flow.MutableStateFlow(UiState())
+
+    fun loadUiState() { ui.value = readUiState() }
+
+    var uiTheme: String
+        get() = ui.value.theme
+        set(v) {
+            prefs.edit().putString(UI_THEME, v).apply()
+            ui.value = ui.value.copy(theme = v)
+        }
+
+    var uiLanguage: String
+        get() = ui.value.language
+        set(v) {
+            prefs.edit().putString(UI_LANG, v).apply()
+            ui.value = ui.value.copy(language = v)
+        }
+
+    fun storedLanguage(): String = runCatching { prefs.getString(UI_LANG, "auto") ?: "auto" }.getOrDefault("auto")
+
+    fun setTabHidden(tab: AppTab, hidden: Boolean) {
+        if (!tab.canHide) return
+        val next = if (hidden) ui.value.hiddenTabs + tab else ui.value.hiddenTabs - tab
+        if (next.size >= AppTab.entries.count { it.canHide }) return
+        prefs.edit().putString(UI_TABS_HIDDEN, next.joinToString(",") { it.key }).apply()
+        ui.value = ui.value.copy(hiddenTabs = next)
+    }
+
+    const val CODE_MIN_LENGTH = 4
+
+    enum class CodeResult { OK, TOO_SHORT, DUPLICATE, FAILED }
+
+    private const val DURESS_BLOB = "duress"
+    private const val APPCODE_BLOB = "appcode"
+    private const val DURESS_OBSOLETE_HASH = "privacy.duresspin.argon2.hash"
+    private const val DURESS_OBSOLETE_SALT = "privacy.duresspin.argon2.salt"
+    private const val DURESS_LEGACY_KEYS = "privacy.duresspin.hash;privacy.duresspin.salt;privacy.duresspin.iter;privacy.duresspin"
+    private const val DURESS_HASH_LENGTH = 32
+    private const val BLOB_LENGTH = Argon2id.MIN_SALT_LENGTH + DURESS_HASH_LENGTH
+
+    @Volatile private var duressPresent: Boolean? = null
+    @Volatile private var appCodePresent: Boolean? = null
+
+    fun invalidateCaches() {
+        duressPresent = null
+        appCodePresent = null
+        keyboardHandledClip = null
+        loadUiState()
+    }
+
+    private fun codeHash(salt: ByteArray, code: String): ByteArray =
+        Argon2id.derive(code.toByteArray(Charsets.UTF_8), salt, DURESS_HASH_LENGTH)
+
+    private fun codeStored(name: String): Boolean =
+        runCatching { SecureStore.read(name)?.size == BLOB_LENGTH }.getOrDefault(false)
+
+    private fun writeCode(name: String, code: String): Boolean {
+        val salt = randomBytes(Argon2id.MIN_SALT_LENGTH)
+        val digest = codeHash(salt, code)
+        val stored = runCatching { SecureStore.write(name, salt + digest); true }.getOrDefault(false)
+        digest.fill(0)
+        return stored
+    }
+
+    private val DUMMY_BLOB = ByteArray(BLOB_LENGTH)
+
+    private fun verifyCode(name: String, code: String): Boolean {
+        val blob = runCatching { SecureStore.read(name) }.getOrNull()
+        val present = blob != null && blob.size == BLOB_LENGTH
+        val source = if (present) blob!! else DUMMY_BLOB
+        val salt = source.copyOfRange(0, Argon2id.MIN_SALT_LENGTH)
+        val expected = source.copyOfRange(Argon2id.MIN_SALT_LENGTH, source.size)
+        val digest = codeHash(salt, code)
+        val equal = MessageDigest.isEqual(digest, expected)
+        digest.fill(0)
+        expected.fill(0)
+        blob?.fill(0)
+        return present && equal
+    }
+
+    data class CodeCheck(val panic: Boolean, val app: Boolean)
+
+    fun verifyCodes(code: String): CodeCheck {
+        migrateDuressPin()
+        if (code.length < CODE_MIN_LENGTH) return CodeCheck(panic = false, app = false)
+        val panicMatch = verifyCode(DURESS_BLOB, code)
+        val appMatch = verifyCode(APPCODE_BLOB, code)
+        return CodeCheck(panic = panicMatch, app = appMatch)
+    }
+
+    val hasPanicPassword: Boolean
         get() {
-            migrateLegacyDuressPin()
-            return prefs.getString(DURESS_HASH, null) != null
+            migrateDuressPin()
+            duressPresent?.let { return it }
+            return codeStored(DURESS_BLOB).also { duressPresent = it }
         }
 
-    private val duressExecutor = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
-        Thread(r, "kryptos-duress").apply { isDaemon = true }
-    }
-
-    fun setDuressPinAsync(pin: String) {
-        duressExecutor.execute { setDuressPin(pin) }
-    }
-
-    fun setDuressPin(pin: String) {
-        if (pin.isEmpty()) {
-            prefs.edit().remove(DURESS_HASH).remove(DURESS_SALT).remove(DURESS_ITER).remove(DURESS_LEGACY).apply()
-            return
+    val hasAppCode: Boolean
+        get() {
+            appCodePresent?.let { return it }
+            return codeStored(APPCODE_BLOB).also { appCodePresent = it }
         }
-        val salt = randomBytes(16)
-        prefs.edit()
-            .putString(DURESS_SALT, Base64.encodeToString(salt, Base64.NO_WRAP))
-            .putString(DURESS_HASH, Base64.encodeToString(duressPbkdf2(salt, pin), Base64.NO_WRAP))
-            .putInt(DURESS_ITER, DURESS_ITERATIONS)
-            .remove(DURESS_LEGACY)
-            .apply()
+
+    fun setPanicPassword(code: String): CodeResult {
+        migrateDuressPin()
+        if (code.length < CODE_MIN_LENGTH) return CodeResult.TOO_SHORT
+        if (verifyCode(APPCODE_BLOB, code)) return CodeResult.DUPLICATE
+        val stored = writeCode(DURESS_BLOB, code)
+        duressPresent = stored
+        return if (stored) CodeResult.OK else CodeResult.FAILED
     }
 
-    fun checkDuressPin(pin: String): Boolean {
-        migrateLegacyDuressPin()
-        val salt = prefs.getString(DURESS_SALT, null) ?: return false
-        val stored = prefs.getString(DURESS_HASH, null) ?: return false
-        val expected = runCatching { Base64.decode(stored, Base64.NO_WRAP) }.getOrNull() ?: return false
-        val saltBytes = runCatching { Base64.decode(salt, Base64.NO_WRAP) }.getOrNull() ?: return false
-        val digest = if (prefs.contains(DURESS_ITER)) {
-            duressPbkdf2(saltBytes, pin, prefs.getInt(DURESS_ITER, DURESS_ITERATIONS))
-        } else {
-            duressLegacySha(saltBytes, pin)
+    fun setAppCode(code: String): CodeResult {
+        if (code.length < CODE_MIN_LENGTH) return CodeResult.TOO_SHORT
+        if (verifyCode(DURESS_BLOB, code)) return CodeResult.DUPLICATE
+        val stored = writeCode(APPCODE_BLOB, code)
+        appCodePresent = stored
+        return if (stored) CodeResult.OK else CodeResult.FAILED
+    }
+
+    fun clearPanicPassword() {
+        migrateDuressPin()
+        runCatching { SecureStore.delete(DURESS_BLOB) }
+        duressPresent = false
+    }
+
+    fun clearAppCode() {
+        runCatching { SecureStore.delete(APPCODE_BLOB) }
+        appCodePresent = false
+    }
+
+    fun purgeLegacyRecords() = migrateDuressPin()
+
+    @Synchronized private fun migrateDuressPin() {
+        val legacy = DURESS_LEGACY_KEYS.split(";")
+        val stale = legacy.any { prefs.contains(it) } ||
+            prefs.contains(DURESS_OBSOLETE_HASH) || prefs.contains(DURESS_OBSOLETE_SALT)
+        if (!stale) return
+        val hash = prefs.getString(DURESS_OBSOLETE_HASH, null)
+        val salt = prefs.getString(DURESS_OBSOLETE_SALT, null)
+        if (hash != null && salt != null) {
+            val h = runCatching { Base64.decode(hash, Base64.NO_WRAP) }.getOrNull()
+            val sBytes = runCatching { Base64.decode(salt, Base64.NO_WRAP) }.getOrNull()
+            if (h != null && sBytes != null && sBytes.size == Argon2id.MIN_SALT_LENGTH &&
+                h.size == DURESS_HASH_LENGTH
+            ) {
+                runCatching { SecureStore.write(DURESS_BLOB, sBytes + h) }
+                duressPresent = null
+            }
         }
-        return MessageDigest.isEqual(digest, expected)
-    }
-
-    private fun duressPbkdf2(salt: ByteArray, pin: String, iterations: Int = DURESS_ITERATIONS): ByteArray =
-        javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
-            .generateSecret(javax.crypto.spec.PBEKeySpec(pin.toCharArray(), salt, iterations.coerceAtLeast(1), 256))
-            .encoded
-
-    private fun duressLegacySha(salt: ByteArray, pin: String): ByteArray =
-        MessageDigest.getInstance("SHA-256").apply { update(salt) }.digest(pin.toByteArray(Charsets.UTF_8))
-
-    private fun migrateLegacyDuressPin() {
-        val legacy = prefs.getString(DURESS_LEGACY, null) ?: return
-        if (legacy.isNotEmpty()) setDuressPin(legacy) else prefs.edit().remove(DURESS_LEGACY).apply()
+        val editor = prefs.edit()
+        legacy.forEach { editor.remove(it) }
+        editor.remove(DURESS_OBSOLETE_HASH).remove(DURESS_OBSOLETE_SALT)
+        editor.commit()
     }
 }

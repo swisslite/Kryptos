@@ -11,8 +11,26 @@ enum Keychain {
         return FileFallback.save(data, account: account)
     }
 
+    enum ReadResult { case found(Data); case absent; case unavailable }
+
     static func load(account: String) -> Data? {
         loadItem(account: account, group: accessGroup) ?? loadItem(account: account, group: nil) ?? FileFallback.load(account)
+    }
+
+    static func loadStrict(account: String) -> ReadResult {
+        var blocked = false
+        for group in [accessGroup, nil] {
+            switch loadItemStrict(account: account, group: group) {
+            case .found(let data): return .found(data)
+            case .unavailable: blocked = true
+            case .absent: continue
+            }
+        }
+        switch FileFallback.loadStrict(account) {
+        case .found(let data): return .found(data)
+        case .unavailable: return .unavailable
+        case .absent: return blocked ? .unavailable : .absent
+        }
     }
 
     @discardableResult
@@ -41,6 +59,12 @@ enum Keychain {
             (try? data.write(to: url(account), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])) != nil
         }
         static func load(_ account: String) -> Data? { try? Data(contentsOf: url(account)) }
+        static func loadStrict(_ account: String) -> ReadResult {
+            let target = url(account)
+            guard FileManager.default.fileExists(atPath: target.path) else { return .absent }
+            guard let data = try? Data(contentsOf: target) else { return .unavailable }
+            return .found(data)
+        }
         static func delete(_ account: String) { try? FileManager.default.removeItem(at: url(account)) }
         static func deleteAll() {
             let fm = FileManager.default
@@ -69,6 +93,17 @@ enum Keychain {
         let update: [String: Any] = [kSecValueData as String: data,
                                      kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly]
         return SecItemUpdate(baseQuery(account: account, group: group) as CFDictionary, update as CFDictionary) == errSecSuccess
+    }
+
+    private static func loadItemStrict(account: String, group: String?) -> ReadResult {
+        var q = baseQuery(account: account, group: group)
+        q[kSecReturnData as String] = true
+        q[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: AnyObject?
+        let status = SecItemCopyMatching(q as CFDictionary, &result)
+        if status == errSecItemNotFound || status == errSecMissingEntitlement { return .absent }
+        guard status == errSecSuccess, let data = result as? Data else { return .unavailable }
+        return .found(data)
     }
 
     private static func loadItem(account: String, group: String?) -> Data? {

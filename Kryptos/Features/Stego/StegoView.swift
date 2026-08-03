@@ -4,9 +4,16 @@ import UIKit
 import UniformTypeIdentifiers
 import CipherCore
 
+enum StegoOutcome: Sendable {
+    case hidden(Data)
+    case revealed(String)
+    case failed(String)
+}
+
 struct StegoView: View {
     enum Mode { case hide, reveal }
 
+    @EnvironmentObject private var lock: LockGate
     @State private var mode: Mode = .hide
     @State private var pickerItem: PhotosPickerItem?
     @State private var showFileImporter = false
@@ -17,6 +24,7 @@ struct StegoView: View {
     @State private var resultFile: URL?
     @State private var revealed: String?
     @State private var errorText: String?
+    @State private var busy = false
 
     var body: some View {
         ScreenScaffold("Photo",
@@ -37,14 +45,22 @@ struct StegoView: View {
         }
         .onChange(of: pickerItem) { _, item in loadImage(item) }
         .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.image]) { loadFile($0) }
+        .onChange(of: lock.isLocked) { _, locked in
+            guard locked else { return }
+            showFileImporter = false
+            revealed = nil
+            password = ""
+        }
+        .onDisappear { discardResultFile() }
     }
 
     private var pickCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let preview = sourceImage
+        return VStack(alignment: .leading, spacing: 12) {
             fieldLabel(mode == .hide ? "COVER PHOTO" : "PHOTO WITH A SECRET")
             PhotosPicker(selection: $pickerItem, matching: .images) {
-                if let sourceImage {
-                    Image(uiImage: sourceImage)
+                if let preview {
+                    Image(uiImage: preview)
                         .resizable().scaledToFill()
                         .frame(height: 170).frame(maxWidth: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: KTheme.cornerSmall, style: .continuous))
@@ -73,8 +89,11 @@ struct StegoView: View {
             TextEditor(text: $message)
                 .frame(minHeight: 100).scrollContentBackground(.hidden)
                 .padding(8).background(FieldBackground())
-            Button(action: hide) { Label("Hide in photo", systemImage: "eye.slash.fill") }
-                .buttonStyle(PrimaryButtonStyle())
+            Button(action: hide) {
+                Label(busy ? "Working…" : "Hide in photo", systemImage: busy ? "hourglass" : "eye.slash.fill")
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .disabled(busy)
         }
         .glassCard()
     }
@@ -85,8 +104,11 @@ struct StegoView: View {
             SecureField("shared secret", text: $password)
                 .textInputAutocapitalization(.never).autocorrectionDisabled()
                 .padding(12).background(FieldBackground())
-            Button(action: reveal) { Label("Reveal message", systemImage: "eye.fill") }
-                .buttonStyle(PrimaryButtonStyle())
+            Button(action: reveal) {
+                Label(busy ? "Working…" : "Reveal message", systemImage: busy ? "hourglass" : "eye.fill")
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .disabled(busy)
         }
         .glassCard()
     }
@@ -130,39 +152,78 @@ struct StegoView: View {
     }
 
     private func hide() {
-        errorText = nil; resultImage = nil; resultFile = nil
-        guard let img = sourceImage?.normalizedUp else { errorText = String(localized: "Choose a photo first."); return }
+        errorText = nil; discardResultFile(); resultImage = nil
+        guard let source = sourceImage else { errorText = String(localized: "Choose a photo first."); return }
         guard !password.isEmpty else { errorText = String(localized: "Enter a password."); return }
         guard !message.isEmpty else { errorText = String(localized: "Enter some text."); return }
+        let img = ImageBridge.preparedCover(source)
         guard let (pixels, w, h) = ImageBridge.rgba(from: img) else { errorText = String(localized: "Could not read the photo."); return }
-        do {
-            let blob = try PasswordCipher.encrypt(Data(message.utf8), password: password)
-            guard blob.count <= LSBStego.capacity(pixelCount: w * h) else {
-                errorText = String(localized: "The message is too large for this photo. Use a bigger photo or a shorter message.")
-                return
+        let secret = password
+        let text = message
+        busy = true
+        Task {
+            let outcome = await Task.detached(priority: .userInitiated) {
+                do {
+                    let stego = try ImageStego.hide(Data(text.utf8), password: secret, rgba: pixels,
+                                                    width: w, height: h, pad: PrivacyConfig.lengthPadding)
+                    guard let png = ImageBridge.pngData(fromRGBA: stego, width: w, height: h) else {
+                        return StegoOutcome.failed(String(localized: "Could not build the image."))
+                    }
+                    return StegoOutcome.hidden(png)
+                } catch CipherError.stegoCapacityExceeded {
+                    return StegoOutcome.failed(String(localized: "The message is too large for this photo. Use a bigger or more detailed photo, or a shorter message."))
+                } catch {
+                    return StegoOutcome.failed(String(localized: "Could not hide the message."))
+                }
+            }.value
+            busy = false
+            switch outcome {
+            case .hidden(let png):
+                let url = FileManager.default.temporaryDirectory.appendingPathComponent("kryptos-hidden.png")
+                guard let out = UIImage(data: png),
+                      (try? png.write(to: url, options: [.atomic, .completeFileProtection])) != nil else {
+                    errorText = String(localized: "Could not build the image.")
+                    return
+                }
+                resultImage = out
+                resultFile = url
+            case .failed(let message):
+                errorText = message
+            case .revealed:
+                break
             }
-            let stego = try LSBStego.embed(payload: blob, intoRGBA: pixels)
-            guard let png = ImageBridge.pngData(fromRGBA: stego, width: w, height: h),
-                  let out = UIImage(data: png) else { errorText = String(localized: "Could not build the image."); return }
-            let url = FileManager.default.temporaryDirectory.appendingPathComponent("kryptos-hidden.png")
-            try png.write(to: url, options: [.atomic, .completeFileProtection])
-            resultImage = out; resultFile = url
-        } catch { errorText = String(localized: "Could not hide the message.") }
+        }
     }
 
     private func reveal() {
         errorText = nil; revealed = nil
         guard let img = sourceImage else { errorText = String(localized: "Choose a photo first."); return }
         guard !password.isEmpty else { errorText = String(localized: "Enter a password."); return }
-        guard let (pixels, _, _) = ImageBridge.rgba(from: img) else { errorText = String(localized: "Could not read the photo."); return }
-        do {
-            let blob = try LSBStego.extract(fromRGBA: pixels)
-            let plain = try PasswordCipher.decrypt(blob, password: password)
-            revealed = String(decoding: plain, as: UTF8.self)
-        } catch CipherError.noHiddenData {
-            errorText = String(localized: "No hidden message found in this photo.")
-        } catch {
-            errorText = String(localized: "Wrong password or corrupted data.")
+        guard ImageBridge.isWithinLimits(img) else {
+            errorText = String(localized: "This photo is too large. Use a smaller one.")
+            return
+        }
+        guard let (pixels, w, h) = ImageBridge.rgba(from: img) else { errorText = String(localized: "Could not read the photo."); return }
+        let secret = password
+        busy = true
+        Task {
+            let outcome = await Task.detached(priority: .userInitiated) {
+                do {
+                    let plain = try ImageStego.reveal(rgba: pixels, width: w, height: h, password: secret)
+                    return StegoOutcome.revealed(String(decoding: plain, as: UTF8.self))
+                } catch {
+                    return StegoOutcome.failed(String(localized: "No message found — wrong password, or this photo carries nothing."))
+                }
+            }.value
+            busy = false
+            switch outcome {
+            case .revealed(let text):
+                revealed = text
+            case .failed(let message):
+                errorText = message
+            case .hidden:
+                break
+            }
         }
     }
 
@@ -189,7 +250,13 @@ struct StegoView: View {
         sourceImage = img
     }
 
+    private func discardResultFile() {
+        if let url = resultFile { try? FileManager.default.removeItem(at: url) }
+        resultFile = nil
+    }
+
     private func reset() {
-        resultImage = nil; resultFile = nil; revealed = nil; errorText = nil
+        discardResultFile()
+        resultImage = nil; revealed = nil; errorText = nil
     }
 }

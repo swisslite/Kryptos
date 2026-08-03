@@ -1,6 +1,6 @@
 import Foundation
 
-final class SuggestionEngine {
+final class SuggestionEngine: @unchecked Sendable {
     static let shared = SuggestionEngine()
     private init() {}
 
@@ -113,27 +113,50 @@ final class SuggestionEngine {
             return (a, childEnd(a, hi, p, c))
         }
 
-        static func build(dictSorted: [String], rankOf: (String) -> Int32, vocab: Data) -> Lexicon {
-            let text = String(decoding: vocab, as: UTF8.self)
-            let units = Array(text.utf16)
-            var lineCount = 0
-            var scan = 0
-            while scan < units.count {
-                var e = scan
-                while e < units.count, units[e] != 0x0A { e += 1 }
-                if e > scan { lineCount += 1 }
-                scan = e + 1
+        private static func decodeUTF16(_ bytes: UnsafeBufferPointer<UInt8>, _ from: Int, _ to: Int,
+                                        into out: inout [UInt16]) {
+            var i = from
+            while i < to {
+                let b = bytes[i]
+                if b < 0x80 {
+                    out.append(UInt16(b)); i += 1
+                } else if b < 0xE0 {
+                    guard i + 1 < to else { return }
+                    out.append(UInt16(UInt32(b & 0x1F) << 6 | UInt32(bytes[i + 1] & 0x3F)))
+                    i += 2
+                } else if b < 0xF0 {
+                    guard i + 2 < to else { return }
+                    let scalar = UInt32(b & 0x0F) << 12 | UInt32(bytes[i + 1] & 0x3F) << 6 | UInt32(bytes[i + 2] & 0x3F)
+                    out.append(UInt16(scalar)); i += 3
+                } else {
+                    guard i + 3 < to else { return }
+                    let scalar = UInt32(b & 0x07) << 18 | UInt32(bytes[i + 1] & 0x3F) << 12
+                        | UInt32(bytes[i + 2] & 0x3F) << 6 | UInt32(bytes[i + 3] & 0x3F)
+                    let v = scalar - 0x10000
+                    out.append(UInt16(0xD800 + (v >> 10)))
+                    out.append(UInt16(0xDC00 + (v & 0x3FF)))
+                    i += 4
+                }
             }
+        }
+
+        private static func compareUnits(_ a: [UInt16], _ b: [UInt16]) -> Int {
+            var i = 0
+            while i < a.count, i < b.count {
+                if a[i] != b[i] { return a[i] < b[i] ? -1 : 1 }
+                i += 1
+            }
+            return a.count - b.count
+        }
+
+        static func build(dictSorted: [String], rankOf: (String) -> Int32, vocab: Data) -> Lexicon {
             var dictChars = 0
             for w in dictSorted { dictChars += w.utf16.count }
+
             var chars: [UInt16] = []
-            chars.reserveCapacity(units.count + dictChars)
             var starts: [Int32] = [0]
-            starts.reserveCapacity(dictSorted.count + lineCount + 1)
             var ranks: [Int32] = []
-            ranks.reserveCapacity(dictSorted.count + lineCount)
             var di = 0
-            var pos = 0
             var dw: [UInt16] = di < dictSorted.count ? Array(dictSorted[di].utf16) : []
 
             func appendDict() {
@@ -144,31 +167,44 @@ final class SuggestionEngine {
                 dw = di < dictSorted.count ? Array(dictSorted[di].utf16) : []
             }
 
-            func appendVocab(_ from: Int, _ to: Int) {
-                chars.append(contentsOf: units[from ..< to])
+            func appendLine(_ line: [UInt16]) {
+                chars.append(contentsOf: line)
                 ranks.append(noRank)
                 starts.append(Int32(chars.count))
             }
 
-            func cmpRegion(_ from: Int, _ to: Int) -> Int {
-                var i = from, j = 0
-                while i < to, j < dw.count {
-                    if units[i] != dw[j] { return units[i] < dw[j] ? -1 : 1 }
-                    i += 1; j += 1
+            vocab.withUnsafeBytes { raw in
+                let bytes = raw.bindMemory(to: UInt8.self)
+                let n = bytes.count
+                var scalars = 0
+                var lines = 0
+                var i = 0
+                while i < n {
+                    let b = bytes[i]
+                    if b == 0x0A { lines += 1 } else if (b & 0xC0) != 0x80 { scalars += 1 }
+                    i += 1
                 }
-                return (to - from) - dw.count
-            }
+                if n > 0, bytes[n - 1] != 0x0A { lines += 1 }
+                chars.reserveCapacity(scalars + dictChars)
+                starts.reserveCapacity(dictSorted.count + lines + 1)
+                ranks.reserveCapacity(dictSorted.count + lines)
 
-            while pos < units.count || di < dictSorted.count {
-                if pos >= units.count { appendDict(); continue }
-                var end = pos
-                while end < units.count, units[end] != 0x0A { end += 1 }
-                if end == pos { pos = end + 1; continue }
-                if di >= dictSorted.count { appendVocab(pos, end); pos = end + 1; continue }
-                let c = cmpRegion(pos, end)
-                if c < 0 { appendVocab(pos, end); pos = end + 1 }
-                else if c > 0 { appendDict() }
-                else { appendDict(); pos = end + 1 }
+                var line: [UInt16] = []
+                line.reserveCapacity(64)
+                var pos = 0
+                while pos < n || di < dictSorted.count {
+                    if pos >= n { appendDict(); continue }
+                    var end = pos
+                    while end < n, bytes[end] != 0x0A { end += 1 }
+                    if end == pos { pos = end + 1; continue }
+                    line.removeAll(keepingCapacity: true)
+                    decodeUTF16(bytes, pos, end, into: &line)
+                    if di >= dictSorted.count { appendLine(line); pos = end + 1; continue }
+                    let c = compareUnits(line, dw)
+                    if c < 0 { appendLine(line); pos = end + 1 }
+                    else if c > 0 { appendDict() }
+                    else { appendDict(); pos = end + 1 }
+                }
             }
             return Lexicon(chars: chars, starts: starts, ranks: ranks)
         }
@@ -246,6 +282,10 @@ final class SuggestionEngine {
     private var enLex: Lexicon?
     private var ruLex: Lexicon?
     private var loadStarted = false
+    private var claimedLanguages: Set<String> = []
+    private var loadedLanguages: Set<String> = []
+
+    static let supportedLanguages: Set<String> = ["en", "ru"]
 
     private static func buildLexicon(_ dict: Dict, _ vocab: Data) -> Lexicon {
         Lexicon.build(
@@ -255,58 +295,57 @@ final class SuggestionEngine {
         )
     }
 
-    func warmUp() {
+    func warmUp(languages: Set<String>, typingAids: Bool) {
+        let wanted = typingAids ? languages.intersection(Self.supportedLanguages) : []
         lock.lock()
-        let start = !loadStarted
+        let toLoad = wanted.subtracting(claimedLanguages)
+        claimedLanguages.formUnion(toLoad)
+        let needPersonal = !loadStarted
         loadStarted = true
         lock.unlock()
-        guard start else { return }
+        guard !toLoad.isEmpty || needPersonal else { return }
         DispatchQueue.global(qos: .utility).async { [self] in
             func read(_ name: String) -> [String] {
                 guard let url = Bundle.main.url(forResource: name, withExtension: "txt"),
                       let text = try? String(contentsOf: url, encoding: .utf8) else { return [] }
                 return text.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
             }
-            let ruDict = Dict(byFrequency: read("dict-ru"))
-            let enDict = Dict(byFrequency: read("dict-en"))
-            let ruPairs = Bigrams(lines: read("bigrams-ru"))
-            let enPairs = Bigrams(lines: read("bigrams-en"))
             func readData(_ name: String) -> Data {
                 guard let url = Bundle.main.url(forResource: name, withExtension: "txt"),
                       let d = try? Data(contentsOf: url) else { return Data() }
                 return d
             }
-            let ruForms = Self.buildLexicon(ruDict, readData("vocab-ru"))
-            let enForms = Self.buildLexicon(enDict, readData("vocab-en"))
-            let personal = Self.loadPersonal()
-            lock.lock()
-            ru = ruDict
-            en = enDict
-            ruBigrams = ruPairs
-            enBigrams = enPairs
-            ruLex = ruForms
-            enLex = enForms
-            words = personal.words
-            bigrams = personal.bigrams
-            lock.unlock()
-        }
-    }
+            func load(_ code: String) -> (Dict, Bigrams, Lexicon) {
+                let dict = Dict(byFrequency: read("dict-\(code)"))
+                let pairs = Bigrams(lines: read("bigrams-\(code)"))
+                let forms = Self.buildLexicon(dict, readData("vocab-\(code)"))
+                return (dict, pairs, forms)
+            }
 
-    func loadForTest(
-        ruWords: [String], enWords: [String], ruPairs: [String], enPairs: [String],
-        ruForms: Data = Data(), enForms: Data = Data(),
-    ) {
-        let ruDict = Dict(byFrequency: ruWords)
-        let enDict = Dict(byFrequency: enWords)
-        lock.lock()
-        ru = ruDict
-        en = enDict
-        ruBigrams = Bigrams(lines: ruPairs)
-        enBigrams = Bigrams(lines: enPairs)
-        ruLex = Self.buildLexicon(ruDict, ruForms)
-        enLex = Self.buildLexicon(enDict, enForms)
-        loadStarted = true
-        lock.unlock()
+            if needPersonal {
+                let stored = SharedStore.read(Self.storeKey)
+                let personal = Self.decodePersonal(stored)
+                lock.lock()
+                if !loadedFromStore, words.isEmpty, bigrams.isEmpty {
+                    words = personal.words
+                    bigrams = personal.bigrams
+                    loadedFromStore = stored != nil
+                }
+                lock.unlock()
+            }
+
+            for code in toLoad.sorted() {
+                let (dict, pairs, forms) = load(code)
+                lock.lock()
+                if code == "ru" {
+                    ru = dict; ruBigrams = pairs; ruLex = forms
+                } else {
+                    en = dict; enBigrams = pairs; enLex = forms
+                }
+                loadedLanguages.insert(code)
+                lock.unlock()
+            }
+        }
     }
 
     static let storeKey = "kbdict"
@@ -321,10 +360,10 @@ final class SuggestionEngine {
     private var words: [String: Int] = [:]
     private var bigrams: [String: Int] = [:]
     private var dirty = false
+    private var loadedFromStore = false
 
-    private static func loadPersonal() -> Personal {
-        guard let d = SharedStore.read(storeKey),
-              let p = try? JSONDecoder().decode(Personal.self, from: d) else { return Personal() }
+    private static func decodePersonal(_ data: Data?) -> Personal {
+        guard let data, let p = try? JSONDecoder().decode(Personal.self, from: data) else { return Personal() }
         return p
     }
 
@@ -333,8 +372,15 @@ final class SuggestionEngine {
         defer { lock.unlock() }
         guard dirty else { return }
         dirty = false
+        if loadedFromStore, SharedStore.read(Self.storeKey) == nil {
+            words = [:]
+            bigrams = [:]
+            loadedFromStore = false
+            return
+        }
         if let d = try? JSONEncoder().encode(Personal(words: words, bigrams: bigrams)) {
             SharedStore.write(Self.storeKey, d)
+            loadedFromStore = true
         }
     }
 
@@ -358,11 +404,13 @@ final class SuggestionEngine {
     }
 
     private var sessionSkip: Set<String> = []
+    private static let sessionSkipCap = 128
 
     func noteUndoneCorrection(_ rawWord: String) {
         guard let word = Self.normalize(rawWord) else { return }
         lock.lock()
         defer { lock.unlock() }
+        if sessionSkip.count >= Self.sessionSkipCap { sessionSkip.removeAll(keepingCapacity: true) }
         sessionSkip.insert(word)
     }
 
@@ -394,15 +442,18 @@ final class SuggestionEngine {
     }
 
     private func langFor(firstChar: Character?, russian: Bool) -> Lang? {
-        guard let ruDict = ru, let enDict = en else { return nil }
         let useRu: Bool
         if let c = firstChar, ("а"..."я").contains(c) || c == "ё" { useRu = true }
         else if let c = firstChar, ("a"..."z").contains(c) { useRu = false }
         else { useRu = russian }
-        return useRu ? Lang(dict: ruDict, bigrams: ruBigrams, lex: ruLex,
-                            alphabet: Self.ruAlphabet, neighbors: Self.ruNeighbors, russian: true)
-                     : Lang(dict: enDict, bigrams: enBigrams, lex: enLex,
-                            alphabet: Self.enAlphabet, neighbors: Self.enNeighbors, russian: false)
+        if useRu {
+            guard let ruDict = ru else { return nil }
+            return Lang(dict: ruDict, bigrams: ruBigrams, lex: ruLex,
+                        alphabet: Self.ruAlphabet, neighbors: Self.ruNeighbors, russian: true)
+        }
+        guard let enDict = en else { return nil }
+        return Lang(dict: enDict, bigrams: enBigrams, lex: enLex,
+                    alphabet: Self.enAlphabet, neighbors: Self.enNeighbors, russian: false)
     }
 
     private static func toU16(_ c: Character) -> UInt16 { Array(String(c).utf16)[0] }

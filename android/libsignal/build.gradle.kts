@@ -30,7 +30,6 @@ android {
         jniLibs.srcDir("$ls/android/src/main/jniLibs")
     }
 
-    packaging { jniLibs.keepDebugSymbols += "**/*.so" }
 }
 
 kotlin {

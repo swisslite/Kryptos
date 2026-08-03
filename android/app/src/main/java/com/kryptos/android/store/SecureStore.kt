@@ -21,6 +21,8 @@ object SecureStore {
         context = appContext.applicationContext
     }
 
+    fun appContext(): Context = context
+
     private fun dir(): File = File(context.filesDir, "kryptos").apply { mkdirs() }
 
     private fun file(name: String): File {
@@ -30,7 +32,14 @@ object SecureStore {
         return File(dir(), name)
     }
 
+    @Volatile private var cachedKey: SecretKey? = null
+
     private fun masterKey(): SecretKey {
+        cachedKey?.let { return it }
+        return resolveMasterKey().also { cachedKey = it }
+    }
+
+    private fun resolveMasterKey(): SecretKey {
         val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (ks.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
         val deviceSecure = runCatching {
@@ -80,10 +89,20 @@ object SecureStore {
 
     @Synchronized
     fun destroyMasterKey() {
+        cachedKey = null
         runCatching {
             KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.deleteEntry(KEY_ALIAS)
         }
     }
+
+    private fun <T> withMasterKey(body: (SecretKey) -> T): T =
+        try {
+            body(masterKey())
+        } catch (first: Exception) {
+            if (cachedKey == null) throw first
+            cachedKey = null
+            body(masterKey())
+        }
 
     @Synchronized
     fun read(name: String): ByteArray? = decryptFile(file(name))
@@ -102,9 +121,11 @@ object SecureStore {
             val blob = f.readBytes()
             val iv = blob.copyOfRange(0, 12)
             val ct = blob.copyOfRange(12, blob.size)
-            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-            cipher.init(Cipher.DECRYPT_MODE, masterKey(), GCMParameterSpec(128, iv))
-            cipher.doFinal(ct)
+            withMasterKey { key ->
+                val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
+                cipher.doFinal(ct)
+            }
         } catch (e: Exception) {
             null
         }
@@ -112,16 +133,22 @@ object SecureStore {
 
     @Synchronized
     fun write(name: String, data: ByteArray) {
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.ENCRYPT_MODE, masterKey())
-        val ct = cipher.doFinal(data)
+        val target = file(name)
+        val blob = withMasterKey { key ->
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.ENCRYPT_MODE, key)
+            cipher.iv + cipher.doFinal(data)
+        }
         val tmp = File(dir(), "$name.tmp")
         java.io.FileOutputStream(tmp).use { out ->
-            out.write(cipher.iv + ct)
+            out.write(blob)
             out.fd.sync()
         }
-        if (!tmp.renameTo(file(name))) {
-            file(name).writeBytes(cipher.iv + ct)
+        if (!tmp.renameTo(target)) {
+            java.io.FileOutputStream(target).use { out ->
+                out.write(blob)
+                out.fd.sync()
+            }
             tmp.delete()
         }
     }
@@ -133,8 +160,8 @@ object SecureStore {
 
     @Synchronized
     fun deleteAll() {
-        dir().listFiles()?.forEach { it.delete() }
         destroyMasterKey()
+        dir().listFiles()?.forEach { it.delete() }
     }
 
     fun prefs(): SharedPreferences = context.getSharedPreferences("kryptos.settings", Context.MODE_PRIVATE)

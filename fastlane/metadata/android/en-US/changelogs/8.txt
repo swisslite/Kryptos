@@ -1,0 +1,9 @@
+Kryptos 2.3
+
+* Panic password: a second password that wipes everything instead of unlocking.
+* App passcode, for unlocking without biometrics.
+* Key backup: your keys, contact keys and PGP keys in one password protected file.
+* Argon2id everywhere, PBKDF2 removed.
+* Photo steganography rebuilt: no visible signature, keyed adaptive placement.
+* On-screen decryption finds messages in real messengers again.
+* Password protected messages and stego photos from older versions no longer open.

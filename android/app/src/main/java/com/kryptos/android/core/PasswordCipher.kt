@@ -1,23 +1,19 @@
 package com.kryptos.android.core
 
 import javax.crypto.Cipher
-import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
-import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 
 object PasswordCipher {
-    const val ITERATIONS = 210_000
+    const val SALT_LEN = 16
+    const val TAG_LEN = 16
+    const val KEY_LEN = 32
+    const val NONCE_LEN = 12
+    const val DERIVED_LEN = 44
 
-    private const val SALT_LEN = 16
-    private const val TAG_LEN = 16
     private const val TAG_BITS = 128
 
-    fun encrypt(plaintext: ByteArray, password: String, pad: Boolean = false): ByteArray {
-        val salt = randomBytes(SALT_LEN)
-        val km = derive(password, salt)
-        val key = km.copyOfRange(0, 32)
-        val nonce = km.copyOfRange(32, 44)
+    fun sealBody(plaintext: ByteArray, key: ByteArray, nonce: ByteArray, version: Byte, pad: Boolean): ByteArray {
         val compressed = Deflate.compress(plaintext)
         val deflate = compressed != null
         val content = if (deflate) compressed!! else plaintext
@@ -27,23 +23,17 @@ object PasswordCipher {
         framed.copyInto(body, 1)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(TAG_BITS, nonce))
-        key.fill(0)
-        val ctAndTag = cipher.doFinal(body)
-        return salt + ctAndTag
+        cipher.updateAAD(byteArrayOf(version))
+        return cipher.doFinal(body)
     }
 
-    fun decrypt(data: ByteArray, password: String): ByteArray {
-        if (data.size < SALT_LEN + TAG_LEN) throw CipherException(CipherException.Kind.MALFORMED)
-        val salt = data.copyOfRange(0, SALT_LEN)
-        val ctAndTag = data.copyOfRange(SALT_LEN, data.size)
-        val km = derive(password, salt)
-        val key = km.copyOfRange(0, 32)
-        val nonce = km.copyOfRange(32, 44)
+    fun openBody(sealed: ByteArray, key: ByteArray, nonce: ByteArray, version: Byte): ByteArray {
+        if (sealed.size < TAG_LEN) throw CipherException(CipherException.Kind.DECRYPTION_FAILED)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(TAG_BITS, nonce))
-        key.fill(0)
+        cipher.updateAAD(byteArrayOf(version))
         val body = try {
-            cipher.doFinal(ctAndTag)
+            cipher.doFinal(sealed)
         } catch (e: Exception) {
             throw CipherException(CipherException.Kind.DECRYPTION_FAILED)
         }
@@ -59,9 +49,32 @@ object PasswordCipher {
         return content
     }
 
-    private fun derive(password: String, salt: ByteArray): ByteArray {
-        val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
-        val spec = PBEKeySpec(password.toCharArray(), salt, ITERATIONS, 44 * 8)
-        return factory.generateSecret(spec).encoded
+    fun encrypt(plaintext: ByteArray, password: String, pad: Boolean = false): ByteArray {
+        val salt = randomBytes(SALT_LEN)
+        val version = Argon2id.PROFILE_VERSION
+        val km = Argon2id.derive(password.toByteArray(Charsets.UTF_8), salt, DERIVED_LEN)
+        val key = km.copyOfRange(0, KEY_LEN)
+        val nonce = km.copyOfRange(KEY_LEN, DERIVED_LEN)
+        km.fill(0)
+        val sealed = sealBody(plaintext, key, nonce, version, pad)
+        key.fill(0)
+        return salt + version + sealed
+    }
+
+    fun decrypt(data: ByteArray, password: String): ByteArray {
+        if (data.size < SALT_LEN + 1 + TAG_LEN) throw CipherException(CipherException.Kind.MALFORMED)
+        val salt = data.copyOfRange(0, SALT_LEN)
+        val version = data[SALT_LEN]
+        if (version != Argon2id.PROFILE_VERSION) throw CipherException(CipherException.Kind.MALFORMED)
+        val sealed = data.copyOfRange(SALT_LEN + 1, data.size)
+        val km = Argon2id.derive(password.toByteArray(Charsets.UTF_8), salt, DERIVED_LEN)
+        val key = km.copyOfRange(0, KEY_LEN)
+        val nonce = km.copyOfRange(KEY_LEN, DERIVED_LEN)
+        km.fill(0)
+        try {
+            return openBody(sealed, key, nonce, version)
+        } finally {
+            key.fill(0)
+        }
     }
 }

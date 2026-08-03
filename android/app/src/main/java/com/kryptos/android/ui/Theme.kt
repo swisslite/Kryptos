@@ -8,6 +8,8 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
@@ -21,6 +23,7 @@ data class KColors(
     val textSecondary: Color,
     val accent: Color,
     val accentBright: Color,
+    val accentInk: Color,
     val danger: Color,
     val success: Color,
     val hairline: Color,
@@ -29,6 +32,11 @@ data class KColors(
     val surface: Color,
     val segment: Color,
     val incomingBubble: Color,
+    val glassTop: Color,
+    val glassBottom: Color,
+    val glassRimTop: Color,
+    val glassRimBottom: Color,
+    val glassShadow: Color,
 )
 
 private val LightK = KColors(
@@ -37,6 +45,7 @@ private val LightK = KColors(
     textSecondary = Color(0x8C12141A),
     accent = Color(0xFF3749C2),
     accentBright = Color(0xFF4F63E0),
+    accentInk = Color(0xFF3749C2),
     danger = Color(0xFFC72E38),
     success = Color(0xFF2BA467),
     hairline = Color(0x1A000000),
@@ -45,6 +54,11 @@ private val LightK = KColors(
     surface = Color(0xFFFFFFFF),
     segment = Color(0xFFFFFFFF),
     incomingBubble = Color(0xFFFFFFFF),
+    glassTop = Color(0xFFFFFFFF),
+    glassBottom = Color(0xFFFEFEFE),
+    glassRimTop = Color(0xFFECEDED),
+    glassRimBottom = Color(0xFFDFE0E0),
+    glassShadow = Color(0x1412141A),
 )
 
 private val DarkK = KColors(
@@ -53,6 +67,7 @@ private val DarkK = KColors(
     textSecondary = Color(0x94FFFFFF),
     accent = Color(0xFF6B85FA),
     accentBright = Color(0xFF859CFF),
+    accentInk = Color(0xFF8FA6FF),
     danger = Color(0xFFFF6B75),
     success = Color(0xFF33B873),
     hairline = Color(0x1AFFFFFF),
@@ -61,6 +76,11 @@ private val DarkK = KColors(
     surface = Color(0xFF14171D),
     segment = Color(0xFF343846),
     incomingBubble = Color(0xFF292B36),
+    glassTop = Color(0xFF1F232B),
+    glassBottom = Color(0xFF15181E),
+    glassRimTop = Color(0xFF3A3E45),
+    glassRimBottom = Color(0xFF1E2127),
+    glassShadow = Color(0x33000000),
 )
 
 val LocalK = staticCompositionLocalOf { LightK }
@@ -78,7 +98,12 @@ private val KTypography = Typography().let { t ->
 
 @Composable
 fun KryptosTheme(content: @Composable () -> Unit) {
-    val dark = isSystemInDarkTheme()
+    val ui by com.kryptos.android.signal.AppSettingsStore.ui.collectAsState()
+    val dark = when (ui.theme) {
+        "light" -> false
+        "dark" -> true
+        else -> isSystemInDarkTheme()
+    }
     val k = if (dark) DarkK else LightK
     val scheme = if (dark) {
         darkColorScheme(

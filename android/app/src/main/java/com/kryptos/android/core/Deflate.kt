@@ -10,16 +10,19 @@ object Deflate {
     fun compress(data: ByteArray): ByteArray? {
         if (data.isEmpty()) return null
         val deflater = Deflater(Deflater.BEST_COMPRESSION, true)
-        deflater.setInput(data)
-        deflater.finish()
-        val out = ByteArrayOutputStream(data.size)
-        val buf = ByteArray(4096)
-        while (!deflater.finished()) {
-            val n = deflater.deflate(buf)
-            out.write(buf, 0, n)
+        val result = try {
+            deflater.setInput(data)
+            deflater.finish()
+            val out = ByteArrayOutputStream(data.size)
+            val buf = ByteArray(4096)
+            while (!deflater.finished()) {
+                val n = deflater.deflate(buf)
+                out.write(buf, 0, n)
+            }
+            out.toByteArray()
+        } finally {
+            deflater.end()
         }
-        deflater.end()
-        val result = out.toByteArray()
         return if (result.size < data.size) result else null
     }
 
@@ -27,7 +30,9 @@ object Deflate {
         if (data.isEmpty()) return null
         val inflater = Inflater(true)
         inflater.setInput(data)
-        val out = ByteArrayOutputStream(data.size * 2)
+        val out = ByteArrayOutputStream(
+            (data.size.toLong() * 2).coerceIn(64L, limit.toLong().coerceAtLeast(64L)).toInt()
+        )
         val buf = ByteArray(4096)
         return try {
             while (!inflater.finished()) {

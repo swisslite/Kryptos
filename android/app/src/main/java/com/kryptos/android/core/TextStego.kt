@@ -118,19 +118,21 @@ object TextStego {
         val index = language.indexMap
         var acc = 0L
         var bits = 0
-        val bytes = ArrayList<Byte>(tokens.size * BITS_PER_WORD / 8 + 1)
+        var bytes = ByteArray(tokens.size * BITS_PER_WORD / 8 + 2)
+        var count = 0
         for (token in tokens) {
             val value = index[token] ?: continue
             acc = (acc shl BITS_PER_WORD) or value.toLong()
             bits += BITS_PER_WORD
             while (bits >= 8) {
                 bits -= 8
-                bytes.add(((acc shr bits) and 0xFF).toByte())
+                if (count == bytes.size) bytes = bytes.copyOf(bytes.size * 2 + 2)
+                bytes[count++] = ((acc shr bits) and 0xFF).toByte()
             }
         }
-        if (bytes.size < 4) return null
+        if (count < 4) return null
         var x = bytes[0].toInt() and 0xFF
-        val inner = ByteArray(bytes.size - 1)
+        val inner = ByteArray(count - 1)
         for (i in inner.indices) {
             x = (x * 197 + 91) and 0xFF
             inner[i] = (bytes[1 + i].toInt() xor x).toByte()

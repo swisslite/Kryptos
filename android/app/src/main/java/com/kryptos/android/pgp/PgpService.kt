@@ -1,5 +1,6 @@
 package com.kryptos.android.pgp
 
+import com.kryptos.android.R
 import com.kryptos.android.store.SecureStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.Serializable
@@ -56,7 +57,9 @@ enum class PgpAlgo(val label: String) {
 
 enum class PgpVerification { VERIFIED, UNVERIFIED }
 
-class PgpException(message: String) : Exception(message)
+class PgpDecryption(val text: String, val verification: PgpVerification, val signer: String?)
+
+class PgpException(val res: Int) : Exception("pgp:$res")
 
 @Serializable
 private data class PgpIndex(var identities: List<PgpIdentity> = emptyList(), var currentID: String = "")
@@ -65,6 +68,7 @@ object PgpService {
     private const val INDEX_KEY = "pgp.index"
     private const val RECIPIENTS_KEY = "pgp.recipients"
     private const val MAX_PLAINTEXT_BYTES = 8L * 1024 * 1024
+    private const val MAX_ARMORED_CHARS = 8 * 1024 * 1024
     private fun secretKeyName(id: String) = "pgp.secret.$id"
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -95,10 +99,11 @@ object PgpService {
             identities.value = index.identities
             currentID.value = if (index.identities.any { it.id == index.currentID }) index.currentID
             else index.identities.firstOrNull()?.id ?: ""
-            initialized = true
             if (identities.value.isEmpty()) {
                 generateBlocking(name = "My key", email = "", algo = PgpAlgo.CURVE25519)
+                if (identities.value.isEmpty()) return
             }
+            initialized = true
         }
     }
 
@@ -110,6 +115,7 @@ object PgpService {
     }
 
     private fun loadRecipients() {
+        ringCacheKey = null
         recipients.value = SecureStore.readStrict(RECIPIENTS_KEY)?.let {
             try {
                 json.decodeFromString<List<PgpRecipient>>(String(it, Charsets.UTF_8))
@@ -120,13 +126,19 @@ object PgpService {
     }
 
     private fun saveRecipients() {
+        ringCacheKey = null
         SecureStore.write(RECIPIENTS_KEY, json.encodeToString(recipients.value).toByteArray())
     }
 
-    private fun secretRing(id: String): PGPSecretKeyRing? =
-        SecureStore.read(secretKeyName(id))?.let {
-            runCatching { PGPainless.readKeyRing().secretKeyRing(String(it, Charsets.UTF_8)) }.getOrNull()
+    private fun secretRing(id: String): PGPSecretKeyRing? {
+        val raw = SecureStore.readStrict(secretKeyName(id)) ?: return null
+        val ring = try {
+            PGPainless.readKeyRing().secretKeyRing(String(raw, Charsets.UTF_8))
+        } catch (e: Exception) {
+            throw PgpException(R.string.pgp_key_unreadable)
         }
+        return ring ?: throw PgpException(R.string.pgp_key_unreadable)
+    }
 
     private fun generateRing(userId: String, algo: PgpAlgo): PGPSecretKeyRing = when (algo) {
         PgpAlgo.CURVE25519 -> PGPainless.generateKeyRing().modernKeyRing(userId)
@@ -178,7 +190,7 @@ object PgpService {
 
     fun addRecipient(name: String, armoredKey: String) = synchronized(lock) {
         val ring = runCatching { PGPainless.readKeyRing().publicKeyRing(armoredKey) }.getOrNull()
-            ?: throw PgpException("This is not a valid PGP public key.")
+            ?: throw PgpException(R.string.pgp_invalid_key)
         val fp = prettyFingerprint(OpenPgpFingerprint.of(ring))
         val list = recipients.value.toMutableList()
         val idx = list.indexOfFirst { it.fingerprint == fp && fp.isNotEmpty() }
@@ -196,13 +208,25 @@ object PgpService {
         saveRecipients()
     }
 
-    private fun recipientRings(): List<PGPPublicKeyRing> =
-        recipients.value.mapNotNull { runCatching { PGPainless.readKeyRing().publicKeyRing(it.publicKey) }.getOrNull() }
+    private var ringCacheKey: List<PgpRecipient>? = null
+    private var ringCache: List<Pair<PgpRecipient, PGPPublicKeyRing>> = emptyList()
+
+    private fun recipientRings(): List<Pair<PgpRecipient, PGPPublicKeyRing>> {
+        val current = recipients.value
+        if (ringCacheKey === current) return ringCache
+        val built = current.mapNotNull { recipient ->
+            runCatching { PGPainless.readKeyRing().publicKeyRing(recipient.publicKey) }.getOrNull()
+                ?.let { recipient to it }
+        }
+        ringCacheKey = current
+        ringCache = built
+        return built
+    }
 
     fun encrypt(text: String, to: PgpRecipient): String = synchronized(lock) {
-        val secret = secretRing(currentID.value) ?: throw PgpException("No PGP key is selected.")
+        val secret = secretRing(currentID.value) ?: throw PgpException(R.string.pgp_no_key)
         val recipientRing = runCatching { PGPainless.readKeyRing().publicKeyRing(to.publicKey) }.getOrNull()
-            ?: throw PgpException("This is not a valid PGP public key.")
+            ?: throw PgpException(R.string.pgp_invalid_key)
         val ownCert = PGPainless.extractCertificate(secret)
 
         val out = ByteArrayOutputStream()
@@ -216,24 +240,30 @@ object PgpService {
             .withOptions(
                 ProducerOptions.signAndEncrypt(encryptionOptions, signingOptions).setAsciiArmor(true)
             )
-        stream.write(text.toByteArray(Charsets.UTF_8))
-        stream.close()
+        try {
+            stream.write(text.toByteArray(Charsets.UTF_8))
+        } finally {
+            stream.close()
+        }
         out.toString("UTF-8")
     }
 
-    fun decrypt(armored: String): Pair<String, PgpVerification> = synchronized(lock) {
-        val secret = secretRing(currentID.value) ?: throw PgpException("No PGP key is selected.")
-        val verifyCerts: List<PGPPublicKeyRing> = recipientRings() + listOf(PGPainless.extractCertificate(secret))
+    fun decrypt(armored: String): PgpDecryption = synchronized(lock) {
+        if (armored.length > MAX_ARMORED_CHARS) throw PgpException(R.string.pgp_too_large)
+        val secret = secretRing(currentID.value) ?: throw PgpException(R.string.pgp_no_key)
+        val ownCert = PGPainless.extractCertificate(secret)
+        val known = recipientRings()
 
         val options = ConsumerOptions.get()
             .addDecryptionKey(secret, SecretKeyRingProtector.unprotectedKeys())
-        verifyCerts.forEach { options.addVerificationCert(it) }
+        known.forEach { options.addVerificationCert(it.second) }
+        options.addVerificationCert(ownCert)
 
         val stream = runCatching {
             PGPainless.decryptAndOrVerify()
                 .onInputStream(ByteArrayInputStream(armored.toByteArray(Charsets.UTF_8)))
                 .withOptions(options)
-        }.getOrNull() ?: throw PgpException("No PGP message found.")
+        }.getOrNull() ?: throw PgpException(R.string.pgp_no_message)
 
         val out = ByteArrayOutputStream()
         try {
@@ -245,7 +275,7 @@ object PgpService {
                 total += n
                 if (total > MAX_PLAINTEXT_BYTES) {
                     runCatching { stream.close() }
-                    throw PgpException("Message too large.")
+                    throw PgpException(R.string.pgp_too_large)
                 }
                 out.write(buf, 0, n)
             }
@@ -253,10 +283,86 @@ object PgpService {
         } catch (e: PgpException) {
             throw e
         } catch (e: Exception) {
-            throw PgpException("No PGP message found.")
+            throw PgpException(R.string.pgp_no_message)
         }
-        val verified = stream.metadata.verifiedSignatures.isNotEmpty()
-        out.toString("UTF-8") to (if (verified) PgpVerification.VERIFIED else PgpVerification.UNVERIFIED)
+        val metadata = stream.metadata
+        val signedBy = runCatching {
+            known.firstOrNull { metadata.isVerifiedSignedBy(it.second) }?.first?.name
+                ?: if (metadata.isVerifiedSignedBy(ownCert)) currentIdentity?.name else null
+        }.getOrNull()
+        val verified = signedBy != null
+        PgpDecryption(
+            out.toString("UTF-8"),
+            if (verified) PgpVerification.VERIFIED else PgpVerification.UNVERIFIED,
+            signedBy,
+        )
+    }
+
+    fun archivedIdentities(): List<com.kryptos.android.core.ArchivedPgpIdentity>? = synchronized(lock) {
+        identities.value.map { ident ->
+            val raw = runCatching { SecureStore.readStrict(secretKeyName(ident.id)) }.getOrNull()
+                ?: return@synchronized null
+            val armored = String(raw, Charsets.UTF_8)
+            if (armored.isBlank()) return@synchronized null
+            com.kryptos.android.core.ArchivedPgpIdentity(
+                id = ident.id, name = ident.name, email = ident.email,
+                fingerprint = ident.fingerprint, algo = ident.algo,
+                created = ident.createdAt, publicKey = ident.publicKey, secret = armored,
+            )
+        }
+    }
+
+    fun archivedRecipients(): List<com.kryptos.android.core.ArchivedPgpRecipient> =
+        recipients.value.map {
+            com.kryptos.android.core.ArchivedPgpRecipient(it.name, it.publicKey, it.fingerprint)
+        }
+
+    fun restore(
+        list: List<com.kryptos.android.core.ArchivedPgpIdentity>,
+        incoming: List<com.kryptos.android.core.ArchivedPgpRecipient>,
+    ): Boolean = synchronized(lock) {
+        ensureInitialized()
+        if (list.isEmpty() && incoming.isEmpty()) return@synchronized true
+
+        val restored = ArrayList<PgpIdentity>()
+        val seen = HashSet<String>()
+        for (entry in list) {
+            if (!seen.add(entry.id)) continue
+            if (runCatching { java.util.UUID.fromString(entry.id) }.isFailure) continue
+            if (entry.secret.isBlank()) continue
+            val valid = runCatching { PGPainless.readKeyRing().secretKeyRing(entry.secret) != null }.getOrDefault(false)
+            if (!valid) continue
+            val written = runCatching {
+                SecureStore.write(secretKeyName(entry.id), entry.secret.toByteArray(Charsets.UTF_8))
+            }.isSuccess
+            if (!written) continue
+            restored.add(
+                PgpIdentity(
+                    id = entry.id, name = entry.name, email = entry.email,
+                    fingerprint = entry.fingerprint, algo = entry.algo,
+                    createdAt = entry.created, publicKey = entry.publicKey,
+                )
+            )
+        }
+
+        if (list.isNotEmpty() && restored.isEmpty()) return@synchronized false
+
+        if (restored.isNotEmpty()) {
+            val keep = restored.mapTo(HashSet()) { it.id }
+            val stale = identities.value.map { it.id }.filter { it !in keep }
+            identities.value = restored
+            currentID.value = restored[0].id
+            persistIndex()
+            stale.forEach { runCatching { SecureStore.delete(secretKeyName(it)) } }
+        }
+
+        if (restored.isNotEmpty() || incoming.isNotEmpty()) {
+            recipients.value = incoming.map {
+                PgpRecipient(name = it.name, publicKey = it.publicKey, fingerprint = it.fingerprint)
+            }
+            saveRecipients()
+        }
+        true
     }
 
     fun eraseAllStorage() = synchronized(lock) {
@@ -266,6 +372,8 @@ object PgpService {
         identities.value = emptyList()
         recipients.value = emptyList()
         currentID.value = ""
+        ringCacheKey = null
+        ringCache = emptyList()
         initialized = false
     }
 }

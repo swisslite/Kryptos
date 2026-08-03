@@ -12,7 +12,17 @@ let package = Package(
     ],
     targets: [
         .target(
+            name: "CArgon2",
+            path: "Sources/CArgon2",
+            exclude: ["LICENSE"],
+            cSettings: [
+                .define("ARGON2_NO_THREADS"),
+                .headerSearchPath(".")
+            ]
+        ),
+        .target(
             name: "CipherCore",
+            dependencies: ["CArgon2"],
             path: "Sources/CipherCore"
         ),
         .testTarget(
