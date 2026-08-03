@@ -38,6 +38,12 @@ Kryptos — приложение сквозного шифрования для 
 Контрольные суммы SHA-256 публикуются с каждым релизом и на сайте. Хотите собрать сами или получить
 приложение в F-Droid? См. [Сборка](#сборка).
 
+## Скриншоты
+
+| Сквозное шифрование | Обмен ключами | Режим PGP | Любой мессенджер | Стеганография |
+|:---:|:---:|:---:|:---:|:---:|
+| <img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/1.jpg" width="150" alt="Сквозное шифрование"> | <img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/2.jpg" width="150" alt="Обмен ключами"> | <img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/3.jpg" width="150" alt="Режим PGP"> | <img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/4.jpg" width="150" alt="Любой мессенджер"> | <img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/5.jpg" width="150" alt="Стеганография"> |
+
 ## Чем Kryptos отличается
 
 Большинство защищённых мессенджеров (Signal, Session, Threema…) — это **своя собственная сеть**:
