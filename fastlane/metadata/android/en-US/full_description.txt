@@ -1,13 +1,15 @@
-Kryptos is end-to-end encryption that works through any messenger or SMS. You encrypt a message inside Kryptos (or on its keyboard), paste the resulting code into WhatsApp, Telegram, SMS or anything else, and your correspondent decrypts it with Kryptos on their side. The messenger only ever carries what looks like random noise; the plaintext never touches it.
+Kryptos encrypts right inside the conversation, so you never have to run between apps.
 
-No accounts, no phone number, no servers, no telemetry. The app has no networking code at all and ships without the INTERNET permission. Keys are generated on-device and never leave it.
+The Kryptos keyboard installs like any other system keyboard: turn it on once and it is there everywhere you type. Write your message in WhatsApp, Telegram or an SMS, tap the padlock, and what is left in the field is the ciphertext, ready to send. Incoming messages Kryptos decrypts by itself, right over the chat as you scroll it, with nothing to copy and nowhere to switch. Both the keyboard and the on-screen decryption are built into the system, so they work in any app.
 
-Features:
+It is the same app on iPhone and on Android and the two are fully compatible. It does not matter which phone your contact has.
 
-* Real Signal Protocol via Signal's own libsignal (PQXDH post-quantum handshake and Double Ratchet), a fresh key for every message.
-* Ciphertext looks like pure random noise, with no recognizable prefixes.
-* Password mode (a shared passphrase) and OpenPGP mode.
-* Steganography: hide an encrypted message inside a photo, or disguise it as an innocent run of ordinary words (English and Russian).
-* An encrypting keyboard, on-screen decryption, app lock, panic PIN and more.
+The encryption is the real thing: the Signal Protocol through Signal's own libsignal library, a fresh key for every message and protection even against future quantum computers. A contact can be verified by safety number. When a full chat is more than you need, there is a simple mode built on one shared password, and for those who live on PGP that is built in too. All the messenger ever sees is a meaningless run of characters, with no recognizable markers.
 
-iOS and Android are wire-compatible, so an iPhone and an Android phone talk to each other seamlessly.
+Steganography hides the very fact that you are writing: the ciphertext can be buried inside an ordinary photo or disguised as a harmless run of real words. Without the password there is nothing in the photo to test for.
+
+Nothing goes online: there is no networking code in the app at all, and the build ships without the INTERNET permission. It asks only for the camera to scan QR codes, vibration and overlay control. No accounts, no phone number, no servers, no analytics. Keys are created on the phone itself, kept in the Android Keystore and never leave it.
+
+Entry can be closed off with biometrics or a passcode. There is also a panic password: typed into the same field, it wipes everything for good instead of unlocking. The clipboard clears itself, messages can disappear on a timer, screenshots and the app-switcher snapshot can be blocked, and all your keys can be exported into one password protected file to move them to a new phone.
+
+Also inside: light and dark themes, an app language separate from the system one, a step-by-step guide with answers to common questions, and a keyboard with suggestions, autocorrection and emoji for English and Russian, entirely offline.

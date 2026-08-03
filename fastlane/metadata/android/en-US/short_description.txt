@@ -1,1 +1,1 @@
-End-to-end encryption for any messenger, over any channel
+Encrypt inside any messenger: the keyboard encrypts, the screen decrypts
