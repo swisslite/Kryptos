@@ -45,6 +45,16 @@ on the same app for it to work. Classic PGP tools, on the other hand, wrap messa
 `-----BEGIN PGP MESSAGE-----` block that screams "this person is hiding something." Kryptos is built
 around a different idea:
 
+- **A keyboard that does the crypto in place.** The bundled keyboard (iOS extension / Android IME)
+  encrypts the field or decrypts the clipboard **inside any app**, so you never switch back and
+  forth.
+
+- **It reads messages right where they are.** On **Android**, Kryptos can recognize its messages in
+  any app and lay the decrypted text **live on top of the ciphertext as you scroll the chat** — only
+  for your contacts, and never while the app is locked. On **iOS**, a copied message opens already
+  decrypted. Messages are found by the *shape* of the token, so stray timestamps, ticks or a sender
+  name glued on by the messenger don't break detection.
+
 - **It rides on top of the channels you already use.** There is no Kryptos network. You keep using
   WhatsApp, Telegram, iMessage, Discord, email or plain SMS — Kryptos just turns your text into a
   blob before it goes out and back into text on the other end. Only the two of you need Kryptos;
@@ -66,16 +76,6 @@ around a different idea:
   (64 / 128 / 256 …), so its length no longer betrays how long your message was. The format is
   self-describing, so the recipient strips the padding regardless of their own settings.
 
-- **It reads messages right where they are.** On **Android**, Kryptos can recognize its messages in
-  any app and lay the decrypted text **live on top of the ciphertext as you scroll the chat** — only
-  for your contacts, and never while the app is locked. On **iOS**, a copied message opens already
-  decrypted. Messages are found by the *shape* of the token, so stray timestamps, ticks or a sender
-  name glued on by the messenger don't break detection.
-
-- **A keyboard that does the crypto in place.** The bundled keyboard (iOS extension / Android IME)
-  encrypts the field or decrypts the clipboard **inside any app**, so you never switch back and
-  forth.
-
 - **Two ways to hide a message in plain sight (steganography).** Bury an already-encrypted payload
   in the low bits of an ordinary **photo**, or disguise it as an innocent-looking run of **real,
   grammatical words/sentences** (EN + RU) — so even the fact that a message exists can be hidden.
@@ -86,8 +86,9 @@ around a different idea:
 
 - **Simple enough to actually use daily.** The point was never a lab tool for one-off secrets but
   something convenient for ordinary chatting: one-tap encrypt with auto-copy, automatic detection
-  and decryption of incoming messages, the in-keyboard crypto bar, adaptive light/dark themes, and
-  Russian/English that follow the system language. Strong crypto that doesn't get in your way.
+  and decryption of incoming messages, the in-keyboard crypto bar, light and dark themes, an app
+  language you can set independently of the system one, and a built-in guide with an FAQ. Strong crypto
+  that doesn't get in your way.
 
 ## Three ways to encrypt
 
@@ -131,8 +132,16 @@ around a different idea:
   chats.
 - **Clipboard hygiene** — auto-clear after a delay, clips flagged sensitive to stay out of history.
 - **Multiple identities** — create, switch, rename, regenerate or delete separate profiles.
-- **Android hardening** — a **panic PIN** that wipes all keys/chats/contacts and destroys the
-  Keystore key (crypto-erasure); screenshot blocking (`FLAG_SECURE`); anti-tapjacking and
+- **Lock screen codes** — an optional **app passcode** that unlocks Kryptos, and a **panic password**
+  that wipes everything for good instead: keys, chats, contacts, PGP keys, learned words, caches and
+  settings. Both are typed into the same field, so the field itself never reveals whether a panic
+  password is set, and the check takes the same time either way.
+- **Key backup** — profiles, private keys, contact keys and PGP keys export into a single
+  password-encrypted file (Argon2id → AES-256-GCM) and restore on a new phone. Message history is
+  deliberately left out.
+- **Disappearing messages** — an optional per-chat timer that erases messages once it expires,
+  including the copies cached by the keyboard and the on-screen overlay.
+- **Android hardening** — screenshot and app-switcher blocking (`FLAG_SECURE`); anti-tapjacking and
   task-hijacking (StrandHogg) defences; device-integrity warnings (root / emulator / debugger /
   hooking framework / re-signed APK); backups and device-transfer disabled; R8 shrink + obfuscate.
 
