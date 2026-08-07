@@ -27,16 +27,24 @@ already use all day.
 
 ## Download
 
-Ready-to-install builds are attached to each [**GitHub Release**](../../releases) and mirrored on
-the [website](https://datakeeper.pages.dev/kryptos):
+- **F-Droid** — [f-droid.org/packages/com.kryptos.android](https://f-droid.org/packages/com.kryptos.android/).
+  F-Droid builds Kryptos from source, and the build is signed with the same key as the files here, so
+  it installs over a copy you already have without removing anything, and updates are offered
+  automatically. The simplest route on Android.
+- **Android, direct** — `Kryptos.apk` from any [Release](../../releases) or from the
+  [website](https://datakeeper.pages.dev/kryptos), self-signed. Enable "install unknown apps",
+  minimum Android 8.0. Updates this way are manual.
+- **iOS** — `Kryptos.ipa`, **unsigned**, minimum iOS 17. Which route you need depends on whether you
+  already have a signing certificate:
+  - **With your own certificate** (a `.p12` plus a provisioning profile) — open the downloaded `.ipa`
+    in Feather, ESign or Scarlet and tap install. No computer needed.
+  - **Without one** — add the [AltStore-format repository](https://datakeeper.pages.dev/altstore.json)
+    to AltStore or SideStore. They sign with your ordinary Apple ID, so there is nothing to buy: one
+    tap to install and new versions arrive on their own. The signature lasts 7 days and is renewed
+    with Refresh in the same app.
 
-- **Android** — `Kryptos.apk`, self-signed sideload. Enable "install unknown apps", minimum
-  Android 8.0.
-- **iOS** — `Kryptos.ipa`, **unsigned** — sign it with your own certificate (Feather / AltStore /
-  Sideloadly), minimum iOS 17.
-
-SHA-256 checksums are published with every release and on the website. Prefer to build it yourself,
-or want it on F-Droid? See [Building](#building).
+SHA-256 checksums are published with every release and on the website. Prefer to build it yourself?
+See [Building](#building).
 
 ## Screenshots
 
