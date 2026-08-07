@@ -10,6 +10,11 @@ Common:
 
 - **Git**
 - **Rust** via [rustup](https://rustup.rs) — needed to build `libsignal` from source.
+- **CMake**, the **Protocol Buffers compiler** (`protoc`) and **Clang** with `libclang`. `libsignal`
+  compiles BoringSSL and generates protobuf code, so without these the build stops with raw compiler
+  errors rather than a helpful message.
+  - Debian / Ubuntu: `apt-get install cmake build-essential clang libclang-dev protobuf-compiler libprotobuf-dev`
+  - macOS: the Xcode command-line tools, plus `brew install cmake protobuf`
 
 For iOS:
 
@@ -51,8 +56,10 @@ You can run the script without flags to only fetch + patch, then build later.
 ```
 
 Runs the CipherCore unit tests, builds `Kryptos` for device (arm64, Release, **unsigned**), and
-writes `dist/Kryptos.ipa`. Sign it with your own certificate using **Feather**, **AltStore**, or
-**Sideloadly** and install. Native Liquid Glass on iOS 26+, a close visual fallback below.
+writes `dist/Kryptos.ipa`. To install it: with a certificate of your own (a `.p12` plus a
+provisioning profile) open the file in **Feather**, **ESign** or **Scarlet**; without one, use
+**AltStore** or **SideStore**, which sign with your ordinary Apple ID. Native Liquid Glass on
+iOS 26+, a close visual fallback below.
 
 Just the crypto engine:
 
