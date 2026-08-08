@@ -1,18 +1,20 @@
 package com.kryptos.android.signal
 
 import com.kryptos.android.core.ArchivedContact
-import com.kryptos.android.core.ArchivedPgpIdentity
-import com.kryptos.android.core.ArchivedPgpRecipient
 import com.kryptos.android.core.ArchivedProfile
 import com.kryptos.android.core.ArchivedRetired
 import com.kryptos.android.R
 import com.kryptos.android.core.BinaryReader
 import com.kryptos.android.core.BinaryWriter
 import com.kryptos.android.core.CachePurge
+import com.kryptos.android.core.KeyText
+import com.kryptos.android.core.WipingBuffer
 import com.kryptos.android.store.SecureStore
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToStream
 import org.signal.libsignal.protocol.IdentityKey
 import org.signal.libsignal.protocol.IdentityKeyPair
 import org.signal.libsignal.protocol.SessionBuilder
@@ -31,7 +33,7 @@ import java.security.SecureRandom
 import java.util.Base64
 
 object SignalService {
-    private const val KEY_PREFIX = "KRYPTOS-KEY:"
+    private val KEY_PREFIX = KeyText.PREFIX
     private const val BUNDLE_FORMAT: Int = 0x01
 
     private const val ROTATION_INTERVAL_MS = 2L * 24 * 3600 * 1000
@@ -87,7 +89,7 @@ object SignalService {
     private fun defaultProfileName(n: Int): String =
         SecureStore.appContext().getString(R.string.profile_n, n)
 
-    private val autoNamePrefixes = listOf("Profile ", "Профиль ")
+    private val autoNamePrefixes = listOf("Profile ", "Профиль ", "Profil ")
 
     private fun relocalizedDefaultName(profile: Profile): Profile {
         for (prefix in autoNamePrefixes) {
@@ -279,10 +281,18 @@ object SignalService {
 
     private var lastMetaDigest: ByteArray? = null
 
+    @OptIn(ExperimentalSerializationApi::class)
     private fun saveMeta() {
         meta.contacts = contacts.value
         meta.messages = messages.value
-        val encoded = json.encodeToString(Meta.serializer(), meta).toByteArray()
+        val buffer = WipingBuffer(16384)
+        val encoded = try {
+            json.encodeToStream(Meta.serializer(), meta, buffer)
+            buffer.drain()
+        } catch (e: Exception) {
+            buffer.drain().fill(0)
+            throw e
+        }
         val digest = java.security.MessageDigest.getInstance("SHA-256").digest(encoded)
         if (lastMetaDigest?.contentEquals(digest) == true) {
             encoded.fill(0)
@@ -293,7 +303,12 @@ object SignalService {
         lastMetaDigest = digest
     }
 
-    fun myKeyString(): String = synchronized(lock) {
+    class KeyShare(val payload: ByteArray) {
+        val text: String get() = KEY_PREFIX + Base64.getEncoder().encodeToString(payload)
+    }
+
+    fun myKeyShare(): KeyShare = synchronized(lock) {
+        ensureInitialized()
         val opk = store.batch { nextOneTimePreKeyForBundle() }
         saveMeta()
         val payload = BundlePayload(
@@ -305,7 +320,7 @@ object SignalService {
             kyberPreKeySignature = meta.kyberPreKeySig,
             oneTimePreKeyId = opk.first, oneTimePreKey = opk.second,
         )
-        KEY_PREFIX + Base64.getEncoder().encodeToString(encodeBundle(payload))
+        KeyShare(encodeBundle(payload))
     }
 
     private fun encodeBundle(p: BundlePayload): ByteArray {
@@ -342,14 +357,24 @@ object SignalService {
         return BundlePayload(reg, dev, ik, spkId, spk, spkSig, kyId, ky, kySig, otpId, otp)
     }
 
-    fun addContact(keyString: String, displayName: String): Contact = synchronized(lock) {
-        val trimmed = keyString.trim()
-        val idx = trimmed.indexOf(KEY_PREFIX)
-        if (idx < 0) throw BadKeyStringException()
-        val b64 = trimmed.substring(idx + KEY_PREFIX.length).takeWhile { !it.isWhitespace() }
-        val blob = runCatching { Base64.getDecoder().decode(b64) }.getOrNull() ?: throw BadKeyStringException()
-        val peer = runCatching { decodeBundle(blob) }.getOrNull() ?: throw BadKeyStringException()
+    private fun parseKeyPayload(blob: ByteArray): BundlePayload? =
+        runCatching { decodeBundle(blob) }.getOrNull()
 
+    private fun parseKeyText(keyString: String): BundlePayload? =
+        KeyText.blobs(keyString).firstNotNullOfOrNull { parseKeyPayload(it) }
+
+    fun addContact(keyString: String, displayName: String): Contact =
+        addPeer(parseKeyText(keyString) ?: throw BadKeyStringException(), displayName)
+
+    fun addContactFromScan(raw: ByteArray, displayName: String): Contact {
+        val peer = parseKeyPayload(raw)
+            ?: parseKeyText(String(raw, Charsets.ISO_8859_1))
+            ?: throw BadKeyStringException()
+        return addPeer(peer, displayName)
+    }
+
+    private fun addPeer(peer: BundlePayload, displayName: String): Contact = synchronized(lock) {
+        ready()
         val fp = SignalFormat.hex(peer.identityKey)
         if (fp == myFingerprint.value) throw OwnKeyException()
 
@@ -399,8 +424,22 @@ object SignalService {
         saveMeta()
     }
 
-    fun encrypt(text: String, to: Contact): String = synchronized(lock) {
+    private fun requireSession(fingerprint: String) {
+        if (!store.containsSession(SignalProtocolAddress(fingerprint, 1))) {
+            throw NoSessionForContactException()
+        }
+    }
+
+    fun ready(): Boolean = try {
         ensureInitialized()
+        true
+    } catch (e: IllegalStateException) {
+        throw StorageUnavailableException(e)
+    }
+
+    fun encrypt(text: String, to: Contact): String = synchronized(lock) {
+        ready()
+        requireSession(to.fingerprint)
         val armored = store.batch {
             SignalWire.encrypt(text, to.fingerprint, myFingerprint.value, store, AppSettingsStore.resolvedStegoLanguage(), AppSettingsStore.resolvedStegoMode(), AppSettingsStore.lengthPadding)
         }
@@ -411,7 +450,7 @@ object SignalService {
     }
 
     fun decrypt(armored: String, from: Contact): String = synchronized(lock) {
-        ensureInitialized()
+        ready()
         meta.decryptCache[DecryptCacheKey.of(armored)]?.let { hit ->
             if (hit.fingerprint != from.fingerprint) {
                 val name = contacts.value.firstOrNull { it.fingerprint == hit.fingerprint }?.displayName
@@ -420,7 +459,11 @@ object SignalService {
             }
             return@synchronized hit.text
         }
-        val text = store.batch { SignalWire.decrypt(armored, from.fingerprint, myFingerprint.value, store) }
+        val text = try {
+            store.batch { SignalWire.decrypt(armored, from.fingerprint, myFingerprint.value, store) }
+        } catch (e: org.signal.libsignal.protocol.NoSessionException) {
+            throw NoSessionForContactException()
+        }
         meta.rememberDecrypt(armored, from.fingerprint, text)
         append(ChatMessage(text = text, mine = false), from.fingerprint)
         text

@@ -64,19 +64,19 @@ struct ChatView: View {
                         Label("Delete contact & chat", systemImage: "person.badge.minus")
                     }
                 } label: { Image(systemName: "ellipsis.circle") }
-            }
-        }
-        .confirmationDialog("Securely erase this conversation? This can't be undone.",
-                            isPresented: $confirmClear, titleVisibility: .visible) {
-            Button("Clear chat", role: .destructive) { signal.clearChat(contact) }
-        }
-        .confirmationDialog("Delete this contact and your conversation? Their key and session are erased from this device; your own key stays. This can't be undone.",
-                            isPresented: $confirmDeleteContact, titleVisibility: .visible) {
-            Button("Delete contact & chat", role: .destructive) {
-                if signal.removeContact(contact) {
-                    dismiss()
-                } else {
-                    errorText = String(localized: "Could not delete this contact — try again.")
+                .confirmationDialog("Securely erase this conversation? This can't be undone.",
+                                    isPresented: $confirmClear, titleVisibility: .visible) {
+                    Button("Clear chat", role: .destructive) { signal.clearChat(contact) }
+                }
+                .confirmationDialog("Delete this contact and your conversation? Their key and session are erased from this device; your own key stays. This can't be undone.",
+                                    isPresented: $confirmDeleteContact, titleVisibility: .visible) {
+                    Button("Delete contact & chat", role: .destructive) {
+                        if signal.removeContact(contact) {
+                            dismiss()
+                        } else {
+                            errorText = String(localized: "Could not delete this contact — try again.")
+                        }
+                    }
                 }
             }
         }
@@ -152,7 +152,8 @@ struct ChatView: View {
             lastCipher = armored
             return true
         } catch {
-            errorText = String(localized: "Could not encrypt the message.")
+            errorText = (error as? SignalServiceError)?.errorDescription
+                ?? String(localized: "Could not encrypt the message.")
             return false
         }
     }
@@ -175,6 +176,10 @@ struct ChatView: View {
             return String(localized: "The clipboard has no Kryptos message — copy the encrypted text first.")
         }
         switch error {
+        case CipherError.unsupportedFormat:
+            return String(localized: "This message was made by a newer version of Kryptos. Update the app to read it.")
+        case SignalServiceError.sessionLost, SignalError.sessionNotFound:
+            return String(localized: "The secure session with this contact is gone. Send them your key again and add their key — that restores the conversation.")
         case SignalServiceError.decryptedForOtherContact(let name):
             return String(localized: "This message is from another contact: \(name).")
         case SignalError.duplicatedMessage:

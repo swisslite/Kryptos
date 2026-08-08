@@ -53,10 +53,12 @@ object LetterStego {
     private val russian by lazy { Alphabet("абвгдежзийклмнопрстуфхцчшщъыьэюя", 5) }
     private val english by lazy { Alphabet("abcdefghijklmnopqrstuvwxyz", 7) }
 
+    private val tables by lazy { listOf(russian, english) }
+
     private fun table(language: StegoLanguage): Alphabet =
         when (language) {
             StegoLanguage.RUSSIAN -> russian
-            StegoLanguage.ENGLISH -> english
+            StegoLanguage.ENGLISH, StegoLanguage.GERMAN -> english
         }
 
     fun encode(data: ByteArray, language: StegoLanguage = StegoLanguage.forSystem()): String =
@@ -82,8 +84,7 @@ object LetterStego {
     fun decode(text: String): ByteArray? {
         for (token in StegoTokenizer.split(text)) {
             if (token.length < MIN_CHARS) continue
-            for (language in StegoLanguage.entries) {
-                val a = table(language)
+            for (a in tables) {
                 if (!a.index.containsKey(token[0]) || !structurallyValid(token.length, a)) continue
                 val framed = unpack(token, a) ?: continue
                 val payload = unframe(framed)

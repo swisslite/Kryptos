@@ -169,7 +169,7 @@ fun PgpScreen(modifier: Modifier = Modifier) {
                                     val recipient = target
                                         ?: throw PgpException(R.string.pgp_choose_recipient)
                                     PgpService.encrypt(body, recipient)
-                                        .also { copySensitive(context, it, null) }
+                                        .also { copyCipher(context, it, null) }
                                 } else {
                                     PgpService.decrypt(body)
                                 }
@@ -360,7 +360,9 @@ private fun PgpKeysSheet(onDismiss: () -> Unit) {
                         FieldLabel(ident.algo)
                     }
                     if (ident.id != currentID) {
-                        SecondaryButton(stringResource(R.string.pgp_use)) { PgpService.switchTo(ident.id) }
+                        SecondaryButton(stringResource(R.string.pgp_use)) {
+                            scope.launch(Dispatchers.Default + NonCancellable) { PgpService.switchTo(ident.id) }
+                        }
                     }
                 }
                 Text(
@@ -399,8 +401,11 @@ private fun PgpKeysSheet(onDismiss: () -> Unit) {
 @Composable
 private fun PgpShareSheet(onDismiss: () -> Unit) {
     val context = LocalContext.current
-    val key = PgpService.myPublicKey
-    val name = PgpService.currentIdentity?.name ?: stringResource(R.string.my_key)
+    val identities by PgpService.identities.collectAsState()
+    val currentID by PgpService.currentID.collectAsState()
+    val identity = identities.firstOrNull { it.id == currentID }
+    val key = identity?.publicKey.orEmpty()
+    val name = identity?.name ?: stringResource(R.string.my_key)
 
     KSheet(name, onDismiss) {
         Text(stringResource(R.string.pgp_share_hint), fontSize = 14.sp, lineHeight = 19.sp, color = K.textSecondary)
@@ -444,6 +449,17 @@ private fun PgpRecipientsSheet(onDismiss: () -> Unit) {
     var name by remember { mutableStateOf("") }
     var keyText by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    var confirmRemove by remember { mutableStateOf<com.kryptos.android.pgp.PgpRecipient?>(null) }
+
+    confirmRemove?.let { target ->
+        ConfirmDialog(
+            title = stringResource(R.string.confirm_remove_recipient_title),
+            text = stringResource(R.string.confirm_remove_recipient_text),
+            confirmLabel = stringResource(R.string.remove),
+            onConfirm = { scope.launch(Dispatchers.Default + NonCancellable) { PgpService.removeRecipient(target) } },
+            onDismiss = { confirmRemove = null },
+        )
+    }
 
     KSheet(stringResource(R.string.pgp_recipients), onDismiss) {
         GlassCard {
@@ -490,10 +506,10 @@ private fun PgpRecipientsSheet(onDismiss: () -> Unit) {
                         color = K.textPrimary, modifier = Modifier.weight(1f),
                     )
                     Icon(
-                        Icons.Default.Delete, stringResource(R.string.delete),
+                        Icons.Default.Delete, stringResource(R.string.remove),
                         Modifier
                             .size(20.dp)
-                            .quietClickable { PgpService.removeRecipient(r) },
+                            .quietClickable { confirmRemove = r },
                         tint = K.danger,
                     )
                 }

@@ -49,10 +49,12 @@ public enum LetterStego {
     private static let russian = alphabet("абвгдежзийклмнопрстуфхцчшщъыьэюя", blockBytes: 5)
     private static let english = alphabet("abcdefghijklmnopqrstuvwxyz", blockBytes: 7)
 
+    private static let tables = [russian, english]
+
     private static func table(for language: StegoLanguage) -> Alphabet {
         switch language {
         case .russian: return russian
-        case .english: return english
+        case .english, .german: return english
         }
     }
 
@@ -82,8 +84,7 @@ public enum LetterStego {
     public static func decode(_ text: String) -> Data? {
         for token in tokenize(text) where token.count >= minChars {
             let chars = Array(token)
-            for language in StegoLanguage.allCases {
-                let a = table(for: language)
+            for a in tables {
                 guard a.index[chars[0]] != nil, structurallyValid(chars.count, a) else { continue }
                 guard let framed = unpack(chars, a) else { continue }
                 if let payload = unframe(framed) { return payload }

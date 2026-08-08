@@ -75,38 +75,6 @@ data class KeyArchive(
 
         private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
-        private class WipingBuffer : java.io.OutputStream() {
-            private var buf = ByteArray(8192)
-            private var size = 0
-
-            private fun ensure(extra: Int) {
-                if (size + extra <= buf.size) return
-                var capacity = buf.size
-                while (capacity < size + extra) capacity *= 2
-                val grown = buf.copyOf(capacity)
-                buf.fill(0)
-                buf = grown
-            }
-
-            override fun write(b: Int) {
-                ensure(1)
-                buf[size++] = b.toByte()
-            }
-
-            override fun write(b: ByteArray, off: Int, len: Int) {
-                ensure(len)
-                b.copyInto(buf, size, off, off + len)
-                size += len
-            }
-
-            fun drain(): ByteArray {
-                val out = buf.copyOf(size)
-                buf.fill(0)
-                size = 0
-                return out
-            }
-        }
-
         @OptIn(ExperimentalSerializationApi::class)
         fun seal(archive: KeyArchive, password: String): String {
             if (password.length < MIN_PASSWORD_LENGTH) throw ArchiveException(ArchiveException.Kind.PASSWORD_TOO_SHORT)

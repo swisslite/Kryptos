@@ -41,6 +41,7 @@ object AppSettingsStore {
         return when (chatStegoLanguage) {
             "english" -> StegoLanguage.ENGLISH
             "russian" -> StegoLanguage.RUSSIAN
+            "german" -> StegoLanguage.GERMAN
             else -> StegoLanguage.forSystem()
         }
     }
@@ -67,6 +68,10 @@ object AppSettingsStore {
         get() = prefs.getBoolean("kb.autodecrypt", true)
         set(v) { prefs.edit().putBoolean("kb.autodecrypt", v).apply() }
 
+    var keyboardSendAfterEncrypt: Boolean
+        get() = prefs.getBoolean("kb.sendafter", false)
+        set(v) { prefs.edit().putBoolean("kb.sendafter", v).apply() }
+
     @Volatile var keyboardHandledClip: String? = null
 
     var keyboardSuggestions: Boolean
@@ -81,11 +86,22 @@ object AppSettingsStore {
         get() = prefs.getBoolean("kb.emoji", true)
         set(v) { prefs.edit().putBoolean("kb.emoji", v).apply() }
 
+    val systemKeyboardLang: String
+        get() {
+            val tag = java.util.Locale.getDefault().language
+            return if (tag == "ru" || tag == "de") tag else "en"
+        }
+
     val systemRussian: Boolean
         get() = java.util.Locale.getDefault().language.lowercase().startsWith("ru")
 
-    fun keyboardLangEnabled(code: String): Boolean =
-        prefs.getBoolean("kb.lang.$code", code == "en" || (code == "ru" && systemRussian))
+    private val nonLatinLanguages = setOf("ru")
+
+    fun keyboardLangEnabled(code: String): Boolean {
+        val sys = systemKeyboardLang
+        val byDefault = code == sys || (code == "en" && sys in nonLatinLanguages)
+        return prefs.getBoolean("kb.lang.$code", byDefault)
+    }
 
     fun setKeyboardLang(code: String, enabled: Boolean) {
         prefs.edit().putBoolean("kb.lang.$code", enabled).apply()

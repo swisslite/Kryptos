@@ -8,15 +8,26 @@ final class SuggestionEngine: @unchecked Sendable {
         let rank: [String: Int]
         let sorted: [String]
         let size: Int
+        let capitalized: Set<String>
 
         init(byFrequency: [String]) {
             var r = [String: Int](minimumCapacity: byFrequency.count * 2)
-            for (i, w) in byFrequency.enumerated() where r[w] == nil {
+            var caps: Set<String> = []
+            for (i, raw) in byFrequency.enumerated() {
+                let w = raw.lowercased()
+                guard r[w] == nil else { continue }
                 r[w] = i
+                if raw.first?.isUppercase == true { caps.insert(w) }
             }
             rank = r
             sorted = r.keys.sorted()
             size = max(1, r.count)
+            capitalized = caps
+        }
+
+        func display(_ w: String) -> String {
+            guard capitalized.contains(w), let f = w.first else { return w }
+            return f.uppercased() + w.dropFirst()
         }
 
         func contains(_ word: String) -> Bool { rank[word] != nil }
@@ -241,6 +252,7 @@ final class SuggestionEngine: @unchecked Sendable {
 
     private static let ruRows = ["йцукенгшщзх", "фывапролджэ", "ячсмитьбю"]
     private static let enRows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"]
+    private static let deRows = ["qwertzuiopü", "asdfghjklöä", "yxcvbnmß"]
 
     private static func buildNeighbors(_ rows: [String]) -> [Character: Set<Character>] {
         let grid = rows.map(Array.init)
@@ -263,29 +275,73 @@ final class SuggestionEngine: @unchecked Sendable {
 
     private static let ruNeighbors = buildNeighbors(ruRows)
     private static let enNeighbors = buildNeighbors(enRows)
+    private static let deNeighbors = buildNeighbors(deRows)
 
     private static let ruConfusable: Set<String> = ["еи", "ие", "ао", "оа", "ея", "яе", "ьъ", "ъь"]
+    private static let deConfusable: Set<String> = ["äa", "aä", "öo", "oö", "üu", "uü", "ßs", "sß", "ei", "ie"]
     private static let enVowels: Set<Character> = ["a", "e", "i", "o", "u"]
+    private static let deVowels: Set<Character> = ["a", "e", "i", "o", "u", "ä", "ö", "ü"]
 
     private static let ruAlphabet = Array("абвгдеёжзийклмнопрстуфхцчшщъыьэюя")
     private static let enAlphabet = Array("abcdefghijklmnopqrstuvwxyz")
+    private static let deAlphabet = Array("abcdefghijklmnopqrstuvwxyzäöüß")
 
     private static let startToken = "^"
     private static let ruCommon = ["привет", "да", "нет", "спасибо", "как", "хорошо", "я", "что"]
     private static let enCommon = ["hi", "yes", "no", "thanks", "how", "okay", "i", "the"]
+    private static let deCommon = ["hallo", "ja", "nein", "danke", "wie", "gut", "ich", "das"]
+
+    private static func alphabet(_ code: String) -> [Character] {
+        switch code {
+        case "ru": return ruAlphabet
+        case "de": return deAlphabet
+        default: return enAlphabet
+        }
+    }
+
+    private static func neighbors(_ code: String) -> [Character: Set<Character>] {
+        switch code {
+        case "ru": return ruNeighbors
+        case "de": return deNeighbors
+        default: return enNeighbors
+        }
+    }
+
+    private static func common(_ code: String) -> [String] {
+        switch code {
+        case "ru": return ruCommon
+        case "de": return deCommon
+        default: return enCommon
+        }
+    }
+
+    private static func confusable(_ code: String) -> Set<String> {
+        switch code {
+        case "ru": return ruConfusable
+        case "de": return deConfusable
+        default: return []
+        }
+    }
+
+    private static func vowels(_ code: String) -> Set<Character> {
+        switch code {
+        case "ru": return []
+        case "de": return deVowels
+        default: return enVowels
+        }
+    }
+
+    static func isLatin(_ code: String) -> Bool { code != "ru" }
 
     private let lock = NSLock()
-    private var en: Dict?
-    private var ru: Dict?
-    private var enBigrams: Bigrams?
-    private var ruBigrams: Bigrams?
-    private var enLex: Lexicon?
-    private var ruLex: Lexicon?
+    private var dicts: [String: Dict] = [:]
+    private var bigramTables: [String: Bigrams] = [:]
+    private var lexicons: [String: Lexicon] = [:]
     private var loadStarted = false
     private var claimedLanguages: Set<String> = []
     private var loadedLanguages: Set<String> = []
 
-    static let supportedLanguages: Set<String> = ["en", "ru"]
+    static let supportedLanguages: Set<String> = ["en", "ru", "de"]
 
     private static func buildLexicon(_ dict: Dict, _ vocab: Data) -> Lexicon {
         Lexicon.build(
@@ -337,11 +393,9 @@ final class SuggestionEngine: @unchecked Sendable {
             for code in toLoad.sorted() {
                 let (dict, pairs, forms) = load(code)
                 lock.lock()
-                if code == "ru" {
-                    ru = dict; ruBigrams = pairs; ruLex = forms
-                } else {
-                    en = dict; enBigrams = pairs; enLex = forms
-                }
+                dicts[code] = dict
+                bigramTables[code] = pairs
+                lexicons[code] = forms
                 loadedLanguages.insert(code)
                 lock.unlock()
             }
@@ -431,60 +485,62 @@ final class SuggestionEngine: @unchecked Sendable {
     }
 
     private struct Lang {
+        let code: String
         let dict: Dict
         let bigrams: Bigrams?
         let lex: Lexicon?
         let alphabet: [Character]
         let neighbors: [Character: Set<Character>]
-        let russian: Bool
+
 
         func knows(_ w: String) -> Bool { dict.contains(w) || lex?.contains(w) == true }
     }
 
-    private func langFor(firstChar: Character?, russian: Bool) -> Lang? {
-        let useRu: Bool
-        if let c = firstChar, ("а"..."я").contains(c) || c == "ё" { useRu = true }
-        else if let c = firstChar, ("a"..."z").contains(c) { useRu = false }
-        else { useRu = russian }
-        if useRu {
-            guard let ruDict = ru else { return nil }
-            return Lang(dict: ruDict, bigrams: ruBigrams, lex: ruLex,
-                        alphabet: Self.ruAlphabet, neighbors: Self.ruNeighbors, russian: true)
-        }
-        guard let enDict = en else { return nil }
-        return Lang(dict: enDict, bigrams: enBigrams, lex: enLex,
-                    alphabet: Self.enAlphabet, neighbors: Self.enNeighbors, russian: false)
+    private static func codeFor(firstChar: Character?, active: String) -> String {
+        guard let c = firstChar else { return active }
+        if ("а"..."я").contains(c) || ("А"..."Я").contains(c) || c == "ё" || c == "Ё" { return "ru" }
+        if "äöüßÄÖÜ".contains(c) { return "de" }
+        if ("a"..."z").contains(c) || ("A"..."Z").contains(c) { return isLatin(active) ? active : "en" }
+        return active
+    }
+
+    private func langFor(firstChar: Character?, active: String) -> Lang? {
+        let code = Self.codeFor(firstChar: firstChar, active: active)
+        guard let dict = dicts[code] else { return nil }
+        return Lang(code: code, dict: dict, bigrams: bigramTables[code], lex: lexicons[code],
+                    alphabet: Self.alphabet(code), neighbors: Self.neighbors(code))
     }
 
     private static func toU16(_ c: Character) -> UInt16 { Array(String(c).utf16)[0] }
 
-    private static let ruNeighborsU: [UInt16: Set<UInt16>] = {
+    private static func neighborsU(_ code: String) -> [UInt16: Set<UInt16>] {
         var m: [UInt16: Set<UInt16>] = [:]
-        for (k, v) in ruNeighbors { m[toU16(k)] = Set(v.map(toU16)) }
+        for (k, v) in neighbors(code) { m[toU16(k)] = Set(v.map(toU16)) }
         return m
-    }()
+    }
 
-    private static let enNeighborsU: [UInt16: Set<UInt16>] = {
-        var m: [UInt16: Set<UInt16>] = [:]
-        for (k, v) in enNeighbors { m[toU16(k)] = Set(v.map(toU16)) }
-        return m
-    }()
+    private static func confusableU(_ code: String) -> Set<UInt32> {
+        Set(confusable(code).map { pair -> UInt32 in
+            let u = Array(pair.utf16)
+            return (UInt32(u[0]) << 16) | UInt32(u[1])
+        })
+    }
 
-    private static let ruConfusableU: Set<UInt32> = Set(ruConfusable.map { pair -> UInt32 in
-        let u = Array(pair.utf16)
-        return (UInt32(u[0]) << 16) | UInt32(u[1])
-    })
+    private static let neighborsByCode: [String: [UInt16: Set<UInt16>]] =
+        ["en": neighborsU("en"), "ru": neighborsU("ru"), "de": neighborsU("de")]
+    private static let confusableByCode: [String: Set<UInt32>] =
+        ["en": confusableU("en"), "ru": confusableU("ru"), "de": confusableU("de")]
+    private static let vowelsByCode: [String: Set<UInt16>] =
+        ["en": Set(vowels("en").map(toU16)), "ru": [], "de": Set(vowels("de").map(toU16))]
 
-    private static let enVowelsU: Set<UInt16> = Set(enVowels.map(toU16))
     private static let yeU: UInt16 = 0x0435
     private static let yoU: UInt16 = 0x0451
 
-    private static func subAdjustU(_ orig: UInt16, _ a: UInt16, ruPlane: Bool) -> Double {
+    private static func subAdjustU(_ orig: UInt16, _ a: UInt16, code: String) -> Double {
         if (orig == yeU && a == yoU) || (orig == yoU && a == yeU) { return subYo }
-        if ruConfusableU.contains((UInt32(orig) << 16) | UInt32(a)) { return subRuConfuse }
-        let neighbors = ruPlane ? ruNeighborsU : enNeighborsU
-        if neighbors[orig]?.contains(a) == true { return subAdjacent }
-        if enVowelsU.contains(orig), enVowelsU.contains(a) { return subEnVowel }
+        if confusableByCode[code]?.contains((UInt32(orig) << 16) | UInt32(a)) == true { return subRuConfuse }
+        if neighborsByCode[code]?[orig]?.contains(a) == true { return subAdjacent }
+        if let vs = vowelsByCode[code], vs.contains(orig), vs.contains(a) { return subEnVowel }
         return subOther
     }
 
@@ -603,7 +659,7 @@ final class SuggestionEngine: @unchecked Sendable {
         var hits: [Int: FuzzyHit] = [:]
         var pops = 0
         var scanBudget = Self.fuzzyScanTotal
-        let ruPlane = lang.russian
+        let langCode = lang.code
 
         func key(_ lo: Int, _ p: Int, _ i: Int) -> Int64 {
             (Int64(lo) << 24) | (Int64(p) << 8) | Int64(i)
@@ -667,7 +723,7 @@ final class SuggestionEngine: @unchecked Sendable {
                     if c == qc {
                         push(j, end, s.p + 1, s.i + 1, s.cost, s.edits)
                     } else {
-                        push(j, end, s.p + 1, s.i + 1, s.cost - Self.subAdjustU(qc, c, ruPlane: ruPlane), s.edits + 1)
+                        push(j, end, s.p + 1, s.i + 1, s.cost - Self.subAdjustU(qc, c, code: langCode), s.edits + 1)
                         if s.i + 1 < qn, q[s.i + 1] == c, qc != c,
                            let g = lex.findChild(j, end, s.p + 1, qc) {
                             push(g.0, g.1, s.p + 2, s.i + 2, s.cost - Self.transpose, s.edits + 1)
@@ -739,9 +795,9 @@ final class SuggestionEngine: @unchecked Sendable {
             for a in lang.alphabet where a != orig {
                 let cost: Double
                 if (orig == "е" && a == "ё") || (orig == "ё" && a == "е") { cost = subYo }
-                else if ruConfusable.contains("\(orig)\(a)") { cost = subRuConfuse }
+                else if Self.confusable(lang.code).contains("\(orig)\(a)") { cost = subRuConfuse }
                 else if lang.neighbors[orig]?.contains(a) == true { cost = subAdjacent }
-                else if enVowels.contains(orig), enVowels.contains(a) { cost = subEnVowel }
+                else if Self.vowels(lang.code).contains(orig), Self.vowels(lang.code).contains(a) { cost = subEnVowel }
                 else { cost = subOther }
                 var c = chars; c[i] = a
                 offer(c, cost)
@@ -757,12 +813,12 @@ final class SuggestionEngine: @unchecked Sendable {
         return out
     }
 
-    func suggest(prefix: String, previous: String?, russian: Bool, limit: Int = 3) -> [String] {
+    func suggest(prefix: String, previous: String?, language: String, limit: Int = 3) -> [String] {
         lock.lock()
         defer { lock.unlock() }
-        if prefix.isEmpty { return predictEmpty(previous: previous, russian: russian, limit: limit) }
+        if prefix.isEmpty { return predictEmpty(previous: previous, language: language, limit: limit) }
         let folded = prefix.lowercased()
-        guard let lang = langFor(firstChar: folded.first, russian: russian) else { return [] }
+        guard let lang = langFor(firstChar: folded.first, active: language) else { return [] }
         let prevNorm = previous.flatMap(Self.normalize)
 
         struct Cand { var adjust: Double }
@@ -819,7 +875,7 @@ final class SuggestionEngine: @unchecked Sendable {
         let ranked = cands
             .map { (word: $0.key, score: base($0.key, lang: lang, prevNorm: prevNorm) + $0.value.adjust) }
             .sorted { $0.score > $1.score }
-        return ranked.prefix(limit).map { Self.matchCase(typed: prefix, suggestion: $0.word) }
+        return ranked.prefix(limit).map { Self.matchCase(typed: prefix, suggestion: lang.dict.display($0.word)) }
     }
 
     private func continuationsOf(_ prev: String, lang: Lang, limit: Int) -> [String] {
@@ -836,50 +892,71 @@ final class SuggestionEngine: @unchecked Sendable {
         return out
     }
 
+    private typealias Scored = (word: String, count: Int)
+
+    private static func outranks(_ a: Scored, _ b: Scored) -> Bool {
+        a.count != b.count ? a.count > b.count : a.word < b.word
+    }
+
+    private static func keepTop(_ item: Scored, in best: inout [Scored], limit: Int) {
+        guard limit > 0 else { return }
+        if best.count < limit {
+            let idx = best.firstIndex { outranks(item, $0) } ?? best.count
+            best.insert(item, at: idx)
+            return
+        }
+        guard let last = best.last, outranks(item, last) else { return }
+        let idx = best.firstIndex { outranks(item, $0) } ?? best.count - 1
+        best.insert(item, at: idx)
+        best.removeLast()
+    }
+
     private func continuationsOfUser(_ prev: String, limit: Int) -> [String] {
         let marker = "\(prev) "
-        return bigrams
-            .filter { $0.key.hasPrefix(marker) }
-            .sorted { $0.value > $1.value }
-            .prefix(limit)
-            .map { String($0.key.dropFirst(marker.count)) }
+        var best: [Scored] = []
+        for (key, count) in bigrams where key.hasPrefix(marker) {
+            Self.keepTop((String(key.dropFirst(marker.count)), count), in: &best, limit: limit)
+        }
+        return best.map(\.word)
     }
 
     private func personalMatches(_ folded: String) -> [String] {
-        words
-            .filter { $0.value >= 2 && $0.key.count > folded.count && $0.key.hasPrefix(folded) }
-            .sorted { $0.value > $1.value }
-            .prefix(3)
-            .map(\.key)
+        var best: [Scored] = []
+        for (word, count) in words where count >= 2 && word.count > folded.count && word.hasPrefix(folded) {
+            Self.keepTop((word, count), in: &best, limit: 3)
+        }
+        return best.map(\.word)
     }
 
-    private func predictEmpty(previous: String?, russian: Bool, limit: Int) -> [String] {
+    private func predictEmpty(previous: String?, language: String, limit: Int) -> [String] {
         let atStart = previous == nil
         let prevNorm = previous.flatMap(Self.normalize)
         var out: [String] = []
         func add(_ raw: String) {
             guard raw != prevNorm else { return }
-            guard Self.matchesScript(raw, russian: russian) else { return }
-            let w = atStart ? Self.capitalizeFirst(raw) : raw
+            guard Self.matchesScript(raw, language: language) else { return }
+            let shown = dicts[Self.codeFor(firstChar: raw.first, active: language)]?.display(raw) ?? raw
+            let w = atStart ? Self.capitalizeFirst(shown) : shown
             if !out.contains(w) { out.append(w) }
         }
         if atStart {
             continuationsOfUser(Self.startToken, limit: limit * 2).forEach(add)
         } else if let prev = prevNorm {
             continuationsOfUser(prev, limit: limit * 2).forEach(add)
-            let table = (prev.first.map { ("а"..."я").contains($0) || $0 == "ё" } ?? russian) ? ruBigrams : enBigrams
+            let table = bigramTables[Self.codeFor(firstChar: prev.first, active: language)]
             if let curated = table?.next[prev] {
                 for w in curated where out.count < limit { add(w) }
             }
         }
         if out.count < limit {
-            words.filter { $0.value >= 2 }
-                .sorted { $0.value > $1.value }
-                .prefix(limit * 2)
-                .forEach { add($0.key) }
+            var best: [Scored] = []
+            for (word, count) in words where count >= 2 {
+                Self.keepTop((word, count), in: &best, limit: limit * 2)
+            }
+            best.forEach { add($0.word) }
         }
         if atStart, out.count < limit {
-            for w in (russian ? Self.ruCommon : Self.enCommon) where out.count < limit { add(w) }
+            for w in Self.common(language) where out.count < limit { add(w) }
         }
         return Array(out.prefix(limit))
     }
@@ -898,7 +975,7 @@ final class SuggestionEngine: @unchecked Sendable {
     ]
     private static let informalRU: Set<String> = ["спс", "пж", "плз", "мб", "хз", "крч", "оч", "прив", "пон", "лан", "збс", "кст", "чел"]
 
-    func autocorrect(_ word: String, previous: String?, russian: Bool, deep: Bool = true) -> String? {
+    func autocorrect(_ word: String, previous: String?, language: String, deep: Bool = true) -> String? {
         let folded = word.lowercased()
         guard folded.allSatisfy({ $0.isLetter || $0 == "'" || $0 == "-" || $0 == "’" }) else { return nil }
         if folded == "i", word != "I" {
@@ -914,7 +991,7 @@ final class SuggestionEngine: @unchecked Sendable {
 
         lock.lock()
         defer { lock.unlock() }
-        guard let lang = langFor(firstChar: folded.first, russian: russian) else { return nil }
+        guard let lang = langFor(firstChar: folded.first, active: language) else { return nil }
 
         if lang.bigrams?.vocab.contains(folded) == true { return nil }
         if Self.informalEN.contains(folded) || Self.informalRU.contains(folded) { return nil }
@@ -1025,13 +1102,13 @@ final class SuggestionEngine: @unchecked Sendable {
             if b.score < prior + Self.acPrefixLead { return nil }
         }
         if !b.contextual, second > b.score - Self.acNearTie { return nil }
-        return Self.matchCase(typed: word, suggestion: b.word)
+        return Self.matchCase(typed: word, suggestion: lang.dict.display(b.word))
     }
 
-    private static func matchesScript(_ w: String, russian: Bool) -> Bool {
-        guard let c = w.lowercased().first(where: \.isLetter) else { return true }
-        if ("а"..."я").contains(c) || c == "ё" { return russian }
-        if ("a"..."z").contains(c) { return !russian }
+    private static func matchesScript(_ w: String, language: String) -> Bool {
+        guard let c = w.first(where: \.isLetter) else { return true }
+        if ("а"..."я").contains(c) || ("А"..."Я").contains(c) || c == "ё" || c == "Ё" { return language == "ru" }
+        if ("a"..."z").contains(c) || ("A"..."Z").contains(c) || "äöüßÄÖÜ".contains(c) { return isLatin(language) }
         return true
     }
 

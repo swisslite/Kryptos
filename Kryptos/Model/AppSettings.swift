@@ -41,13 +41,14 @@ extension StegoMode {
 @MainActor
 final class AppSettings: ObservableObject {
     enum LanguageChoice: String, CaseIterable, Identifiable {
-        case auto, english, russian
+        case auto, english, russian, german
         var id: String { rawValue }
         var title: LocalizedStringKey {
             switch self {
             case .auto: return "Automatic (system language)"
             case .english: return "English"
             case .russian: return "Russian"
+            case .german: return "German"
             }
         }
     }
@@ -258,6 +259,7 @@ final class AppSettings: ObservableObject {
         switch chatStegoLanguage {
         case .english: return .english
         case .russian: return .russian
+        case .german: return .german
         case .auto: return .forSystem()
         }
     }

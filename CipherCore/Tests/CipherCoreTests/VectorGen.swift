@@ -26,10 +26,12 @@ final class VectorGenTests: XCTestCase {
         let payload = Data((0...0x20).map { UInt8($0) })
         print("VECTOR-STEGO-EN-BEGIN\n\(TextStego.encode(payload, language: .english))\nVECTOR-STEGO-EN-END")
         print("VECTOR-STEGO-RU-BEGIN\n\(TextStego.encode(payload, language: .russian))\nVECTOR-STEGO-RU-END")
+        print("VECTOR-STEGO-DE-BEGIN\n\(TextStego.encode(payload, language: .german, seed: 0x41))\nVECTOR-STEGO-DE-END")
 
         let letterProbe = Data([0x03, 0x02, 0xAB, 0xCD, 0xEF, 0x10, 0x22, 0x77, 0x91, 0x04, 0x5C, 0xBE])
         print("VECTOR-LETTERS-EN-BEGIN\n\(LetterStego.encode(letterProbe, language: .english, seed: 0x5C))\nVECTOR-LETTERS-EN-END")
         print("VECTOR-LETTERS-RU-BEGIN\n\(LetterStego.encode(letterProbe, language: .russian, seed: 0xB3))\nVECTOR-LETTERS-RU-END")
+        print("VECTOR-SMART-DE-BEGIN\n\(SmartTextStego.encode(letterProbe, language: .german, seed: 0x41))\nVECTOR-SMART-DE-END")
 
         var state: UInt64 = 7
         func next() -> UInt8 {

@@ -5,6 +5,7 @@ import com.kryptos.android.core.Deflate
 import com.kryptos.android.core.LetterStego
 import com.kryptos.android.core.SmartTextStego
 import com.kryptos.android.core.StegoMode
+import com.kryptos.android.core.StegoWire
 import com.kryptos.android.core.StegoLanguage
 import com.kryptos.android.core.TextStego
 import com.kryptos.android.core.WireFormat
@@ -16,7 +17,6 @@ import org.signal.libsignal.protocol.message.SignalMessage
 import org.signal.libsignal.protocol.state.SignalProtocolStore
 
 object SignalWire {
-    private const val SIGNAL_PREFIX = 0x03
 
     fun pairKey(a: String, b: String): ByteArray =
         (if (a <= b) a + b else b + a).toByteArray(Charsets.UTF_8)
@@ -40,10 +40,8 @@ object SignalWire {
             val deflate = compressed != null
             val ct = cipher.encrypt(if (deflate) compressed!! else raw)
             val serialized = ct.serialize()
-            val payload = ByteArray(2 + serialized.size)
-            payload[0] = SIGNAL_PREFIX.toByte()
-            payload[1] = ((ct.type and 0x0F) or (if (deflate) 0x10 else 0)).toByte()
-            serialized.copyInto(payload, 2)
+            val padded = pad && StegoWire.fits(serialized.size, true)
+            val payload = StegoWire.frame(serialized, ct.type, deflate, padded)
             if (payload.size <= TextStego.MAX_PAYLOAD_BYTES) {
                 return when (mode) {
                     StegoMode.WORDS -> TextStego.encode(payload, stego)
@@ -82,16 +80,20 @@ object SignalWire {
         return decryptStego(cipher, payload)
     }
 
-    private fun stegoPayload(armored: String): ByteArray? =
-        TextStego.decode(armored) ?: SmartTextStego.decode(armored) ?: LetterStego.decode(armored)
+    private const val MAX_STEGO_INPUT_CHARS = 1_000_000
+
+    private fun stegoPayload(armored: String): ByteArray? {
+        if (armored.length > MAX_STEGO_INPUT_CHARS) return null
+        return TextStego.decode(armored) ?: SmartTextStego.decode(armored) ?: LetterStego.decode(armored)
+    }
 
     private fun decryptStego(cipher: SessionCipher, payload: ByteArray): String {
-        if (payload.size < 2 || (payload[0].toInt() and 0xFF) != SIGNAL_PREFIX) {
-            throw CipherException(CipherException.Kind.NOT_A_KRYPTOS_MESSAGE)
-        }
-        val flags = payload[1].toInt() and 0xFF
-        val raw = signalDecrypt(cipher, flags and 0x0F, payload.copyOfRange(2, payload.size))
-        val data = if (flags and 0x10 != 0) Deflate.decompress(raw) ?: ByteArray(0) else raw
+        val framed = StegoWire.unframe(payload) ?: throw CipherException(
+            if (StegoWire.carriesUnknownFlags(payload)) CipherException.Kind.UNSUPPORTED_FORMAT
+            else CipherException.Kind.NOT_A_KRYPTOS_MESSAGE
+        )
+        val raw = signalDecrypt(cipher, framed.type, framed.body)
+        val data = if (framed.deflate) Deflate.decompress(raw) ?: ByteArray(0) else raw
         return String(data, Charsets.UTF_8)
     }
 

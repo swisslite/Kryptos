@@ -92,7 +92,7 @@ around a different idea:
 
 - **Two ways to hide a message in plain sight (steganography).** Bury an already-encrypted payload
   in the low bits of an ordinary **photo**, or disguise it as an innocent-looking run of **real,
-  grammatical words/sentences** (EN + RU) — so even the fact that a message exists can be hidden.
+  grammatical words/sentences** (EN, RU + DE) — so even the fact that a message exists can be hidden.
 
 - **Same app, either phone.** Both platforms are complete native apps, not a port with a "lite"
   side — everything (Signal chats, PGP, password mode, both kinds of steganography, the keyboard)
@@ -135,7 +135,7 @@ around a different idea:
   and stego photos cross-decrypt between iOS and Android, proven by unit tests that decode vectors
   produced by the other platform.
 - **Smart offline keyboard** — context-aware suggestions and autocorrect from on-device dictionaries
-  (~360k Russian / ~110k English word forms), learned on-device, stored encrypted, disabled in
+  (~360k Russian / ~177k German / ~110k English word forms), learned on-device, stored encrypted, disabled in
   password fields. No network, ever.
 
 ## Security & privacy

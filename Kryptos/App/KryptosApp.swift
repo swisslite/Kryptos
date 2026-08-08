@@ -17,13 +17,22 @@ struct KryptosApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                RootView()
-                    .environmentObject(signal)
-                    .environmentObject(settings)
-                    .environmentObject(pgp)
-                    .environmentObject(lock)
+                if signal.hasBooted {
+                    RootView()
+                        .environmentObject(signal)
+                        .environmentObject(settings)
+                        .environmentObject(pgp)
+                        .environmentObject(lock)
+                } else {
+                    BootScreen()
+                }
                 if lock.isShielded && !lock.isLocked { PrivacyShield() }
                 if lock.isLocked { LockScreen(gate: lock, onCode: handleCode) }
+            }
+            .task {
+                signal.start()
+                pgp.start()
+                if scenePhase == .active, !lock.isLocked { scanClipboard() }
             }
             .preferredColorScheme(settings.colorScheme)
             .tint(KTheme.accent)
@@ -32,7 +41,7 @@ struct KryptosApp: App {
                 ScreenCover.set(lock.isShielded)
                 if phase == .active {
                     SharedStore.revalidateBackend()
-                    signal.reloadCurrentFromDisk()
+                    if signal.hasBooted { signal.reloadCurrentFromDisk() }
                     if !lock.isLocked { scanClipboard() }
                 } else {
                     let cover = PrivacyConfig.coverState()
@@ -53,6 +62,7 @@ struct KryptosApp: App {
 
     @MainActor
     private func scanClipboard() {
+        guard signal.hasBooted else { return }
         Task { @MainActor in
             if let found = await AutoDecrypt.scan(signal: signal), !lock.isLocked {
                 incoming = found
@@ -76,6 +86,15 @@ struct KryptosApp: App {
             PanicWipe.run(signal: signal, pgp: pgp, settings: settings)
             lock.forceUnlock()
             return true
+        }
+    }
+}
+
+private struct BootScreen: View {
+    var body: some View {
+        ZStack {
+            ScreenBackground()
+            ProgressView().tint(KTheme.accent)
         }
     }
 }

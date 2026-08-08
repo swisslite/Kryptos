@@ -160,7 +160,7 @@ public enum ImageStego {
     }
 
     public static func hide(_ message: Data, password: String, rgba: [UInt8],
-                            width: Int, height: Int, pad: Bool = false) throws -> [UInt8] {
+                            width: Int, height: Int) throws -> [UInt8] {
         let list = try candidates(rgba: rgba, width: width, height: height)
         let total = list.count
         guard total > saltBits + lengthBits else { throw CipherError.stegoCapacityExceeded }
@@ -172,7 +172,7 @@ public enum ImageStego {
         let (key, nonce) = try PasswordCipher.split(derived)
         let placementKey = Data(derived[PasswordCipher.derivedLength ..< derived.count])
         let sealed = try PasswordCipher.sealBody(message, key: key, nonce: nonce,
-                                                 version: containerVersion, pad: pad)
+                                                 version: containerVersion, pad: false)
         let payloadBits = sealed.count * 8
         guard saltBits + lengthBits + payloadBits <= total else { throw CipherError.stegoCapacityExceeded }
 

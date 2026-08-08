@@ -13,7 +13,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,7 +47,6 @@ import com.kryptos.android.R
 import com.kryptos.android.core.CipherException
 import com.kryptos.android.core.ImageBridge
 import com.kryptos.android.core.ImageStego
-import com.kryptos.android.signal.AppSettingsStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
@@ -197,7 +195,6 @@ fun StegoScreen(modifier: Modifier = Modifier) {
                                 val stego = ImageStego.hide(
                                     body.toByteArray(Charsets.UTF_8), secret,
                                     pixels.rgba, pixels.width, pixels.height,
-                                    AppSettingsStore.lengthPadding,
                                 )
                                 StegoResult(ImageBridge.pngData(stego, pixels.width, pixels.height), null)
                             } else {
@@ -219,6 +216,7 @@ fun StegoScreen(modifier: Modifier = Modifier) {
                         isError = true
                         status = context.getString(
                             when {
+                                e is PhotoTooLargeException -> R.string.photo_too_large
                                 e is OutOfMemoryError -> R.string.low_memory
                                 e is CipherException &&
                                     e.kind == CipherException.Kind.STEGO_CAPACITY_EXCEEDED ->
@@ -262,12 +260,13 @@ fun StegoScreen(modifier: Modifier = Modifier) {
 
 private class StegoResult(val png: ByteArray?, val text: String?)
 
+private class PhotoTooLargeException : Exception()
+
 private fun readPixels(context: Context, uri: Uri, degrees: Float, shrinkTo: Long? = null): ImageBridge.Pixels? {
-    val sample = shrinkTo?.let { target ->
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
-        ImageBridge.sampleSizeFor(bounds.outWidth, bounds.outHeight, target)
-    } ?: 1
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+    val sample = shrinkTo?.let { ImageBridge.sampleSizeFor(bounds.outWidth, bounds.outHeight, it) } ?: 1
+    if (!ImageBridge.withinLimits(bounds.outWidth, bounds.outHeight, sample)) throw PhotoTooLargeException()
     return context.contentResolver.openInputStream(uri)?.use { stream ->
         if (degrees == 0f && sample == 1) {
             ImageBridge.rgba(stream)

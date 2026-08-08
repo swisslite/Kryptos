@@ -1,5 +1,32 @@
 import SwiftUI
 
+@MainActor
+private enum EngineCheck {
+    private static let storeKey = "engine.check"
+    private static var cached: Bool?
+
+    private static var build: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
+    }
+
+    static func result() async -> Bool {
+        if let cached { return cached }
+        if let stored = SharedStore.read(storeKey),
+           let text = String(data: stored, encoding: .utf8) {
+            let parts = text.split(separator: "|", maxSplits: 1, omittingEmptySubsequences: false)
+            if parts.count == 2, parts[0] == build {
+                let ok = parts[1] == "1"
+                cached = ok
+                return ok
+            }
+        }
+        let ok = await Task.detached { SignalWire.engineCheckError() == nil }.value
+        cached = ok
+        SharedStore.write(storeKey, Data("\(build)|\(ok ? "1" : "0")".utf8))
+        return ok
+    }
+}
+
 struct SessionsView: View {
     @EnvironmentObject private var signal: SignalService
     @EnvironmentObject private var lock: LockGate
@@ -10,7 +37,6 @@ struct SessionsView: View {
     @State private var confirmWipeContacts = false
     @State private var confirmDeleteContact: Contact?
     @State private var engineOK: Bool?
-    nonisolated(unsafe) private static var cachedEngineOK: Bool?
 
     var body: some View {
         NavigationStack {
@@ -29,6 +55,14 @@ struct SessionsView: View {
                                     .contextMenu {
                                         Button(role: .destructive) { confirmDeleteContact = contact } label: {
                                             Label("Delete contact & chat", systemImage: "person.badge.minus")
+                                        }
+                                    }
+                                    .confirmationDialog("Delete this contact and your conversation? Their key and session are erased from this device; your own key stays. This can't be undone.",
+                                                        isPresented: Binding(get: { confirmDeleteContact?.fingerprint == contact.fingerprint },
+                                                                             set: { if !$0 { confirmDeleteContact = nil } }),
+                                                        titleVisibility: .visible) {
+                                        Button("Delete contact & chat", role: .destructive) {
+                                            signal.removeContact(contact)
                                         }
                                     }
                             }
@@ -71,34 +105,21 @@ struct SessionsView: View {
                             }
                         }
                     } label: { Image(systemName: "ellipsis.circle") }
+                    .confirmationDialog("Securely erase every conversation? Contacts stay; message history is wiped. This can't be undone.",
+                                        isPresented: $confirmWipeAll, titleVisibility: .visible) {
+                        Button("Clear all chats", role: .destructive) { signal.wipeAllChats() }
+                    }
+                    .confirmationDialog("Delete every contact and conversation? Their keys and sessions are erased from this device; your own key stays. This can't be undone.",
+                                        isPresented: $confirmWipeContacts, titleVisibility: .visible) {
+                        Button("Delete contacts & chats", role: .destructive) { signal.wipeContactsAndChats() }
+                    }
                 }
             }
             .sheet(isPresented: $showMyKey) { MyKeyView() }
             .sheet(isPresented: $showAdd) { AddContactView() }
             .sheet(isPresented: $showProfiles) { ProfilesView() }
-            .confirmationDialog("Securely erase every conversation? Contacts stay; message history is wiped. This can't be undone.",
-                                isPresented: $confirmWipeAll, titleVisibility: .visible) {
-                Button("Clear all chats", role: .destructive) { signal.wipeAllChats() }
-            }
-            .confirmationDialog("Delete every contact and conversation? Their keys and sessions are erased from this device; your own key stays. This can't be undone.",
-                                isPresented: $confirmWipeContacts, titleVisibility: .visible) {
-                Button("Delete contacts & chats", role: .destructive) { signal.wipeContactsAndChats() }
-            }
-            .confirmationDialog("Delete this contact and your conversation? Their key and session are erased from this device; your own key stays. This can't be undone.",
-                                isPresented: Binding(get: { confirmDeleteContact != nil },
-                                                     set: { if !$0 { confirmDeleteContact = nil } }),
-                                titleVisibility: .visible) {
-                Button("Delete contact & chat", role: .destructive) {
-                    if let c = confirmDeleteContact { signal.removeContact(c) }
-                }
-            }
         }
-        .task {
-            if Self.cachedEngineOK == nil {
-                Self.cachedEngineOK = await Task.detached { SignalWire.engineCheckError() == nil }.value
-            }
-            engineOK = Self.cachedEngineOK
-        }
+        .task { engineOK = await EngineCheck.result() }
         .onAppear { signal.reloadCurrentFromDisk() }
         .onChange(of: lock.isLocked) { _, locked in
             guard locked else { return }

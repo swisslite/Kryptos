@@ -132,6 +132,7 @@ enum ChatStego {
         switch c.lang {
         case "english": language = .english
         case "russian": language = .russian
+        case "german": language = .german
         default: language = .forSystem()
         }
         return (language, mode(of: c))
@@ -192,7 +193,7 @@ enum PrivacyConfig {
 }
 
 enum InterfaceConfig {
-    static let supportedLanguages = ["en", "ru"]
+    static let supportedLanguages = ["en", "ru", "de"]
 
     private static let key = "interface"
     private struct Config: Codable {
@@ -293,7 +294,7 @@ enum KeyboardConfig {
                         suggestions: c.suggestions ?? true,
                         autocorrect: c.autocorrect ?? true,
                         emoji: c.emoji ?? true,
-                        languages: langs.isEmpty ? (systemPrefersRussian ? ["en", "ru"] : ["en"]) : langs)
+                        languages: langs.isEmpty ? defaultLanguages : langs)
     }
 
     static var haptics: Bool { config().haptics }
@@ -304,7 +305,7 @@ enum KeyboardConfig {
     static var emoji: Bool { config().emoji ?? true }
     static var autocorrect: Bool { config().autocorrect ?? true }
     static var composeToggle: Bool { config().composeToggle ?? true }
-    static var languages: [String] { storedLanguages ?? (systemPrefersRussian ? ["en", "ru"] : ["en"]) }
+    static var languages: [String] { storedLanguages ?? defaultLanguages }
 
     static var storedLanguages: [String]? {
         guard let raw = config().langs else { return nil }
@@ -314,7 +315,22 @@ enum KeyboardConfig {
 
     static var systemPrefersRussian: Bool { StegoLanguage.forSystem() == .russian }
 
-    static let supported = ["en", "ru"]
+    private static let nonLatinLanguages: Set<String> = ["ru"]
+
+    static var defaultLanguages: [String] {
+        let sys = systemLanguage
+        guard nonLatinLanguages.contains(sys) else { return [sys] }
+        return ["en", sys]
+    }
+
+    static var systemLanguage: String {
+        let code = Bundle.main.preferredLocalizations.first ?? "en"
+        if code.hasPrefix("ru") { return "ru" }
+        if code.hasPrefix("de") { return "de" }
+        return "en"
+    }
+
+    static let supported = ["en", "ru", "de"]
 
     private static func cleaned(_ raw: [String]) -> [String] { supported.filter(raw.contains) }
 }

@@ -8,6 +8,12 @@
             "state": "translated",
             "value": "Сначала выберите контакт"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle zuerst einen Kontakt"
+          }
         }
       }
     },
@@ -18,6 +24,12 @@
             "state": "translated",
             "value": "Очистить"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leeren"
+          }
         }
       }
     },
@@ -27,6 +39,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Буфер обмена пуст."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Zwischenablage ist leer."
           }
         }
       }
@@ -39,6 +57,12 @@
             "state": "translated",
             "value": "Поле ввода"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eingabefeld"
+          }
         }
       }
     },
@@ -48,6 +72,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Контакт"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontakt"
           }
         }
       }
@@ -59,6 +89,12 @@
             "state": "translated",
             "value": "Не удалось расшифровать — проверьте профиль и контакт"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entschlüsseln fehlgeschlagen — prüfe Profil und Kontakt"
+          }
         }
       }
     },
@@ -68,6 +104,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Не удалось расшифровать — другой профиль/контакт или сообщение повреждено"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entschlüsseln fehlgeschlagen — anderes Profil bzw. anderer Kontakt, oder die Nachricht ist beschädigt"
           }
         }
       }
@@ -79,6 +121,12 @@
             "state": "translated",
             "value": "Не удалось зашифровать"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verschlüsseln fehlgeschlagen"
+          }
         }
       }
     },
@@ -88,6 +136,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Расшифровано · %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entschlüsselt · %@"
           }
         }
       }
@@ -99,6 +153,12 @@
             "state": "translated",
             "value": "Зашифровано для %@"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verschlüsselt für %@"
+          }
         }
       }
     },
@@ -108,6 +168,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Введите текст."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib einen Text ein."
           }
         }
       }
@@ -120,6 +186,12 @@
             "state": "translated",
             "value": "Заблокировано — разблокируйте, чтобы пользоваться шифрованием"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesperrt — entsperre die App, um zu verschlüsseln"
+          }
         }
       }
     },
@@ -129,6 +201,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "В профиле нет контактов"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Kontakte in diesem Profil"
           }
         }
       }
@@ -140,6 +218,12 @@
             "state": "translated",
             "value": "Нет сообщения — вставьте его в поле или скопируйте"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Nachricht — füge sie in das Feld ein oder kopiere sie"
+          }
         }
       }
     },
@@ -149,6 +233,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Недавних эмодзи пока нет — выберите категорию ниже"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine zuletzt verwendeten Emoji — wähle unten eine Kategorie"
           }
         }
       }
@@ -160,6 +250,12 @@
             "state": "translated",
             "value": "Откройте приложение Kryptos и добавьте контакт."
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffne die Kryptos-App und füge einen Kontakt hinzu."
+          }
         }
       }
     },
@@ -169,6 +265,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Вставить"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einfügen"
           }
         }
       }
@@ -180,6 +282,12 @@
             "state": "translated",
             "value": "Для шифрования включите «Полный доступ» в настройках клавиатуры."
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktiviere für die Verschlüsselung „Vollen Zugriff“ in den Tastatureinstellungen."
+          }
         }
       }
     },
@@ -189,6 +297,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Печатайте или вставьте текст — мессенджер не увидит его до шифрования"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe oder füge Text ein — der Messenger sieht ihn erst, wenn er verschlüsselt ist"
           }
         }
       }
@@ -200,6 +314,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Разблокируйте Kryptos"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kryptos entsperren"
           }
         }
       }

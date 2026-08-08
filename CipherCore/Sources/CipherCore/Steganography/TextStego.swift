@@ -3,23 +3,28 @@ import Foundation
 public enum StegoLanguage: String, Sendable, CaseIterable {
     case english
     case russian
+    case german
 
     var words: [String] {
         switch self {
         case .english: return StegoWordlists.english
         case .russian: return StegoWordlists.russian
+        case .german: return StegoWordlists.german
         }
     }
 
     public static func forSystem() -> StegoLanguage {
         let code = (Locale.preferredLanguages.first ?? "en").lowercased()
-        return code.hasPrefix("ru") ? .russian : .english
+        if code.hasPrefix("ru") { return .russian }
+        if code.hasPrefix("de") { return .german }
+        return .english
     }
 }
 
 public enum TextStego {
     private static let bitsPerWord = 12
     private static let wordMask = 0xFFF
+    private static let resyncStarts = 3
     private static let magic: UInt8 = 0xC7
 
     public static let maxPayloadBytes = 0x7FFF
@@ -83,6 +88,14 @@ public enum TextStego {
 
     private static func decode(tokens: [String], language: StegoLanguage) -> Data? {
         let index = language.indexMap
+        let kept = tokens.filter { index[$0] != nil }
+        for start in 0 ..< min(resyncStarts, kept.count) {
+            if let data = decodeFrom(Array(kept[start...]), index: index) { return data }
+        }
+        return nil
+    }
+
+    private static func decodeFrom(_ tokens: [String], index: [String: Int]) -> Data? {
         var acc = 0, bits = 0
         var bytes: [UInt8] = []
         bytes.reserveCapacity(tokens.count * bitsPerWord / 8 + 1)

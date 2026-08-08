@@ -217,4 +217,31 @@ internal object SmartStegoData {
         ),
     )
 
+
+    val german = Grammar(
+        openers = listOf("die", "meine", "deine", "seine", "ihre", "unsere", "diese", "alle", "ehrlich", "offenbar", "sicher", "klar", "freilich", "allerdings", "immerhin", "wirklich", "vermutlich", "angeblich", "bekanntlich", "erstaunlich", "heute", "gestern", "damals", "danach", "bald", "oft", "endlich", "wieder", "neulich", "zuletzt", "inzwischen", "seitdem"),
+        openerKind = listOf(2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+        structOf = listOf(3, 4, 5, 3, 4, 5, 3, 4, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2),
+        structures = listOf(listOf("#3", "#0", "#1", "#0", "#2"), listOf("#3", "#0", "#1", "#0", "#2", "#4"), listOf("#3", "#0", "#1", "#0", "#2", "#5", "#0", "#1", "#3", "#0", "#2"), listOf("#1", "#3", "#0", "#2"), listOf("#1", "#3", "#0", "#2", "#4"), listOf("#1", "#3", "#0", "#2", "#5", "#0", "#1", "#3", "#0", "#2")),
+        slots = listOf(
+            listOf(
+                "die", "meine", "deine", "seine", "ihre", "unsere", "diese", "alle",
+            ),
+            listOf(
+                "Lehrer", "Fahrer", "Maler", "Richter", "Freunde", "Nachbarn", "Studenten", "Soldaten", "Kollegen", "Boten", "Diener", "Reiter", "Sieger", "Helden", "Riesen", "Piraten", "Ritter", "Priester", "Meister", "Weber", "Hirten", "Krieger", "Zeugen", "Erben", "Neffen", "Enkel", "Paten", "Kunden", "Wanderer", "Trainer", "Forscher", "Dichter",
+            ),
+            listOf(
+                "Tische", "Fenster", "Wege", "Bilder", "Rahmen", "Uhren", "Ringe", "Ketten", "Karten", "Briefe", "Zettel", "Hefte", "Stifte", "Federn", "Seile", "Netze", "Beutel", "Taschen", "Koffer", "Rohre", "Wagen", "Boote", "Segel", "Anker", "Ruder", "Leitern", "Stufen", "Balken", "Bretter", "Schrauben", "Zangen", "Schaufeln", "Harken", "Karren", "Scheunen", "Zelte", "Tunnel", "Gruben", "Brunnen", "Teiche", "Seen", "Berge", "Felder", "Wiesen", "Zweige", "Wurzeln", "Blumen", "Beeren", "Samen", "Steine", "Felsen", "Ziegel", "Fliesen", "Platten", "Scheiben", "Klingen", "Schilde", "Speere", "Pfeile", "Trommeln", "Geigen", "Harfen", "Glocken", "Riegel",
+            ),
+            listOf(
+                "kauften", "verkauften", "holten", "machten", "legten", "stellten", "setzten", "packten", "suchten", "zeigten", "sammelten", "ordneten", "putzten", "malten", "zeichneten", "deckten", "leerten", "wechselten", "tauschten", "teilten", "sortierten", "zahlten", "bezahlten", "kochten", "reinigten", "trockneten", "formten", "bauten", "planten", "bestellten", "lieferten", "lagerten", "stapelten", "verteilten", "markierten", "notierten", "kopierten", "druckten", "falteten", "klebten", "sicherten", "testeten", "reichten", "buchten", "mieteten", "schenkten", "borgten", "sparten", "bewachten", "bewegten", "drehten", "wendeten", "kippten", "rollten", "schleppten", "zerrten", "senkten", "sperrten", "bemalten", "benutzten", "brauchten", "kannten", "nannten", "sendeten",
+            ),
+            listOf(
+                "oft", "gern", "kaum", "bald", "immer", "wieder", "endlich", "langsam", "schnell", "leise", "ruhig", "sorgsam", "sofort", "erneut", "gerade", "zusammen",
+            ),
+            listOf(
+                "und", "aber", "denn", "sondern",
+            ),
+        ),
+    )
 }

@@ -8,7 +8,9 @@ object SmartTextStego {
     const val MAX_PAYLOAD_BYTES = 0x7FFF
 
     private val random = SecureRandom()
-    private val commaBefore = setOf("but", "so", "yet", "then", "while", "because", "though", "и", "но", "а", "затем", "потом", "пока", "когда", "поэтому")
+    private const val RESYNC_STARTS = 3
+
+    private val commaBefore = setOf("but", "so", "yet", "then", "while", "because", "though", "aber", "denn", "sondern", "и", "но", "а", "затем", "потом", "пока", "когда", "поэтому")
 
     fun encode(data: ByteArray, language: StegoLanguage = StegoLanguage.forSystem()): String =
         encode(data, language, random.nextInt(256))
@@ -53,28 +55,47 @@ object SmartTextStego {
     private fun decode(rawTokens: List<String>, g: Grammar): ByteArray? {
         val tokens = rawTokens.filter { it in g.vocab }
         if (tokens.isEmpty()) return null
-        var pos = 0
+        var tried = 0
+        for (start in tokens.indices) {
+            if (!g.openerIndex.containsKey(tokens[start])) continue
+            decodeFrom(tokens, start, g)?.let { return it }
+            if (++tried >= RESYNC_STARTS) break
+        }
+        return null
+    }
+
+    private fun decodeFrom(tokens: List<String>, start: Int, g: Grammar): ByteArray? {
+        var pos = start
         val writer = BitWriter()
+        var sentences = 0
         while (pos < tokens.size) {
-            val openerIdx = g.openerIndex[tokens[pos]] ?: return null
-            pos++
-            writer.append(openerIdx, g.openerBits)
-            val structure = g.structures[g.structOf[openerIdx]]
-            for (element in structure) {
+            val openerIdx = g.openerIndex[tokens[pos]] ?: break
+            val pending = ArrayList<IntArray>()
+            pending.add(intArrayOf(openerIdx, g.openerBits))
+            var next = pos + 1
+            var complete = true
+            for (element in g.structures[g.structOf[openerIdx]]) {
                 when (element) {
-                    is Element.Literal -> {
-                        if (pos >= tokens.size || tokens[pos] != element.word) return null
-                        pos++
-                    }
+                    is Element.Literal ->
+                        if (next < tokens.size && tokens[next] == element.word) next++ else complete = false
                     is Element.Slot -> {
-                        if (pos >= tokens.size) return null
-                        val idx = g.slotIndex[element.type][tokens[pos]] ?: return null
-                        writer.append(idx, g.slotBits[element.type])
-                        pos++
+                        val idx = if (next < tokens.size) g.slotIndex[element.type][tokens[next]] else null
+                        if (idx != null) {
+                            pending.add(intArrayOf(idx, g.slotBits[element.type]))
+                            next++
+                        } else {
+                            complete = false
+                        }
                     }
                 }
+                if (!complete) break
             }
+            if (!complete) break
+            for (item in pending) writer.append(item[0], item[1])
+            pos = next
+            sentences++
         }
+        if (sentences == 0) return null
         return frameDecode(writer.bytes())
     }
 
@@ -168,10 +189,15 @@ object SmartTextStego {
 
     private val englishGrammar by lazy { Grammar(SmartStegoData.english) }
     private val russianGrammar by lazy { Grammar(SmartStegoData.russian) }
-    private val grammars by lazy { listOf(englishGrammar, russianGrammar) }
+    private val germanGrammar by lazy { Grammar(SmartStegoData.german) }
+    private val grammars by lazy { listOf(englishGrammar, russianGrammar, germanGrammar) }
 
     private fun grammar(language: StegoLanguage): Grammar =
-        if (language == StegoLanguage.RUSSIAN) russianGrammar else englishGrammar
+        when (language) {
+            StegoLanguage.RUSSIAN -> russianGrammar
+            StegoLanguage.GERMAN -> germanGrammar
+            StegoLanguage.ENGLISH -> englishGrammar
+        }
 
     private sealed class Element {
         class Literal(val word: String) : Element()
@@ -191,15 +217,15 @@ object SmartTextStego {
                 else Element.Literal(nfc(token))
             }
         }
-        val openerIndex: Map<String, Int> = openers.withIndex().associate { (i, w) -> w to i }
+        val openerIndex: Map<String, Int> = openers.withIndex().associate { (i, w) -> w.lowercase() to i }
         val slotIndex: List<Map<String, Int>> = slots.map { list ->
-            list.withIndex().associate { (i, w) -> w to i }
+            list.withIndex().associate { (i, w) -> w.lowercase() to i }
         }
         val vocab: Set<String> = buildSet {
-            addAll(openers)
-            for (list in slots) addAll(list)
+            addAll(openers.map { it.lowercase() })
+            for (list in slots) addAll(list.map { it.lowercase() })
             for (row in structures) for (element in row) {
-                if (element is Element.Literal) add(element.word)
+                if (element is Element.Literal) add(element.word.lowercase())
             }
         }
 
@@ -241,7 +267,11 @@ object SmartTextStego {
                 current = (current shl 1) or ((value ushr i) and 1)
                 count++
                 if (count == 8) {
-                    if (size == out.size) out = out.copyOf(out.size * 2)
+                    if (size == out.size) {
+                        val grown = out.copyOf(out.size * 2)
+                        out.fill(0)
+                        out = grown
+                    }
                     out[size++] = current.toByte()
                     current = 0
                     count = 0

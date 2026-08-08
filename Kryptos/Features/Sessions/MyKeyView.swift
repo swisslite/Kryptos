@@ -5,10 +5,16 @@ struct MyKeyView: View {
     @EnvironmentObject private var signal: SignalService
     @Environment(\.dismiss) private var dismiss
     @State private var copied = false
-    @State private var key = ""
+    @State private var share: SignalService.KeyShare?
     @State private var showQR = false
     @State private var qrImage: UIImage?
     @State private var qrTried = false
+    @State private var savedBrightness: CGFloat?
+    @State private var containerWidth: CGFloat = 0
+
+    static let platePadding: CGFloat = 6
+
+    private var key: String { share?.text ?? "" }
 
     var body: some View {
         NavigationStack {
@@ -21,23 +27,40 @@ struct MyKeyView: View {
                         infoCard
                         actionButtons
                     }
+                    .background {
+                        GeometryReader { proxy in
+                            Color.clear.preference(key: QRWidthKey.self, value: proxy.size.width)
+                        }
+                    }
+                    .onPreferenceChange(QRWidthKey.self) { containerWidth = $0 }
                     .padding(20)
                 }
             }
             .navigationTitle("My key")
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
         }
-        .task { if key.isEmpty { key = signal.myKeyString() } }
+        .task { if share == nil { share = signal.myKeyShare() } }
         .task(id: qrRequest) {
-            guard showQR, qrImage == nil, !key.isEmpty, !qrTried else { return }
-            let source = key
-            let rendered = await Task.detached(priority: .userInitiated) { QRCode.image(from: source) }.value
+            guard showQR, qrImage == nil, !qrTried, let payload = share?.payload else { return }
+            let rendered = await Task.detached(priority: .userInitiated) { QRCode.image(from: payload) }.value
             qrTried = true
             qrImage = rendered
         }
+        .onChange(of: showQR) { _, on in setBright(on) }
+        .onDisappear { setBright(false) }
     }
 
-    private var qrRequest: String { "\(showQR)|\(key.isEmpty)" }
+    private var qrRequest: String { "\(showQR)|\(share == nil)" }
+
+    private func setBright(_ on: Bool) {
+        if on {
+            if savedBrightness == nil { savedBrightness = UIScreen.main.brightness }
+            UIScreen.main.brightness = 1
+        } else if let level = savedBrightness {
+            UIScreen.main.brightness = level
+            savedBrightness = nil
+        }
+    }
 
     private var profileChip: some View {
         HStack(spacing: 8) {
@@ -81,23 +104,28 @@ struct MyKeyView: View {
     @ViewBuilder private var qrCard: some View {
         Group {
             if let qrImage {
-                Image(uiImage: qrImage).interpolation(.none).resizable().scaledToFit()
-                    .frame(width: 260, height: 260)
+                let side = QRCode.exactSide(modules: Int(qrImage.size.width),
+                                            available: containerWidth - MyKeyView.platePadding * 2)
+                Image(uiImage: qrImage)
+                    .interpolation(.none)
+                    .resizable()
+                    .frame(width: side, height: side)
+                    .padding(MyKeyView.platePadding)
             } else if !qrTried {
-                ProgressView()
-                    .frame(width: 260, height: 260)
+                Color.clear.aspectRatio(1, contentMode: .fit).overlay { ProgressView() }
             } else {
-                VStack(spacing: 10) {
-                    Image(systemName: "qrcode").font(.system(size: 40)).foregroundStyle(.black.opacity(0.35))
-                    Text("QR unavailable — use Copy key or Share below.")
-                        .font(.kBody()).foregroundStyle(.black.opacity(0.55))
-                        .multilineTextAlignment(.center).padding(.horizontal, 16)
+                Color.clear.aspectRatio(1, contentMode: .fit).overlay {
+                    VStack(spacing: 10) {
+                        Image(systemName: "qrcode").font(.system(size: 40)).foregroundStyle(.black.opacity(0.35))
+                        Text("QR unavailable — use Copy key or Share below.")
+                            .font(.kBody()).foregroundStyle(.black.opacity(0.55))
+                            .multilineTextAlignment(.center).padding(.horizontal, 16)
+                    }
                 }
-                .frame(width: 260, height: 260)
             }
         }
-        .padding(16).background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: KTheme.corner, style: .continuous))
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: KTheme.cornerSmall, style: .continuous))
         .shadow(color: .black.opacity(0.18), radius: 16, y: 6)
     }
 

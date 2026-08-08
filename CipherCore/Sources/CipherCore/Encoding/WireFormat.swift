@@ -8,6 +8,7 @@ public enum WireFormat {
     static let minTokenBytes = 24
     static let minTokenChars = 32
     static let maxTokenChars = 2_000_000
+    static let knownHeaderBits: UInt8 = 0x0F | 0x10 | 0x20
 
     public static func wrap(_ body: Data, type: UInt8, deflate: Bool, padded: Bool, pairKey: Data) throws -> String {
         try wrap(body, type: type, deflate: deflate, padded: padded, pairKey: pairKey, salt: randomBytes(saltLength))
@@ -30,6 +31,7 @@ public enum WireFormat {
         let (key, iv) = derive(pairKey: pairKey, salt: Data(salt))
         guard let plain = ctr(key: key, iv: iv, Data(masked)) else { return nil }
         guard let header = plain.first else { return nil }
+        guard header & ~knownHeaderBits == 0 else { return nil }
         let type = header & 0x0F
         guard type == 2 || type == 3 else { return nil }
         let inner = Data(plain.suffix(from: plain.startIndex + 1))
@@ -54,8 +56,13 @@ public enum WireFormat {
 
     public static func isToken(_ text: String) -> Bool {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard t.count >= minTokenChars, t.count <= maxTokenChars, t.allSatisfy(isBase64URLChar) else { return false }
-        guard let d = base64URLDecode(t) else { return false }
+        var n = 0
+        for c in t {
+            guard isBase64URLChar(c) else { return false }
+            n += 1
+            if n > maxTokenChars { return false }
+        }
+        guard n >= minTokenChars, let d = base64URLDecode(t) else { return false }
         return d.count >= minTokenBytes
     }
 

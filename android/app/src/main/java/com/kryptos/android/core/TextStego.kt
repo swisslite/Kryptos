@@ -5,31 +5,39 @@ import java.text.Normalizer
 import java.util.Locale
 
 enum class StegoLanguage {
-    ENGLISH, RUSSIAN;
+    ENGLISH, RUSSIAN, GERMAN;
 
     val words: List<String>
         get() = when (this) {
             ENGLISH -> Wordlists.english
             RUSSIAN -> Wordlists.russian
+            GERMAN -> Wordlists.german
         }
 
     internal val indexMap: Map<String, Int>
         get() = when (this) {
             ENGLISH -> Wordlists.englishIndex
             RUSSIAN -> Wordlists.russianIndex
+            GERMAN -> Wordlists.germanIndex
         }
 
     companion object {
         fun forSystem(): StegoLanguage =
-            if (Locale.getDefault().language.lowercase().startsWith("ru")) RUSSIAN else ENGLISH
+            when (Locale.getDefault().language.lowercase()) {
+                "ru" -> RUSSIAN
+                "de" -> GERMAN
+                else -> ENGLISH
+            }
     }
 }
 
 internal object Wordlists {
     val english: List<String> by lazy { load("english") }
     val russian: List<String> by lazy { load("russian") }
+    val german: List<String> by lazy { load("german") }
     val englishIndex: Map<String, Int> by lazy { index(english) }
     val russianIndex: Map<String, Int> by lazy { index(russian) }
+    val germanIndex: Map<String, Int> by lazy { index(german) }
 
     private fun load(name: String): List<String> {
         val stream = Wordlists::class.java.classLoader!!.getResourceAsStream("wordlists/$name.txt")
@@ -46,6 +54,7 @@ internal object Wordlists {
 object TextStego {
     private const val BITS_PER_WORD = 12
     private const val WORD_MASK = 0xFFF
+    private const val RESYNC_STARTS = 3
     private const val MAGIC = 0xC7
 
     const val MAX_PAYLOAD_BYTES = 0x7FFF
@@ -116,6 +125,16 @@ object TextStego {
 
     private fun decode(tokens: List<String>, language: StegoLanguage): ByteArray? {
         val index = language.indexMap
+        val kept = tokens.filter { index.containsKey(it) }
+        val starts = minOf(RESYNC_STARTS, kept.size)
+        for (start in 0 until starts) {
+            decodeFrom(kept, start, index)?.let { return it }
+        }
+        return null
+    }
+
+    private fun decodeFrom(kept: List<String>, start: Int, index: Map<String, Int>): ByteArray? {
+        val tokens = if (start == 0) kept else kept.subList(start, kept.size)
         var acc = 0L
         var bits = 0
         var bytes = ByteArray(tokens.size * BITS_PER_WORD / 8 + 2)

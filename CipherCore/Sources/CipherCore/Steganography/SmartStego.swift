@@ -46,29 +46,50 @@ public enum SmartTextStego {
     private static func decode(tokens rawTokens: [String], grammar g: Grammar) -> Data? {
         let tokens = rawTokens.filter { g.vocab.contains($0) }
         guard !tokens.isEmpty else { return nil }
-        var pos = 0
+        var tried = 0
+        for start in tokens.indices where g.openerIndex[tokens[start]] != nil {
+            if let data = decodeFrom(tokens, start: start, grammar: g) { return data }
+            tried += 1
+            if tried >= resyncStarts { break }
+        }
+        return nil
+    }
+
+    private static func decodeFrom(_ tokens: [String], start: Int, grammar g: Grammar) -> Data? {
+        var pos = start
         let writer = BitWriter()
+        var sentences = 0
         while pos < tokens.count {
-            guard let openerIdx = g.openerIndex[tokens[pos]] else { return nil }
-            pos += 1
-            writer.append(openerIdx, bits: g.openerBits)
-            let structure = g.structures[g.structOf[openerIdx]]
-            for element in structure {
+            guard let openerIdx = g.openerIndex[tokens[pos]] else { break }
+            var pending: [(value: Int, bits: Int)] = [(openerIdx, g.openerBits)]
+            var next = pos + 1
+            var complete = true
+            for element in g.structures[g.structOf[openerIdx]] {
                 switch element {
                 case .literal(let word):
-                    guard pos < tokens.count, tokens[pos] == word else { return nil }
-                    pos += 1
+                    if next < tokens.count, tokens[next] == word { next += 1 } else { complete = false }
                 case .slot(let type):
-                    guard pos < tokens.count, let idx = g.slotIndex[type][tokens[pos]] else { return nil }
-                    writer.append(idx, bits: g.slotBits[type])
-                    pos += 1
+                    if next < tokens.count, let idx = g.slotIndex[type][tokens[next]] {
+                        pending.append((idx, g.slotBits[type]))
+                        next += 1
+                    } else {
+                        complete = false
+                    }
                 }
+                if !complete { break }
             }
+            if !complete { break }
+            for item in pending { writer.append(item.value, bits: item.bits) }
+            pos = next
+            sentences += 1
         }
+        guard sentences > 0 else { return nil }
         return frameDecode(writer.bytes)
     }
 
-    private static let commaBefore: Set<String> = ["but", "so", "yet", "then", "while", "because", "though", "и", "но", "а", "затем", "потом", "пока", "когда", "поэтому"]
+    private static let resyncStarts = 3
+
+    private static let commaBefore: Set<String> = ["but", "so", "yet", "then", "while", "because", "though", "aber", "denn", "sondern", "и", "но", "а", "затем", "потом", "пока", "когда", "поэтому"]
 
     private static func render(opener: String, kind: Int, parts: [String]) -> String {
         var sentence = opener.prefix(1).uppercased() + opener.dropFirst()
@@ -164,10 +185,15 @@ public enum SmartTextStego {
 
     private static let englishGrammar = Grammar(SmartStegoData.english)
     private static let russianGrammar = Grammar(SmartStegoData.russian)
-    private static let grammars = [englishGrammar, russianGrammar]
+    private static let germanGrammar = Grammar(SmartStegoData.german)
+    private static let grammars = [englishGrammar, russianGrammar, germanGrammar]
 
     private static func grammar(_ language: StegoLanguage) -> Grammar {
-        language == .russian ? russianGrammar : englishGrammar
+        switch language {
+        case .russian: return russianGrammar
+        case .german: return germanGrammar
+        case .english: return englishGrammar
+        }
     }
 
     private struct Grammar {
@@ -203,18 +229,18 @@ public enum SmartTextStego {
                 }
             }
             var openerMap = [String: Int](minimumCapacity: normalizedOpeners.count)
-            for (i, word) in normalizedOpeners.enumerated() { openerMap[word] = i }
+            for (i, word) in normalizedOpeners.enumerated() { openerMap[word.lowercased()] = i }
             openerIndex = openerMap
             slotIndex = normalizedSlots.map { list in
                 var map = [String: Int](minimumCapacity: list.count)
-                for (i, word) in list.enumerated() { map[word] = i }
+                for (i, word) in list.enumerated() { map[word.lowercased()] = i }
                 return map
             }
-            var allWords = Set(normalizedOpeners)
-            for list in normalizedSlots { allWords.formUnion(list) }
+            var allWords = Set(normalizedOpeners.map { $0.lowercased() })
+            for list in normalizedSlots { allWords.formUnion(list.map { $0.lowercased() }) }
             for row in structures {
                 for element in row {
-                    if case .literal(let word) = element { allWords.insert(word) }
+                    if case .literal(let word) = element { allWords.insert(word.lowercased()) }
                 }
             }
             vocab = allWords

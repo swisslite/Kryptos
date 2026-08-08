@@ -20,7 +20,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,6 +28,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -57,6 +58,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Password
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.VerifiedUser
@@ -113,7 +115,8 @@ private enum class SettingsPage {
     Interface, Root, Privacy, AppCode, Panic, Stego, Keyboard, KeyboardLangs, KeyBackup, HowTo,
     HowToKeys, HowToSetup, Faq, About, Developer, Danger }
 
-private val kbLanguageCatalog = listOf("en" to R.string.lang_en, "ru" to R.string.lang_ru)
+private val kbLanguageCatalog =
+    listOf("en" to R.string.lang_en, "ru" to R.string.lang_ru, "de" to R.string.lang_de)
 
 private fun pageDepth(page: SettingsPage): Int = when (page) {
     SettingsPage.Root -> 0
@@ -139,8 +142,15 @@ fun SettingsScreen(modifier: Modifier = Modifier, homeSignal: Int = 0, onShieldC
             page = SettingsPage.Root
         }
     }
-    var panicSet by remember { mutableStateOf(AppSettingsStore.hasPanicPassword) }
-    var appCodeSet by remember { mutableStateOf(AppSettingsStore.hasAppCode) }
+    var panicSet by remember { mutableStateOf(false) }
+    var appCodeSet by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        val codes = withContext(Dispatchers.Default) {
+            AppSettingsStore.hasPanicPassword to AppSettingsStore.hasAppCode
+        }
+        panicSet = codes.first
+        appCodeSet = codes.second
+    }
     BackHandler(enabled = page != SettingsPage.Root) { page = parentPage(page) }
 
     AnimatedContent(
@@ -302,7 +312,8 @@ private fun InterfaceSettings(modifier: Modifier, onBack: () -> Unit) {
             )
             CardDivider()
             val langs = listOf(
-                "auto" to R.string.ui_auto, "en" to R.string.lang_en, "ru" to R.string.lang_ru,
+                "auto" to R.string.ui_auto, "en" to R.string.lang_en,
+                "ru" to R.string.lang_ru, "de" to R.string.lang_de,
             )
             MenuRow(
                 stringResource(R.string.ui_language),
@@ -342,9 +353,7 @@ private fun InterfaceSettings(modifier: Modifier, onBack: () -> Unit) {
 private fun DangerSettings(modifier: Modifier, onBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var confirmWipeChats by remember { mutableStateOf(false) }
-    var confirmWipeContacts by remember { mutableStateOf(false) }
-    var confirmWipe by remember { mutableStateOf(false) }
+    var pending by remember { mutableStateOf<DangerAction?>(null) }
 
     KScreen(
         stringResource(R.string.settings_danger), modifier,
@@ -354,58 +363,62 @@ private fun DangerSettings(modifier: Modifier, onBack: () -> Unit) {
             SettingsTile(
                 stringResource(R.string.settings_wipe_chats), Icons.Default.Delete,
                 tile = K.danger, textColor = K.danger,
-            ) { confirmWipeChats = true }
+            ) { pending = pending.toggled(DangerAction.CHATS) }
+            DangerConfirm(
+                visible = pending == DangerAction.CHATS,
+                warning = stringResource(R.string.confirm_wipe_chats_text),
+                label = stringResource(R.string.settings_wipe_chats),
+            ) {
+                pending = null
+                scope.launch(Dispatchers.Default + NonCancellable) { SignalService.wipeAllChats() }
+            }
             CardDivider()
             SettingsTile(
                 stringResource(R.string.settings_wipe_contacts), Icons.Default.DeleteSweep,
                 tile = K.danger, textColor = K.danger,
-            ) { confirmWipeContacts = true }
+            ) { pending = pending.toggled(DangerAction.CONTACTS) }
+            DangerConfirm(
+                visible = pending == DangerAction.CONTACTS,
+                warning = stringResource(R.string.confirm_wipe_contacts_text),
+                label = stringResource(R.string.settings_wipe_contacts),
+            ) {
+                pending = null
+                scope.launch(Dispatchers.Default + NonCancellable) { SignalService.wipeContactsAndChats() }
+            }
             CardDivider()
             SettingsTile(
                 stringResource(R.string.settings_wipe_all), Icons.Default.DeleteForever,
                 tile = K.danger, textColor = K.danger,
-            ) { confirmWipe = !confirmWipe }
-            if (confirmWipe) {
-                Banner(stringResource(R.string.wipe_all_warning), BannerKind.Error)
-                Spacer(Modifier.height(4.dp))
-                SecondaryButton(
-                    stringResource(R.string.settings_wipe_all),
-                    Modifier.fillMaxWidth(),
-                    danger = true,
-                ) {
-                    confirmWipe = false
-                    scope.launch(Dispatchers.Default + NonCancellable) {
-                        com.kryptos.android.security.DataWipe.wipe(context)
-                    }
+            ) { pending = pending.toggled(DangerAction.ALL) }
+            DangerConfirm(
+                visible = pending == DangerAction.ALL,
+                warning = stringResource(R.string.wipe_all_warning),
+                label = stringResource(R.string.settings_wipe_all),
+            ) {
+                pending = null
+                scope.launch(Dispatchers.Default + NonCancellable) {
+                    com.kryptos.android.security.DataWipe.wipe(context)
                 }
             }
         }
         FooterText(stringResource(R.string.settings_danger_footer))
         Spacer(Modifier.height(8.dp))
     }
+}
 
-    if (confirmWipeChats) {
-        ConfirmDialog(
-            title = stringResource(R.string.confirm_wipe_chats_title),
-            text = stringResource(R.string.confirm_wipe_chats_text),
-            confirmLabel = stringResource(R.string.settings_wipe_chats),
-            onConfirm = {
-                scope.launch(Dispatchers.Default + NonCancellable) { SignalService.wipeAllChats() }
-            },
-            onDismiss = { confirmWipeChats = false },
-        )
-    }
-    if (confirmWipeContacts) {
-        ConfirmDialog(
-            title = stringResource(R.string.confirm_wipe_contacts_title),
-            text = stringResource(R.string.confirm_wipe_contacts_text),
-            confirmLabel = stringResource(R.string.settings_wipe_contacts),
-            onConfirm = {
-                scope.launch(Dispatchers.Default + NonCancellable) { SignalService.wipeContactsAndChats() }
-            },
-            onDismiss = { confirmWipeContacts = false },
-        )
-    }
+private enum class DangerAction { CHATS, CONTACTS, ALL }
+
+private fun DangerAction?.toggled(target: DangerAction): DangerAction? =
+    if (this == target) null else target
+
+@Composable
+private fun DangerConfirm(visible: Boolean, warning: String, label: String, onConfirm: () -> Unit) {
+    if (!visible) return
+    Spacer(Modifier.height(6.dp))
+    Banner(warning, BannerKind.Error)
+    Spacer(Modifier.height(4.dp))
+    SecondaryButton(label, Modifier.fillMaxWidth(), danger = true, onClick = onConfirm)
+    Spacer(Modifier.height(2.dp))
 }
 
 @Composable
@@ -519,7 +532,6 @@ private fun PrivacySettings(
                 integrity = it; AppSettingsStore.integrityWarnings = it
             })
         }
-        FooterText(stringResource(R.string.sec_app_lock_footer))
 
         SectionHeader(stringResource(R.string.codes_section))
         GlassCard(spacing = 4.dp) {
@@ -771,9 +783,8 @@ private fun KeyBackupSettings(modifier: Modifier, onBack: () -> Unit) {
         if (uri == null) return@rememberLauncherForActivityResult
         val text = runCatching {
             context.contentResolver.openInputStream(uri)?.use { stream ->
-                val bytes = stream.readBytes()
-                if (bytes.size > com.kryptos.android.core.KeyArchive.MAX_FILE_BYTES) null
-                else String(bytes, Charsets.UTF_8)
+                readBounded(stream, com.kryptos.android.core.KeyArchive.MAX_FILE_BYTES)
+                    ?.let { String(it, Charsets.UTF_8) }
             }
         }.getOrNull()
         if (text == null) failImport(context.getString(R.string.backup_read_failed)) else importText = text
@@ -996,6 +1007,18 @@ private fun openAccessibilitySettings(context: Context) {
     runCatching { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
 }
 
+private fun readBounded(stream: java.io.InputStream, limit: Int): ByteArray? {
+    val out = java.io.ByteArrayOutputStream()
+    val buf = ByteArray(8192)
+    while (true) {
+        val n = stream.read(buf)
+        if (n < 0) break
+        if (out.size() + n > limit) return null
+        out.write(buf, 0, n)
+    }
+    return if (out.size() == 0) null else out.toByteArray()
+}
+
 @Composable
 private fun StegoSettings(modifier: Modifier, onBack: () -> Unit) {
     var stegoEnabled by remember { mutableStateOf(AppSettingsStore.chatStegoEnabled) }
@@ -1014,7 +1037,10 @@ private fun StegoSettings(modifier: Modifier, onBack: () -> Unit) {
             )
             if (stegoEnabled) {
                 CardDivider()
-                val langs = listOf("auto" to R.string.lang_auto, "english" to R.string.lang_en, "russian" to R.string.lang_ru)
+                val langs = listOf(
+                    "auto" to R.string.lang_auto, "english" to R.string.lang_en,
+                    "russian" to R.string.lang_ru, "german" to R.string.lang_de,
+                )
                 MenuRow(
                     stringResource(R.string.settings_stego_lang),
                     options = langs.map { stringResource(it.second) },
@@ -1040,19 +1066,8 @@ private fun StegoSettings(modifier: Modifier, onBack: () -> Unit) {
         if (stegoEnabled) {
             SectionHeader(stringResource(R.string.stego_example_header))
             GlassCard {
-                val sample = remember(stegoLang, stegoMode) {
-                    val bytes = byteArrayOf(0x03, 0x02, 0x41, 0x9C.toByte(), 0x2A, 0xF7.toByte(),
-                        0x10, 0x88.toByte(), 0x3D, 0x6B, 0xE0.toByte(), 0x54)
-                    val language = when (stegoLang) {
-                        "english" -> StegoLanguage.ENGLISH
-                        "russian" -> StegoLanguage.RUSSIAN
-                        else -> StegoLanguage.forSystem()
-                    }
-                    when (stegoMode) {
-                        StegoMode.WORDS -> TextStego.encode(bytes, language)
-                        StegoMode.SMART -> SmartTextStego.encode(bytes, language)
-                        StegoMode.LETTERS -> LetterStego.encode(bytes, language)
-                    }
+                val sample by produceState("", stegoLang, stegoMode) {
+                    value = withContext(Dispatchers.Default) { stegoSample(stegoLang, stegoMode) }
                 }
                 Text(
                     sample,
@@ -1075,11 +1090,30 @@ private fun StegoSettings(modifier: Modifier, onBack: () -> Unit) {
     }
 }
 
+private fun stegoSample(langKey: String, mode: StegoMode): String {
+    val bytes = byteArrayOf(
+        0x03, 0x02, 0x41, 0x9C.toByte(), 0x2A, 0xF7.toByte(),
+        0x10, 0x88.toByte(), 0x3D, 0x6B, 0xE0.toByte(), 0x54,
+    )
+    val language = when (langKey) {
+        "english" -> StegoLanguage.ENGLISH
+        "russian" -> StegoLanguage.RUSSIAN
+        "german" -> StegoLanguage.GERMAN
+        else -> StegoLanguage.forSystem()
+    }
+    return when (mode) {
+        StegoMode.WORDS -> TextStego.encode(bytes, language)
+        StegoMode.SMART -> SmartTextStego.encode(bytes, language)
+        StegoMode.LETTERS -> LetterStego.encode(bytes, language)
+    }
+}
+
 @Composable
 private fun KeyboardSettings(modifier: Modifier, onBack: () -> Unit, openLanguages: () -> Unit) {
     val context = LocalContext.current
     val forgetScope = rememberCoroutineScope()
     var kbAutoDecrypt by remember { mutableStateOf(AppSettingsStore.keyboardAutoDecrypt) }
+    var kbSendAfter by remember { mutableStateOf(AppSettingsStore.keyboardSendAfterEncrypt) }
     var kbHaptics by remember { mutableStateOf(AppSettingsStore.keyboardHaptics) }
     var kbSounds by remember { mutableStateOf(AppSettingsStore.keyboardSounds) }
     var kbCompose by remember { mutableStateOf(AppSettingsStore.keyboardCompose) }
@@ -1117,6 +1151,13 @@ private fun KeyboardSettings(modifier: Modifier, onBack: () -> Unit, openLanguag
             })
         }
         FooterText(stringResource(R.string.kb_autodecrypt_footer))
+
+        GlassCard(spacing = 4.dp) {
+            ToggleRow(stringResource(R.string.settings_kb_sendafter), kbSendAfter, onChange = {
+                kbSendAfter = it; AppSettingsStore.keyboardSendAfterEncrypt = it
+            })
+        }
+        FooterText(stringResource(R.string.settings_kb_sendafter_desc))
 
         SectionHeader(stringResource(R.string.kb_typing))
         GlassCard(spacing = 4.dp) {
@@ -1249,6 +1290,8 @@ private val faqItems = listOf(
     R.string.faq_q2 to R.string.faq_a2,
     R.string.faq_q14 to R.string.faq_a14,
     R.string.faq_q3 to R.string.faq_a3,
+    R.string.faq_q20 to R.string.faq_a20,
+    R.string.faq_q21 to R.string.faq_a21,
     R.string.faq_q4 to R.string.faq_a4,
     R.string.faq_q5 to R.string.faq_a5,
     R.string.faq_q15 to R.string.faq_a15,
@@ -1265,57 +1308,59 @@ private val faqItems = listOf(
     R.string.faq_q12 to R.string.faq_a12,
 )
 
-@Composable
-private fun ColumnScope.HowToWalkthrough(intro: Int, steps: List<Triple<Int, Int, Int>>) {
-    GlassCard {
-        Text(
-            stringResource(intro),
-            fontSize = 14.sp, lineHeight = 20.sp, color = K.textPrimary,
-        )
-    }
-    steps.forEachIndexed { index, (title, text, shot) ->
-        SectionHeader(stringResource(R.string.howto_step, index + 1))
-        GlassCard(spacing = 10.dp) {
+private fun LazyListScope.howToWalkthrough(intro: Int, steps: List<Triple<Int, Int, Int>>) {
+    item {
+        GlassCard {
             Text(
-                stringResource(title),
-                fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = K.textPrimary,
-            )
-            Text(
-                stringResource(text),
-                fontSize = 14.sp, lineHeight = 20.sp, color = K.textSecondary,
-            )
-            Image(
-                painterResource(shot),
-                contentDescription = null,
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .heightIn(max = 380.dp)
-                    .clip(RoundedCornerShape(KShape.cornerSmall))
-                    .border(1.dp, K.hairline, RoundedCornerShape(KShape.cornerSmall)),
-                contentScale = ContentScale.Fit,
+                stringResource(intro),
+                fontSize = 14.sp, lineHeight = 20.sp, color = K.textPrimary,
             )
         }
     }
-    Spacer(Modifier.height(8.dp))
+    itemsIndexed(steps) { index, step ->
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            SectionHeader(stringResource(R.string.howto_step, index + 1))
+            GlassCard(spacing = 10.dp) {
+                Text(
+                    stringResource(step.first),
+                    fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = K.textPrimary,
+                )
+                Text(
+                    stringResource(step.second),
+                    fontSize = 14.sp, lineHeight = 20.sp, color = K.textSecondary,
+                )
+                Image(
+                    painterResource(step.third),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .heightIn(max = 380.dp)
+                        .clip(RoundedCornerShape(KShape.cornerSmall))
+                        .border(1.dp, K.hairline, RoundedCornerShape(KShape.cornerSmall)),
+                    contentScale = ContentScale.Fit,
+                )
+            }
+        }
+    }
 }
 
 @Composable
 private fun HowToKeysSettings(modifier: Modifier, onBack: () -> Unit) {
-    KScreen(
+    KLazyScreen(
         stringResource(R.string.howto_keys_title), modifier,
         backLabel = stringResource(R.string.help_howto), onBack = onBack,
     ) {
-        HowToWalkthrough(R.string.howto_keys_intro, howToSteps)
+        howToWalkthrough(R.string.howto_keys_intro, howToSteps)
     }
 }
 
 @Composable
 private fun HowToSetupSettings(modifier: Modifier, onBack: () -> Unit) {
-    KScreen(
+    KLazyScreen(
         stringResource(R.string.howto_setup_title), modifier,
         backLabel = stringResource(R.string.help_howto), onBack = onBack,
     ) {
-        HowToWalkthrough(R.string.howto_setup_intro, howToSetupSteps)
+        howToWalkthrough(R.string.howto_setup_intro, howToSetupSteps)
     }
 }
 
@@ -1480,6 +1525,13 @@ private fun AboutSettings(modifier: Modifier, onBack: () -> Unit) {
             }
         }
         FooterText(stringResource(R.string.about_source_footer))
+
+        SectionHeader(stringResource(R.string.about_website))
+        GlassCard(spacing = 4.dp) {
+            AboutLinkRow(Icons.Default.Public, "Kryptos", "datakeeper.pages.dev/kryptos") {
+                openLink(context, "https://datakeeper.pages.dev/kryptos")
+            }
+        }
         Spacer(Modifier.height(8.dp))
     }
 }
@@ -1493,6 +1545,10 @@ private fun DeveloperSettings(modifier: Modifier, onBack: () -> Unit) {
         backLabel = stringResource(R.string.tab_settings), onBack = onBack,
     ) {
         GlassCard(spacing = 4.dp) {
+            AboutLinkRow(Icons.Default.Public, stringResource(R.string.about_website), "datakeeper.pages.dev") {
+                openLink(context, "https://datakeeper.pages.dev")
+            }
+            CardDivider()
             AboutLinkRow(Icons.Default.Email, "Email", "datakeepers@proton.me") {
                 openLink(context, "mailto:datakeepers@proton.me")
             }

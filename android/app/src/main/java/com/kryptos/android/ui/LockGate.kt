@@ -42,6 +42,7 @@ import com.kryptos.android.R
 import com.kryptos.android.security.AppLock
 import com.kryptos.android.signal.AppSettingsStore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -133,7 +134,7 @@ private fun LockScreen(activity: FragmentActivity) {
                         checking = true
                         scope.launch {
                             kotlinx.coroutines.delay(AppLock.codeThrottleMillis())
-                            val outcome = withContext(Dispatchers.Default) {
+                            val outcome = withContext(Dispatchers.Default + NonCancellable) {
                                 AppLock.submitCode(activity.applicationContext, entered)
                             }
                             checking = false

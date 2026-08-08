@@ -102,6 +102,11 @@ enum OwnCipherMarker {
         markLock.unlock()
     }
 
+    static func clear() {
+        forget()
+        SharedStore.delete(storeKey)
+    }
+
     static func storedKey() -> String? {
         guard let d = SharedStore.read(storeKey) else { return nil }
         return String(data: d, encoding: .utf8)
@@ -155,7 +160,7 @@ struct Meta: Codable {
     mutating func rememberDecrypt(armored: String, fingerprint: String, text: String) {
         var cache = decryptCache ?? [:]
         cache[DecryptCacheKey.key(for: armored)] = CachedDecrypt(fingerprint: fingerprint, text: text, date: Date())
-        let cap = 64
+        let cap = 300
         if cache.count > cap {
             for (key, _) in cache.sorted(by: { $0.value.date < $1.value.date }).prefix(cache.count - cap) {
                 cache.removeValue(forKey: key)
@@ -222,6 +227,9 @@ struct ProfilesIndex: Codable {
 
 enum SignalServiceError: LocalizedError {
     case badKeyString
+    case ownKey
+    case unreadableScan
+    case sessionLost
     case decryptedForOtherContact(String)
     case storageUnavailable
 
@@ -229,6 +237,12 @@ enum SignalServiceError: LocalizedError {
         switch self {
         case .badKeyString:
             return String(localized: "This is not a valid Kryptos key.")
+        case .ownKey:
+            return String(localized: "This is your own key — add your contact’s key instead.")
+        case .unreadableScan:
+            return String(localized: "This QR code was not recognised. It may have been made by a different Kryptos version — ask your contact to send the key as text instead.")
+        case .sessionLost:
+            return String(localized: "The secure session with this contact is gone. Send them your key again and add their key — that restores the conversation.")
         case .decryptedForOtherContact(let name):
             return String(localized: "This message is from another contact: \(name).")
         case .storageUnavailable:

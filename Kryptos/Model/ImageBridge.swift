@@ -1,41 +1,55 @@
 import UIKit
-
-extension UIImage {
-    var normalizedUp: UIImage {
-        guard imageOrientation != .up else { return self }
-        let format = UIGraphicsImageRendererFormat.default()
-        format.scale = 1
-        return UIGraphicsImageRenderer(size: size, format: format).image { _ in
-            draw(in: CGRect(origin: .zero, size: size))
-        }
-    }
-}
+import ImageIO
 
 enum ImageBridge {
     private static let bitmapInfo = CGImageAlphaInfo.noneSkipLast.rawValue
     static let maxPixels = 50_000_000
     static let coverTargetPixels = 20_000_000
 
+    static func thumbnail(from data: Data, maxPixel: Int) -> UIImage? {
+        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixel,
+        ]
+        guard let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        return UIImage(cgImage: cg)
+    }
+
     static func isWithinLimits(_ image: UIImage) -> Bool {
         guard let cg = image.cgImage else { return true }
         return cg.width * cg.height <= maxPixels
     }
 
-    static func preparedCover(_ image: UIImage) -> UIImage {
-        let upright = image.normalizedUp
-        guard let cg = upright.cgImage else { return upright }
-        let pixels = cg.width * cg.height
-        guard pixels > coverTargetPixels else { return upright }
-        let scale = (Double(coverTargetPixels) / Double(pixels)).squareRoot()
-        let width = max(1, Int((Double(cg.width) * scale).rounded(.down)))
-        let height = max(1, Int((Double(cg.height) * scale).rounded(.down)))
-        let format = UIGraphicsImageRendererFormat.default()
-        format.scale = 1
-        format.opaque = true
-        let size = CGSize(width: width, height: height)
-        return UIGraphicsImageRenderer(size: size, format: format).image { _ in
-            upright.draw(in: CGRect(origin: .zero, size: size))
+    static func coverImage(from data: Data) -> UIImage? {
+        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
+            return UIImage(data: data)
         }
+        let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+        let width = props?[kCGImagePropertyPixelWidth] as? Int ?? 0
+        let height = props?[kCGImagePropertyPixelHeight] as? Int ?? 0
+        guard width > 0, height > 0 else { return UIImage(data: data) }
+        let pixels = width * height
+        let longest = max(width, height)
+        var maxPixel = longest
+        if pixels > coverTargetPixels {
+            let scale = (Double(coverTargetPixels) / Double(pixels)).squareRoot()
+            maxPixel = max(1, Int((Double(longest) * scale).rounded(.down)))
+        }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixel,
+        ]
+        guard let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return UIImage(data: data)
+        }
+        return UIImage(cgImage: cg)
     }
 
     static func rgba(from image: UIImage) -> (pixels: [UInt8], width: Int, height: Int)? {
@@ -54,10 +68,9 @@ enum ImageBridge {
         return drawn ? (pixels, w, h) : nil
     }
 
-    static func pngData(fromRGBA pixels: [UInt8], width w: Int, height h: Int) -> Data? {
-        var data = pixels
+    static func pngData(fromRGBA pixels: inout [UInt8], width w: Int, height h: Int) -> Data? {
         let cs = CGColorSpaceCreateDeviceRGB()
-        let image = data.withUnsafeMutableBytes { raw -> CGImage? in
+        let image = pixels.withUnsafeMutableBytes { raw -> CGImage? in
             guard let ctx = CGContext(data: raw.baseAddress, width: w, height: h,
                                       bitsPerComponent: 8, bytesPerRow: w * 4, space: cs,
                                       bitmapInfo: bitmapInfo) else { return nil }

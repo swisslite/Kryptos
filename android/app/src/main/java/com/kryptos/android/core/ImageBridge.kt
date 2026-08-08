@@ -9,7 +9,7 @@ import java.nio.ByteBuffer
 object ImageBridge {
     data class Pixels(val rgba: ByteArray, val width: Int, val height: Int)
 
-    private const val MAX_PIXELS = 100_000_000L
+    const val MAX_PIXELS = 50_000_000L
 
     const val COVER_TARGET_PIXELS = 20_000_000L
 
@@ -18,6 +18,12 @@ object ImageBridge {
         var sample = 1
         while (width.toLong() / sample * (height.toLong() / sample) > target) sample *= 2
         return sample
+    }
+
+    fun withinLimits(width: Int, height: Int, sample: Int): Boolean {
+        if (width <= 0 || height <= 0) return true
+        val s = sample.coerceAtLeast(1)
+        return (width.toLong() / s) * (height.toLong() / s) <= MAX_PIXELS
     }
 
     fun rgba(stream: InputStream): Pixels? {
@@ -55,9 +61,8 @@ object ImageBridge {
     fun pngData(rgba: ByteArray, width: Int, height: Int): ByteArray {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         return try {
-            val opaque = rgba.copyOf()
-            for (i in 3 until opaque.size step 4) opaque[i] = 0xFF.toByte()
-            bitmap.copyPixelsFromBuffer(ByteBuffer.wrap(opaque))
+            for (i in 3 until rgba.size step 4) rgba[i] = 0xFF.toByte()
+            bitmap.copyPixelsFromBuffer(ByteBuffer.wrap(rgba))
             val out = ByteArrayOutputStream(rgba.size / 3 + 1024)
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
             out.toByteArray()

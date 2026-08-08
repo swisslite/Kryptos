@@ -162,7 +162,7 @@ private struct DecryptedMessage { let name: String; let text: String; let date: 
 
 private struct RevealedText { let name: String; let text: String }
 
-private enum KeyLayout { case english, russian, numbers, symbols }
+private enum KeyLayout { case english, russian, german, numbers, symbols }
 private enum ShiftState { case off, on, locked }
 private enum Special: Hashable { case shift, backspace, space, ret, digits, letters, symbols, lang, emoji }
 private enum Cap: Hashable { case ch(String); case sp(Special) }
@@ -185,8 +185,7 @@ private struct KryptosKeyboardView: View {
 
     @State private var layout: KeyLayout = .english
     @State private var letterLayout: KeyLayout = .english
-    @State private var langEnEnabled = true
-    @State private var langRuEnabled = false
+    @State private var enabledLangs: [String] = ["en"]
     @State private var shift: ShiftState = .off
     @State private var lastShiftTap = Date.distantPast
     @State private var lastSpaceTap = Date.distantPast
@@ -333,6 +332,7 @@ private struct KryptosKeyboardView: View {
                                         Circle().fill(Color(red: 0.2, green: 0.72, blue: 0.45))
                                             .frame(width: 7, height: 7)
                                             .offset(x: -5, y: 5)
+                                            .allowsHitTesting(false)
                                     }
                                 }
                             iconButton("lock.fill", accent: true) { withCryptoGate { encrypt(store) } }
@@ -485,9 +485,11 @@ private struct KryptosKeyboardView: View {
         KeyGridRepresentable(
             rows: currentRows(),
             shiftState: shift,
-            letterRussian: letterLayout == .russian,
+            languageCode: Self.code(for: letterLayout),
+            langKeyLabel: nextLanguageLabel,
             returnIcon: returnIcon,
             spaceMovable: true,
+            secureInput: secureField,
             onPressFeedback: { press() },
             onChar: { insertChar($0) },
             onSpecial: { performSpecial($0) },
@@ -565,15 +567,15 @@ private struct KryptosKeyboardView: View {
             return
         }
         let ctx = wordContext()
-        let stamp = "\(ctx.prefix)\u{1}\(ctx.previous ?? "\u{2}")\u{1}\(letterLayout == .russian)\u{1}\(autocorrectOn)"
+        let stamp = "\(ctx.prefix)\u{1}\(ctx.previous ?? "\u{2}")\u{1}\(Self.code(for: letterLayout))\u{1}\(autocorrectOn)"
         if stamp == suggestionsStamp { return }
         suggestionsStamp = stamp
         var list = SuggestionEngine.shared.suggest(prefix: ctx.prefix, previous: ctx.previous,
-                                                   russian: letterLayout == .russian)
+                                                   language: Self.code(for: letterLayout))
         var pending: String?
         if autocorrectOn, ctx.prefix.count >= 3 {
             pending = SuggestionEngine.shared.autocorrect(ctx.prefix, previous: ctx.previous,
-                                                          russian: letterLayout == .russian, deep: false)
+                                                          language: Self.code(for: letterLayout), deep: false)
             if let p = pending {
                 let alt = list.first { $0 != p && $0 != ctx.prefix }
                 list = [p, ctx.prefix, alt ?? ""]
@@ -616,7 +618,7 @@ private struct KryptosKeyboardView: View {
             let ctx = wordContext()
             if !ctx.prefix.isEmpty,
                let fixed = SuggestionEngine.shared.autocorrect(ctx.prefix, previous: ctx.previous,
-                                                               russian: letterLayout == .russian),
+                                                               language: Self.code(for: letterLayout)),
                fixed != ctx.prefix {
                 replaceCurrentWord(ctx.prefix, with: fixed)
                 lastAutoFix = AutoFix(original: ctx.prefix, corrected: fixed, separator: separator, at: Date())
@@ -658,7 +660,7 @@ private struct KryptosKeyboardView: View {
         secureField = proxy.isSecureTextEntry ?? false
         let kt = proxy.keyboardType ?? .default
         if kt == .numberPad || kt == .decimalPad || kt == .phonePad || kt == .asciiCapableNumberPad,
-           layout == .english || layout == .russian {
+           layout == letterLayout {
             layout = .numbers
         }
     }
@@ -733,7 +735,7 @@ private struct KryptosKeyboardView: View {
                 Button {
                     press(); showEmoji = false; updateSuggestions()
                 } label: {
-                    Text(letterLayout == .russian ? "АБВ" : "ABC")
+                    Text(Self.modeLabel(Self.code(for: letterLayout)))
                         .font(.system(size: 14, weight: .medium)).foregroundStyle(KB.keyText)
                         .frame(width: 52, height: 32)
                         .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(KB.fieldFill))
@@ -775,6 +777,7 @@ private struct KryptosKeyboardView: View {
         switch layout {
         case .english: return letters("qwertyuiop", "asdfghjkl", "zxcvbnm")
         case .russian: return letters("йцукенгшщзх", "фывапролджэ", "ячсмитьбю")
+        case .german: return letters("qwertzuiopü", "asdfghjklöä", "yxcvbnmß")
         case .numbers: return symbols(["1234567890", "-/:;()$&@\"", ".,?!'"], mode: .symbols)
         case .symbols: return symbols(["[]{}#%^*+=", "_\\|~<>€£₽•", ".,?!'"], mode: .digits)
         }
@@ -782,7 +785,9 @@ private struct KryptosKeyboardView: View {
 
     private func letters(_ a: String, _ b: String, _ c: String) -> [[Cap]] {
         let up = shift != .off
-        func caps(_ s: String) -> [Cap] { s.map { .ch(up ? String($0).uppercased() : String($0)) } }
+        func caps(_ s: String) -> [Cap] {
+            s.map { .ch(up && $0 != "ß" ? String($0).uppercased() : String($0)) }
+        }
         var r3 = caps(c); r3.insert(.sp(.shift), at: 0); r3.append(.sp(.backspace))
         return [caps(a), caps(b), r3, bottomCaps]
     }
@@ -796,7 +801,7 @@ private struct KryptosKeyboardView: View {
     private var bottomCaps: [Cap] {
         let mode: Cap = (layout == .numbers || layout == .symbols) ? .sp(.letters) : .sp(.digits)
         var row: [Cap] = [mode]
-        if langEnEnabled, langRuEnabled { row.append(.sp(.lang)) }
+        if enabledLangs.count > 1 { row.append(.sp(.lang)) }
         if emojiOn { row.append(.sp(.emoji)) }
         row += [.sp(.space), .sp(.ret)]
         return row
@@ -1010,11 +1015,55 @@ private struct KryptosKeyboardView: View {
     }
 
     private func toggleLanguage() {
-        guard langEnEnabled, langRuEnabled else { return }
-        letterLayout = (letterLayout == .english) ? .russian : .english
-        if layout == .english || layout == .russian { layout = letterLayout }
-        UserDefaults.standard.set(letterLayout == .russian ? "ru" : "en", forKey: "kb.lang")
+        guard enabledLangs.count > 1 else { return }
+        let current = Self.code(for: letterLayout)
+        let i = enabledLangs.firstIndex(of: current) ?? 0
+        let next = enabledLangs[(i + 1) % enabledLangs.count]
+        letterLayout = Self.layout(for: next)
+        if layout != .numbers, layout != .symbols { layout = letterLayout }
+        UserDefaults.standard.set(next, forKey: "kb.lang")
         updateSuggestions()
+    }
+
+    private static func code(for layout: KeyLayout) -> String {
+        switch layout {
+        case .russian: return "ru"
+        case .german: return "de"
+        default: return "en"
+        }
+    }
+
+    private static func layout(for code: String) -> KeyLayout {
+        switch code {
+        case "ru": return .russian
+        case "de": return .german
+        default: return .english
+        }
+    }
+
+    static func languageName(_ code: String) -> String {
+        switch code {
+        case "ru": return "Русский"
+        case "de": return "Deutsch"
+        default: return "English"
+        }
+    }
+
+    private static func modeLabel(_ code: String) -> String { code == "ru" ? "АБВ" : "ABC" }
+
+    private static func shortLabel(_ code: String) -> String {
+        switch code {
+        case "ru": return "РУ"
+        case "de": return "DE"
+        default: return "EN"
+        }
+    }
+
+    private var nextLanguageLabel: String {
+        guard enabledLangs.count > 1 else { return "" }
+        let current = Self.code(for: letterLayout)
+        let i = enabledLangs.firstIndex(of: current) ?? 0
+        return Self.shortLabel(enabledLangs[(i + 1) % enabledLangs.count])
     }
 
     private func loadOnce() {
@@ -1037,14 +1086,11 @@ private struct KryptosKeyboardView: View {
             select(profile: p)
         }
         loaded = true
-        let langs = config.languages
-        langEnEnabled = langs.contains("en")
-        langRuEnabled = langs.contains("ru")
-        var lang = UserDefaults.standard.string(forKey: "kb.lang")
-            ?? (KeyboardConfig.systemPrefersRussian ? "ru" : "en")
-        if lang == "ru", !langRuEnabled { lang = "en" }
-        if lang != "ru", !langEnEnabled { lang = "ru" }
-        letterLayout = (lang == "ru") ? .russian : .english
+        enabledLangs = config.languages
+        if enabledLangs.isEmpty { enabledLangs = ["en"] }
+        var lang = UserDefaults.standard.string(forKey: "kb.lang") ?? KeyboardConfig.systemLanguage
+        if !enabledLangs.contains(lang) { lang = enabledLangs[0] }
+        letterLayout = Self.layout(for: lang)
         layout = letterLayout
         restoreRecentPlane()
         adoptFieldTraits()
@@ -1139,6 +1185,10 @@ private struct KryptosKeyboardView: View {
     }
 
     private func select(profile: Profile, remember: Bool = false) {
+        if store?.profile.id != profile.id {
+            decryptCache.removeAll()
+            revealed = nil
+        }
         store = SharedSignalStore(profile: profile)
         if remember, store != nil { KeyboardSelection.rememberProfile(profile.id) }
         if let store {
@@ -1248,9 +1298,11 @@ private struct KryptosKeyboardView: View {
 private struct KeyGridRepresentable: UIViewRepresentable {
     let rows: [[Cap]]
     let shiftState: ShiftState
-    let letterRussian: Bool
+    let languageCode: String
+    let langKeyLabel: String
     let returnIcon: String
     let spaceMovable: Bool
+    let secureInput: Bool
     let onPressFeedback: () -> Void
     let onChar: (String) -> Void
     let onSpecial: (Special) -> Void
@@ -1279,8 +1331,8 @@ private struct KeyGridRepresentable: UIViewRepresentable {
         v.onSpaceTap = onSpaceTap
         v.onCaretMove = onCaretMove
         v.onCaretMoveVertical = onCaretMoveVertical
-        v.configure(rows: rows, shiftState: shiftState, letterRussian: letterRussian,
-                    returnIcon: returnIcon, spaceMovable: spaceMovable)
+        v.configure(rows: rows, shiftState: shiftState, languageCode: languageCode, langKeyLabel: langKeyLabel,
+                    returnIcon: returnIcon, spaceMovable: spaceMovable, secureInput: secureInput)
     }
 }
 
@@ -1302,22 +1354,24 @@ private final class KeyTouch {
     var lastY: CGFloat = 0
     var moved = false
     var initialTimer: Timer?
-    var repeatTimer: Timer?
     init(id: Int, origin: Origin, cellIndex: Int) { self.id = id; self.origin = origin; self.cellIndex = cellIndex }
-    func stopTimers() { initialTimer?.invalidate(); initialTimer = nil; repeatTimer?.invalidate(); repeatTimer = nil }
+    func stopTimers() { initialTimer?.invalidate(); initialTimer = nil }
 }
 
 private final class KeyGridView: UIView {
     private var rows: [[Cap]] = []
     private var shiftState: ShiftState = .off
-    private var letterRussian = true
+    private var languageCode = "en"
+    private var langKeyLabel = "РУ"
     private var returnIcon = "return"
     var spaceMovable = true
+    private var secureInput = false
     private var keys: [GridKey] = []
 
     private let touchYBias: CGFloat = 5
 
     private var active: [ObjectIdentifier: KeyTouch] = [:]
+    private var backspaceRepeat: Task<Void, Never>?
     private var touchSeq = 0
     private var pressedCells: Set<Int> = []
     private var popupChar: (index: Int, char: String)?
@@ -1326,21 +1380,20 @@ private final class KeyGridView: UIView {
     private var trackpadActive = false
     private var labelAlpha: CGFloat = 1
     private var labelFadeTarget: CGFloat = 1
-    private nonisolated(unsafe) var labelFadeLink: CADisplayLink?
-
-    deinit { labelFadeLink?.invalidate() }
+    private var labelFadeLink: CADisplayLink?
 
     private func setTrackpad(_ on: Bool) {
         guard trackpadActive != on else { return }
         trackpadActive = on
         labelFadeTarget = on ? 0 : 1
         labelFadeLink?.invalidate()
-        let link = CADisplayLink(target: self, selector: #selector(stepLabelFade(_:)))
+        let proxy = DisplayLinkProxy(target: self)
+        let link = CADisplayLink(target: proxy, selector: #selector(DisplayLinkProxy.step(_:)))
         link.add(to: .main, forMode: .common)
         labelFadeLink = link
     }
 
-    @objc private func stepLabelFade(_ link: CADisplayLink) {
+    fileprivate func stepLabelFade(_ link: CADisplayLink) {
         let dt = link.targetTimestamp - link.timestamp
         let step = CGFloat(dt > 0 ? dt : 1.0 / 60.0) / 0.16
         if labelAlpha < labelFadeTarget {
@@ -1381,20 +1434,61 @@ private final class KeyGridView: UIView {
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    func configure(rows: [[Cap]], shiftState: ShiftState, letterRussian: Bool, returnIcon: String, spaceMovable: Bool) {
+    func configure(rows: [[Cap]], shiftState: ShiftState, languageCode: String, langKeyLabel: String,
+                   returnIcon: String, spaceMovable: Bool, secureInput: Bool) {
         self.spaceMovable = spaceMovable
-        let geometryChanged = (rows != self.rows)
+        if secureInput != self.secureInput {
+            self.secureInput = secureInput
+            if secureInput, popupChar != nil {
+                popupChar = nil
+                updatePopup()
+            }
+        }
+        let shapeChanged = !KeyGridView.sameShape(rows, self.rows)
+        let labelsChanged = rows != self.rows
+        let visualChanged = labelsChanged || shiftState != self.shiftState || languageCode != self.languageCode
+            || langKeyLabel != self.langKeyLabel || returnIcon != self.returnIcon
+        guard visualChanged else { return }
         self.rows = rows
         self.shiftState = shiftState
-        self.letterRussian = letterRussian
+        self.languageCode = languageCode
+        self.langKeyLabel = langKeyLabel
         self.returnIcon = returnIcon
-        if geometryChanged {
+        if shapeChanged {
             pressedCells.removeAll()
             popupChar = nil
+            rebuildGeometry()
+            updatePopup()
+        } else if labelsChanged {
+            refreshCaps()
         }
-        rebuildGeometry()
-        updatePopup()
         setNeedsDisplay()
+    }
+
+    private func refreshCaps() {
+        var i = 0
+        for row in rows {
+            for cap in row {
+                guard i < keys.count else { return }
+                keys[i] = GridKey(rect: keys[i].rect, visibleRect: keys[i].visibleRect, cap: cap)
+                i += 1
+            }
+        }
+    }
+
+    private static func sameShape(_ a: [[Cap]], _ b: [[Cap]]) -> Bool {
+        guard a.count == b.count else { return false }
+        for (r, row) in a.enumerated() {
+            guard row.count == b[r].count else { return false }
+            for (i, cap) in row.enumerated() {
+                switch (cap, b[r][i]) {
+                case (.ch, .ch): continue
+                case (.sp(let x), .sp(let y)) where x == y: continue
+                default: return false
+                }
+            }
+        }
+        return true
     }
 
     override func layoutSubviews() {
@@ -1517,11 +1611,10 @@ private final class KeyGridView: UIView {
                 info = KeyTouch(id: touchID, origin: .char, cellIndex: idx)
                 onPressFeedback()
                 onChar(s)
-                popupChar = (idx, s)
+                if !secureInput { popupChar = (idx, s) }
             case .sp(.backspace):
                 info = KeyTouch(id: touchID, origin: .backspace, cellIndex: idx)
                 onBackspaceFirst()
-                active[ObjectIdentifier(t)] = info
                 startBackspaceRepeat(info)
             case .sp(.space):
                 info = KeyTouch(id: touchID, origin: .space, cellIndex: idx)
@@ -1616,6 +1709,7 @@ private final class KeyGridView: UIView {
             }
         }
         info.stopTimers()
+        if info.origin == .backspace { stopBackspaceRepeat() }
         pressedCells.remove(info.cellIndex)
         active[ObjectIdentifier(t)] = nil
         if info.origin == .space, !active.values.contains(where: { $0.origin == .space }) {
@@ -1633,15 +1727,21 @@ private final class KeyGridView: UIView {
 
     private func startBackspaceRepeat(_ info: KeyTouch) {
         info.stopTimers()
+        stopBackspaceRepeat()
         let touchID = info.id
-        info.initialTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: false) { [weak self] _ in
-            MainActor.assumeIsolated {
-                guard let self, let live = self.touch(id: touchID) else { return }
-                live.repeatTimer = Timer.scheduledTimer(withTimeInterval: 0.09, repeats: true) { [weak self] _ in
-                    MainActor.assumeIsolated { self?.onBackspaceRepeat() }
-                }
+        backspaceRepeat = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(350))
+            while !Task.isCancelled {
+                guard let self, self.touch(id: touchID) != nil else { return }
+                self.onBackspaceRepeat()
+                try? await Task.sleep(for: .milliseconds(90))
             }
         }
+    }
+
+    private func stopBackspaceRepeat() {
+        backspaceRepeat?.cancel()
+        backspaceRepeat = nil
     }
 
     override func draw(_ rect: CGRect) {
@@ -1685,21 +1785,41 @@ private final class KeyGridView: UIView {
         case .sp(.digits):
             drawCentered("123", font: .systemFont(ofSize: 16, weight: .medium), color: fg, in: rect)
         case .sp(.letters):
-            drawCentered(letterRussian ? "АБВ" : "ABC", font: .systemFont(ofSize: 15, weight: .medium), color: fg, in: rect)
+            drawCentered(languageCode == "ru" ? "АБВ" : "ABC", font: .systemFont(ofSize: 15, weight: .medium), color: fg, in: rect)
         case .sp(.symbols):
             drawCentered("#+=", font: .systemFont(ofSize: 15, weight: .medium), color: fg, in: rect)
         case .sp(.lang):
-            drawCentered(letterRussian ? "EN" : "РУ", font: .systemFont(ofSize: 15, weight: .semibold), color: fg, in: rect)
+            drawCentered(langKeyLabel, font: .systemFont(ofSize: 15, weight: .semibold), color: fg, in: rect)
         case .sp(.space):
-            drawCentered(letterRussian ? "Русский" : "English",
+            drawCentered(KryptosKeyboardView.languageName(languageCode),
                          font: .systemFont(ofSize: 15, weight: .medium),
                          color: KB.textSecondaryU.withAlphaComponent(alpha), in: rect)
         }
     }
 
+    private static let centeredParagraph: NSParagraphStyle = {
+        let p = NSMutableParagraphStyle()
+        p.alignment = .center
+        return p
+    }()
+
+    private static var symbolCache: [String: UIImage] = [:]
+
+    private static func symbol(_ name: String, size: CGFloat, weight: UIImage.SymbolWeight) -> UIImage? {
+        let key = "\(name)|\(Int(size))|\(weight.rawValue)"
+        if let cached = symbolCache[key] { return cached }
+        let cfg = UIImage.SymbolConfiguration(pointSize: size, weight: weight)
+        guard let img = UIImage(systemName: name, withConfiguration: cfg) else { return nil }
+        symbolCache[key] = img
+        return img
+    }
+
     private func drawCentered(_ text: String, font: UIFont, color: UIColor, in rect: CGRect) {
-        let para = NSMutableParagraphStyle(); para.alignment = .center
-        let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color, .paragraphStyle: para]
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: color,
+            .paragraphStyle: KeyGridView.centeredParagraph,
+        ]
         let s = NSAttributedString(string: text, attributes: attrs)
         let size = s.size()
         let y = rect.midY - size.height / 2
@@ -1707,8 +1827,8 @@ private final class KeyGridView: UIView {
     }
 
     private func drawSymbol(_ name: String, size: CGFloat, weight: UIImage.SymbolWeight, color: UIColor, in rect: CGRect) {
-        let cfg = UIImage.SymbolConfiguration(pointSize: size, weight: weight)
-        guard let img = UIImage(systemName: name, withConfiguration: cfg)?.withTintColor(color, renderingMode: .alwaysOriginal) else { return }
+        guard let base = KeyGridView.symbol(name, size: size, weight: weight) else { return }
+        let img = base.withTintColor(color, renderingMode: .alwaysOriginal)
         img.draw(at: CGPoint(x: rect.midX - img.size.width / 2, y: rect.midY - img.size.height / 2))
     }
 
@@ -1738,6 +1858,24 @@ private final class KeyGridView: UIView {
                 self.popupView.alpha = 1
             }
         }
+    }
+}
+
+@MainActor
+private final class DisplayLinkProxy: NSObject {
+    private weak var target: KeyGridView?
+
+    init(target: KeyGridView) {
+        self.target = target
+        super.init()
+    }
+
+    @objc func step(_ link: CADisplayLink) {
+        guard let target else {
+            link.invalidate()
+            return
+        }
+        target.stepLabelFade(link)
     }
 }
 

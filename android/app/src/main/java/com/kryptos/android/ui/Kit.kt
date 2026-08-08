@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -150,6 +152,54 @@ fun KScreen(
         }
         content()
         Spacer(Modifier.height(8.dp + LocalTabBarInset.current))
+    }
+}
+
+@Composable
+fun KLazyScreen(
+    title: String,
+    modifier: Modifier = Modifier,
+    backLabel: String? = null,
+    onBack: (() -> Unit)? = null,
+    content: LazyListScope.() -> Unit,
+) {
+    LazyColumn(
+        modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Spacer(Modifier.height(2.dp))
+                if (onBack != null) {
+                    Row(
+                        Modifier.quietClickable(onClick = onBack),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Default.ArrowBackIosNew, null,
+                            Modifier.size(15.dp), tint = K.accent,
+                        )
+                        Spacer(Modifier.width(3.dp))
+                        Text(
+                            backLabel ?: "",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = K.accent,
+                        )
+                    }
+                }
+                Text(
+                    title,
+                    fontSize = 30.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = K.textPrimary,
+                )
+            }
+        }
+        content()
+        item { Spacer(Modifier.height(8.dp + LocalTabBarInset.current)) }
     }
 }
 

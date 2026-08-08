@@ -112,7 +112,7 @@ fun QuickScreen(modifier: Modifier = Modifier) {
                             runCatching {
                                 if (enc) {
                                     KryptosCore.encrypt(body, secret, AppSettingsStore.lengthPadding)
-                                        .also { copySensitive(context, it, null) }
+                                        .also { copyCipher(context, it, null) }
                                 } else {
                                     KryptosCore.decrypt(body, secret)
                                 }

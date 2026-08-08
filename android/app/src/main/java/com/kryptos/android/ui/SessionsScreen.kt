@@ -1,12 +1,15 @@
 package com.kryptos.android.ui
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
 import android.provider.Settings
+import android.view.View
+import android.view.Window
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,10 +34,12 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -94,11 +99,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -106,11 +114,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.qrcode.QRCodeWriter
+import androidx.compose.ui.window.DialogWindowProvider
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.kryptos.android.R
+import com.kryptos.android.core.KeyQr
 import com.kryptos.android.core.LetterStego
 import com.kryptos.android.core.SmartTextStego
 import com.kryptos.android.core.TextStego
@@ -564,10 +572,16 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
                     }
                     outcome.onFailure { e ->
                         val other = e as? com.kryptos.android.signal.DecryptedForOtherContactException
-                        error = if (other != null) {
-                            context.getString(R.string.decrypted_other_contact, other.displayName)
-                        } else {
-                            context.getString(R.string.decrypt_failed)
+                        val newer = (e as? com.kryptos.android.core.CipherException)?.kind ==
+                            com.kryptos.android.core.CipherException.Kind.UNSUPPORTED_FORMAT
+                        error = when {
+                            other != null -> context.getString(R.string.decrypted_other_contact, other.displayName)
+                            newer -> context.getString(R.string.msg_newer_version)
+                            e is com.kryptos.android.signal.NoSessionForContactException ->
+                                context.getString(R.string.session_lost)
+                            e is com.kryptos.android.signal.StorageUnavailableException ->
+                                context.getString(R.string.storage_unavailable)
+                            else -> context.getString(R.string.decrypt_failed)
                         }
                     }
                     decrypting = false
@@ -577,7 +591,7 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
                 error = null
                 val outcome = withContext(Dispatchers.Default + NonCancellable) {
                     runCatching {
-                        SignalService.encrypt(text, contact).also { copySensitive(context, it, null) }
+                        SignalService.encrypt(text, contact).also { copyCipher(context, it, null) }
                     }
                 }
                 outcome.fold(
@@ -585,8 +599,14 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
                         lastCipher = armored
                         true
                     },
-                    onFailure = {
-                        error = context.getString(R.string.encrypt_failed)
+                    onFailure = { e ->
+                        error = context.getString(
+                            when (e) {
+                                is com.kryptos.android.signal.NoSessionForContactException -> R.string.session_lost
+                                is com.kryptos.android.signal.StorageUnavailableException -> R.string.storage_unavailable
+                                else -> R.string.encrypt_failed
+                            }
+                        )
                         false
                     },
                 )
@@ -635,8 +655,10 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
                         Modifier
                             .fillMaxWidth()
                             .quietClickable {
-                                SignalService.setAutoDelete(secs, contact)
                                 autoDeleteOpen = false
+                                scope.launch(Dispatchers.Default + NonCancellable) {
+                                    SignalService.setAutoDelete(secs, contact)
+                                }
                             }
                             .padding(vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -692,21 +714,58 @@ private fun autoDeleteLabel(secs: Double): String = when (secs) {
     else -> "${secs.toInt()} s"
 }
 
-private fun qrBitmap(text: String): Bitmap? = runCatching {
-    val matrix = QRCodeWriter().encode(text, BarcodeFormat.QR_CODE, 640, 640)
-    val w = matrix.width
-    val pixels = IntArray(w * matrix.height) { i ->
-        if (matrix[i % w, i / w]) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+private fun qrBitmap(payload: ByteArray, availablePx: Int): Bitmap? = runCatching {
+    val matrix = KeyQr.matrix(payload)
+    val modules = matrix.width
+    val scale = KeyQr.scaleFor(modules, availablePx)
+    val size = modules * scale
+    val pixels = IntArray(size * size)
+    for (y in 0 until size) {
+        val my = y / scale
+        val row = y * size
+        for (x in 0 until size) {
+            pixels[row + x] =
+                if (matrix[x / scale, my]) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+        }
     }
-    Bitmap.createBitmap(pixels, w, matrix.height, Bitmap.Config.RGB_565)
+    Bitmap.createBitmap(pixels, size, size, Bitmap.Config.RGB_565)
 }.getOrNull()
+
+private val QR_PLATE_PADDING = 6.dp
+
+private class QrRender(val bitmap: Bitmap?)
+
+private fun hostWindow(view: View): Window? {
+    var node: Any? = view
+    while (node is View) {
+        if (node is DialogWindowProvider) return node.window
+        node = node.parent
+    }
+    return (view.context as? Activity)?.window
+}
+
+@Composable
+private fun KeepScreenBright() {
+    val view = LocalView.current
+    val window = remember(view) { hostWindow(view) }
+    DisposableEffect(window) {
+        val previous = window?.attributes?.screenBrightness
+        window?.let { it.attributes = it.attributes.apply { screenBrightness = 1f } }
+        onDispose {
+            if (window != null && previous != null) {
+                window.attributes = window.attributes.apply { screenBrightness = previous }
+            }
+        }
+    }
+}
 
 @Composable
 private fun MyKeySheet(onDismiss: () -> Unit) {
     val context = LocalContext.current
-    val keyString by produceState(initialValue = "") {
-        value = withContext(Dispatchers.Default) { SignalService.myKeyString() }
+    val share by produceState<SignalService.KeyShare?>(initialValue = null) {
+        value = withContext(Dispatchers.Default) { runCatching { SignalService.myKeyShare() }.getOrNull() }
     }
+    val keyString = share?.text ?: ""
     val safety by SignalService.mySafetyNumber.collectAsState()
     val profiles by SignalService.profiles.collectAsState()
     val scope = rememberCoroutineScope()
@@ -733,17 +792,33 @@ private fun MyKeySheet(onDismiss: () -> Unit) {
         }
 
         if (showQR) {
+            KeepScreenBright()
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                val qr = remember(keyString) { qrBitmap(keyString) }
-                if (qr != null) {
-                    Box(
-                        Modifier
-                            .shadow(10.dp, RoundedCornerShape(KShape.corner))
-                            .clip(RoundedCornerShape(KShape.corner))
-                            .background(Color.White)
-                            .padding(16.dp)
-                    ) {
-                        Image(qr.asImageBitmap(), null, Modifier.size(240.dp))
+                val density = LocalDensity.current
+                BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                    val availablePx = with(density) { (maxWidth - QR_PLATE_PADDING * 2).roundToPx() }
+                    val rendered by produceState<QrRender?>(null, share, availablePx) {
+                        val payload = share?.payload ?: return@produceState
+                        value = QrRender(withContext(Dispatchers.Default) { qrBitmap(payload, availablePx) })
+                    }
+                    val qr = rendered?.bitmap
+                    if (qr != null) {
+                        Box(
+                            Modifier
+                                .shadow(10.dp, RoundedCornerShape(KShape.cornerSmall))
+                                .clip(RoundedCornerShape(KShape.cornerSmall))
+                                .background(Color.White)
+                                .padding(QR_PLATE_PADDING)
+                        ) {
+                            Image(
+                                qr.asImageBitmap(),
+                                null,
+                                Modifier.size(with(density) { qr.width.toDp() }),
+                                filterQuality = FilterQuality.None,
+                            )
+                        }
+                    } else if (rendered != null) {
+                        Banner(stringResource(R.string.qr_unavailable), BannerKind.Warning)
                     }
                 }
                 Spacer(Modifier.height(12.dp))
@@ -816,13 +891,18 @@ private fun AddContactSheet(onDismiss: () -> Unit) {
     val context = LocalContext.current
     var name by remember { mutableStateOf("") }
     var key by remember { mutableStateOf("") }
+    var scanned by remember { mutableStateOf<ByteArray?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var cameraDenied by remember { mutableStateOf(false) }
     var adding by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
-        result.contents?.let { key = it }
+        result.contents?.let {
+            scanned = it.toByteArray(Charsets.ISO_8859_1)
+            key = ""
+            error = null
+        }
     }
     val startScan = {
         cameraDenied = false
@@ -832,6 +912,7 @@ private fun AddContactSheet(onDismiss: () -> Unit) {
                 .setBeepEnabled(false)
                 .setCaptureActivity(PortraitCaptureActivity::class.java)
                 .addExtra("TRY_HARDER", true)
+                .addExtra("CHARACTER_SET", KeyQr.CHARSET)
         )
     }
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -843,7 +924,8 @@ private fun AddContactSheet(onDismiss: () -> Unit) {
             FieldLabel(stringResource(R.string.contact_name))
             KTextField(name, { name = it }, maxLines = 1)
             FieldLabel(stringResource(R.string.paste_key))
-            KTextField(key, { key = it }, mono = true, minLines = 3, maxLines = 6)
+            KTextField(key, { key = it; scanned = null }, mono = true, minLines = 3, maxLines = 6)
+            if (scanned != null) Banner(stringResource(R.string.scan_captured), BannerKind.Success)
             SecondaryButton(
                 stringResource(R.string.scan_qr),
                 Modifier.fillMaxWidth(),
@@ -863,27 +945,36 @@ private fun AddContactSheet(onDismiss: () -> Unit) {
                 Modifier.fillMaxWidth(),
                 icon = Icons.Default.ContentPaste,
                 accent = true,
-            ) { key = clipboardText(context) }
+            ) { key = clipboardText(context); scanned = null }
             PrimaryButton(
                 stringResource(R.string.add),
                 Modifier.fillMaxWidth(),
                 icon = Icons.Default.Add,
-                enabled = key.isNotBlank() && !adding,
+                enabled = (key.isNotBlank() || scanned != null) && !adding,
                 busy = adding,
             ) {
                 val raw = key
+                val payload = scanned
                 val display = name.trim()
                 error = null
                 adding = true
                 scope.launch {
                     val outcome = withContext(Dispatchers.Default + NonCancellable) {
-                        runCatching { SignalService.addContact(raw, display) }
+                        runCatching {
+                            if (payload != null) SignalService.addContactFromScan(payload, display)
+                            else SignalService.addContact(raw, display)
+                        }
                     }
                     adding = false
                     outcome.onSuccess { onDismiss() }.onFailure { e ->
                         error = context.getString(
-                            if (e is com.kryptos.android.signal.OwnKeyException) R.string.add_own_key
-                            else R.string.not_a_kryptos_message
+                            when {
+                                e is com.kryptos.android.signal.OwnKeyException -> R.string.add_own_key
+                                e is com.kryptos.android.signal.StorageUnavailableException ||
+                                    e is IllegalStateException -> R.string.storage_unavailable
+                                payload != null -> R.string.scan_unreadable
+                                else -> R.string.not_a_kryptos_message
+                            }
                         )
                     }
                 }

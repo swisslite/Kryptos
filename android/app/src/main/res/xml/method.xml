@@ -2,7 +2,18 @@
 <input-method xmlns:android="http://schemas.android.com/apk/res/android"
     android:supportsSwitchingToNextInputMethod="true">
     <subtype
-        android:label="@string/keyboard_name"
+        android:label="@string/lang_en"
         android:imeSubtypeLocale="en_US"
+        android:languageTag="en"
+        android:imeSubtypeMode="keyboard" />
+    <subtype
+        android:label="@string/lang_ru"
+        android:imeSubtypeLocale="ru_RU"
+        android:languageTag="ru"
+        android:imeSubtypeMode="keyboard" />
+    <subtype
+        android:label="@string/lang_de"
+        android:imeSubtypeLocale="de_DE"
+        android:languageTag="de"
         android:imeSubtypeMode="keyboard" />
 </input-method>

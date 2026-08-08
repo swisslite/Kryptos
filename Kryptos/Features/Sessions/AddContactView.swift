@@ -8,6 +8,7 @@ struct AddContactView: View {
 
     @State private var name = ""
     @State private var keyText = ""
+    @State private var scanned: Data?
     @State private var showScanner = false
     @State private var errorText: String?
     @State private var cameraDenied = false
@@ -24,16 +25,31 @@ struct AddContactView: View {
                                 .padding(12).background(FieldBackground())
 
                             fieldLabel("THEIR KEY")
-                            TextEditor(text: $keyText)
+                            TextEditor(text: Binding(get: { keyText },
+                                                     set: { keyText = $0; scanned = nil }))
                                 .font(.kMono()).frame(minHeight: 90).scrollContentBackground(.hidden)
                                 .padding(8).background(FieldBackground())
+
+                            if scanned != nil {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(Color(red: 0.2, green: 0.72, blue: 0.45))
+                                    Text("Key scanned").font(.kBody()).foregroundStyle(KTheme.textPrimary)
+                                    Spacer(minLength: 0)
+                                }
+                            }
 
                             Button { requestScan() } label: {
                                 Label("Scan QR", systemImage: "qrcode.viewfinder")
                             }
                             .buttonStyle(SecondaryButtonStyle(accent: true))
 
-                            Button { if let s = UIPasteboard.general.string { keyText = s } } label: {
+                            Button {
+                                if let s = UIPasteboard.general.string {
+                                    keyText = s
+                                    scanned = nil
+                                }
+                            } label: {
                                 Label("Paste", systemImage: "doc.on.clipboard")
                             }
                             .buttonStyle(SecondaryButtonStyle(accent: true))
@@ -70,8 +86,13 @@ struct AddContactView: View {
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Cancel") { dismiss() } } }
             .fullScreenCover(isPresented: $showScanner) {
                 ZStack(alignment: .topTrailing) {
-                    QRScannerView { value in keyText = value; showScanner = false }
-                        .ignoresSafeArea()
+                    QRScannerView { value in
+                        scanned = value
+                        keyText = ""
+                        errorText = nil
+                        showScanner = false
+                    }
+                    .ignoresSafeArea()
                     Button { showScanner = false } label: {
                         Image(systemName: "xmark.circle.fill").font(.largeTitle).foregroundStyle(.white).padding()
                     }
@@ -108,8 +129,13 @@ struct AddContactView: View {
 
     private func add() {
         errorText = nil
+        let display = name.trimmingCharacters(in: .whitespaces)
         do {
-            try signal.addContact(fromKeyString: keyText, displayName: name.trimmingCharacters(in: .whitespaces))
+            if let scanned {
+                try signal.addContact(scanned: scanned, displayName: display)
+            } else {
+                try signal.addContact(fromKeyString: keyText, displayName: display)
+            }
             dismiss()
         } catch {
             errorText = (error as? LocalizedError)?.errorDescription ?? String(localized: "This is not a valid Kryptos key.")

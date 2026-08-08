@@ -1,0 +1,15 @@
+Kryptos verschlüsselt direkt in der Unterhaltung, Sie müssen also nicht zwischen Apps hin und her springen.
+
+Die Kryptos-Tastatur wird wie jede andere Systemtastatur eingerichtet: einmal aktivieren, und sie ist überall da, wo Sie schreiben. Tippen Sie Ihre Nachricht in WhatsApp, Telegram oder eine SMS, tippen Sie auf das Schloss, und im Feld bleibt der fertige Geheimtext stehen. Eingehende Nachrichten entschlüsselt Kryptos von selbst, direkt über dem Chat, während Sie scrollen, ohne Kopieren und ohne Wechseln. Tastatur und Bildschirmentschlüsselung sind ins System eingebunden und funktionieren deshalb in jeder App.
+
+Auf iPhone und Android ist es dieselbe App, und beide sind vollständig kompatibel. Welches Telefon Ihr Gegenüber benutzt, spielt keine Rolle.
+
+Die Verschlüsselung ist echt: das Signal-Protokoll über Signals eigene Bibliothek libsignal, ein frischer Schlüssel für jede Nachricht und Schutz auch vor künftigen Quantencomputern. Ein Kontakt lässt sich über die Sicherheitsnummer überprüfen. Wenn ein vollständiger Chat zu viel des Guten ist, gibt es einen einfachen Modus mit einem gemeinsamen Passwort, und für alle, die ohnehin mit PGP arbeiten, ist auch das eingebaut. Der Messenger sieht immer nur eine sinnlose Zeichenfolge ohne erkennbare Merkmale.
+
+Steganografie verbirgt schon die Tatsache, dass Sie überhaupt schreiben: Der Geheimtext lässt sich in einem gewöhnlichen Foto vergraben oder als harmlose Folge echter Wörter tarnen. Ohne das Passwort gibt es im Foto nichts, worauf sich ein Test ansetzen ließe.
+
+Nichts geht ins Netz: In der App steckt überhaupt kein Netzwerkcode, und der Build kommt ohne die INTERNET-Berechtigung aus. Gefragt wird nur nach der Kamera zum Scannen von QR-Codes, nach Vibration und nach der Steuerung von Overlays. Keine Konten, keine Telefonnummer, keine Server, keine Analyse. Schlüssel entstehen auf dem Telefon selbst, liegen im Android-Keystore und verlassen es nie.
+
+Der Zugang lässt sich mit Biometrie oder einem Code sperren. Dazu kommt ein Panik-Passwort: ins selbe Feld getippt, löscht es alles endgültig, statt zu entsperren. Die Zwischenablage leert sich selbst, Nachrichten können nach einer Frist verschwinden, Screenshots und die Vorschau im App-Wechsler lassen sich blockieren, und alle Schlüssel können in eine einzige passwortgeschützte Datei exportiert werden, um sie auf ein neues Telefon zu bringen.
+
+Außerdem dabei: helles und dunkles Design, eine App-Sprache unabhängig von der Systemsprache, eine Schritt-für-Schritt-Anleitung mit Antworten auf häufige Fragen und eine Tastatur mit Vorschlägen, Autokorrektur und Emoji für Deutsch, Englisch und Russisch, vollständig offline.

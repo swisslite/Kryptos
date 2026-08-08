@@ -173,7 +173,6 @@ object ImageStego {
         rgba: ByteArray,
         width: Int,
         height: Int,
-        pad: Boolean = false,
     ): ByteArray {
         val list = candidates(rgba, width, height)
         val total = list.size
@@ -189,7 +188,7 @@ object ImageStego {
         val placementKey = km.copyOfRange(PasswordCipher.DERIVED_LEN, km.size)
         km.fill(0)
         val sealed = try {
-            PasswordCipher.sealBody(message, key, nonce, CONTAINER_VERSION, pad)
+            PasswordCipher.sealBody(message, key, nonce, CONTAINER_VERSION, false)
         } finally {
             key.fill(0)
             nonce.fill(0)

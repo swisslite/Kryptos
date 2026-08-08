@@ -17,6 +17,7 @@ struct PGPView: View {
     @State private var showKeys = false
     @State private var copied = false
     @State private var autoCopied = false
+    @State private var working = false
 
     var body: some View {
         ScreenScaffold("PGP") {
@@ -132,8 +133,11 @@ struct PGPView: View {
                     Label("Paste", systemImage: "doc.on.clipboard")
                 }.buttonStyle(SecondaryButtonStyle(accent: true))
                 Button(action: run) {
-                    Label(mode == .encrypt ? "Encrypt" : "Decrypt", systemImage: mode == .encrypt ? "lock.fill" : "lock.open.fill")
-                }.buttonStyle(PrimaryButtonStyle())
+                    Label(working ? "Working…" : (mode == .encrypt ? "Encrypt" : "Decrypt"),
+                          systemImage: working ? "hourglass" : (mode == .encrypt ? "lock.fill" : "lock.open.fill"))
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(working)
             }
         }
         .glassCard()
@@ -194,19 +198,31 @@ struct PGPView: View {
     private func run() {
         errorText = nil; output = ""; verification = nil; copied = false; autoCopied = false
         guard !input.isEmpty else { errorText = String(localized: "Enter some text."); return }
-        do {
-            if mode == .encrypt {
-                guard let recipient else { errorText = String(localized: "Choose a recipient."); return }
-                output = try pgp.encrypt(input, to: recipient)
-                Clipboard.copyCipher(output)
-                autoCopied = true
-            } else {
-                let result = try pgp.decrypt(input)
-                output = result.text
-                verification = result.verification
+        let current = mode
+        let chosen = recipient
+        if current == .encrypt, chosen == nil {
+            errorText = String(localized: "Choose a recipient.")
+            return
+        }
+        let text = input
+        working = true
+        Task { @MainActor in
+            await Task.yield()
+            do {
+                if current == .encrypt, let chosen {
+                    let cipher = try pgp.encrypt(text, to: chosen)
+                    output = cipher
+                    Clipboard.copyCipher(cipher)
+                    autoCopied = true
+                } else if current == .decrypt {
+                    let result = try pgp.decrypt(text)
+                    output = result.text
+                    verification = result.verification
+                }
+            } catch {
+                errorText = (error as? LocalizedError)?.errorDescription ?? String(localized: "Could not process the message.")
             }
-        } catch {
-            errorText = (error as? LocalizedError)?.errorDescription ?? String(localized: "Could not process the message.")
+            working = false
         }
     }
 
@@ -280,13 +296,6 @@ private struct PGPKeysView: View {
             .navigationTitle("Your PGP keys")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
-            .confirmationDialog("Regenerate this key? The public key you shared before will stop working.",
-                                isPresented: $confirmRegenerate, titleVisibility: .visible) {
-                Button("Regenerate", role: .destructive) { pgp.regenerateCurrent(algo: algo) }
-            }
-            .confirmationDialog("Delete this key permanently?", isPresented: Binding(get: { confirmDelete != nil }, set: { if !$0 { confirmDelete = nil } }), titleVisibility: .visible) {
-                Button("Delete", role: .destructive) { if let d = confirmDelete { pgp.deleteIdentity(d.id) } }
-            }
         }
     }
 
@@ -332,10 +341,22 @@ private struct PGPKeysView: View {
                 if ident.id == pgp.currentID {
                     Button { confirmRegenerate = true } label: { Label("Regenerate", systemImage: "arrow.triangle.2.circlepath") }
                         .font(.kBody()).foregroundStyle(KTheme.accent).disabled(pgp.busy)
+                        .confirmationDialog("Regenerate this key? The public key you shared before will stop working.",
+                                            isPresented: $confirmRegenerate, titleVisibility: .visible) {
+                            Button("Regenerate", role: .destructive) {
+                                pgp.regenerateCurrent(algo: PGPAlgo.matching(label: ident.algo) ?? .curve25519)
+                            }
+                        }
                 }
                 Spacer(minLength: 0)
                 Button { confirmDelete = ident } label: { Label("Delete", systemImage: "trash") }
                     .font(.kBody()).foregroundStyle(KTheme.danger).disabled(pgp.busy)
+                    .confirmationDialog("Delete this key permanently?",
+                                        isPresented: Binding(get: { confirmDelete?.id == ident.id },
+                                                             set: { if !$0 { confirmDelete = nil } }),
+                                        titleVisibility: .visible) {
+                        Button("Delete", role: .destructive) { pgp.deleteIdentity(ident.id) }
+                    }
             }
         }
         .glassCard()
@@ -348,6 +369,7 @@ private struct PGPRecipientsView: View {
     @State private var name = ""
     @State private var keyText = ""
     @State private var errorText: String?
+    @State private var confirmDelete: PGPRecipient?
 
     var body: some View {
         NavigationStack {
@@ -377,8 +399,14 @@ private struct PGPRecipientsView: View {
                                 HStack {
                                     Text(r.name).font(.kHeadline()).foregroundStyle(KTheme.textPrimary)
                                     Spacer()
-                                    Button { pgp.removeRecipient(r) } label: {
+                                    Button { confirmDelete = r } label: {
                                         Image(systemName: "trash").foregroundStyle(KTheme.danger)
+                                    }
+                                    .confirmationDialog("Remove this recipient? Their public key is deleted from this device.",
+                                                        isPresented: Binding(get: { confirmDelete?.id == r.id },
+                                                                             set: { if !$0 { confirmDelete = nil } }),
+                                                        titleVisibility: .visible) {
+                                        Button("Remove", role: .destructive) { pgp.removeRecipient(r) }
                                     }
                                 }
                                 if !r.fingerprint.isEmpty {

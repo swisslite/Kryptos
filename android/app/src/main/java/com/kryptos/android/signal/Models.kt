@@ -99,16 +99,19 @@ object OwnCipherMarker {
 
     @Volatile private var hash: String? = null
     @Volatile private var loaded = false
+    @Volatile private var lastMarked: String? = null
 
     init {
-        CachePurge.register { synchronized(this) { hash = null; loaded = false } }
+        CachePurge.register { synchronized(this) { hash = null; loaded = false; lastMarked = null } }
     }
 
     fun mark(cipher: String) {
+        if (lastMarked == cipher) return
         val key = DecryptCacheKey.of(cipher)
         synchronized(this) {
             hash = key
             loaded = true
+            lastMarked = cipher
         }
         runCatching { SecureStore.write(STORE_KEY, key.toByteArray(Charsets.UTF_8)) }
     }
@@ -179,3 +182,7 @@ data class ProfilesIndex(var profiles: List<Profile>, var currentID: String)
 class BadKeyStringException : Exception("This is not a valid Kryptos key.")
 
 class OwnKeyException : Exception("This is your own key.")
+
+class NoSessionForContactException : Exception("No Signal session with this contact.")
+
+class StorageUnavailableException(cause: Throwable?) : Exception("Secure storage is unavailable.", cause)

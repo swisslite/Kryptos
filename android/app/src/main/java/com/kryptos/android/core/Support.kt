@@ -9,6 +9,7 @@ class CipherException(val kind: Kind) : Exception(kind.name) {
         DECRYPTION_FAILED,
         STEGO_CAPACITY_EXCEEDED,
         INVALID_INPUT,
+        UNSUPPORTED_FORMAT,
     }
 }
 
@@ -41,6 +42,38 @@ object CachePurge {
     private val hooks = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
     fun register(hook: () -> Unit) { hooks += hook }
     fun purgeAll() { hooks.forEach { it() } }
+}
+
+internal class WipingBuffer(initial: Int = 8192) : java.io.OutputStream() {
+    private var buf = ByteArray(initial.coerceAtLeast(64))
+    private var size = 0
+
+    private fun ensure(extra: Int) {
+        if (size + extra <= buf.size) return
+        var capacity = buf.size
+        while (capacity < size + extra) capacity *= 2
+        val grown = buf.copyOf(capacity)
+        buf.fill(0)
+        buf = grown
+    }
+
+    override fun write(b: Int) {
+        ensure(1)
+        buf[size++] = b.toByte()
+    }
+
+    override fun write(b: ByteArray, off: Int, len: Int) {
+        ensure(len)
+        b.copyInto(buf, size, off, off + len)
+        size += len
+    }
+
+    fun drain(): ByteArray {
+        val out = buf.copyOf(size)
+        buf.fill(0)
+        size = 0
+        return out
+    }
 }
 
 class BinaryWriter {

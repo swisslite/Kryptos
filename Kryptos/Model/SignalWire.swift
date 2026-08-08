@@ -22,8 +22,10 @@ enum SignalWire {
             let deflate = compressed != nil
             let ct = try signalEncrypt(message: Array(deflate ? compressed! : raw), for: addr, localAddress: myAddr,
                                        sessionStore: store, identityStore: store, context: ctx)
-            var payload = Data([0x03, (ct.messageType.rawValue & 0x0F) | (deflate ? 0x10 : 0)])
-            payload.append(ct.serialize())
+            let serialized = ct.serialize()
+            let padded = pad && StegoWire.fits(ciphertext: serialized.count, padded: true)
+            let payload = StegoWire.frame(serialized, type: ct.messageType.rawValue,
+                                          deflate: deflate, padded: padded)
             if payload.count <= TextStego.maxPayloadBytes {
                 switch mode {
                 case .words: return TextStego.encode(payload, language: language)
@@ -31,7 +33,7 @@ enum SignalWire {
                 case .letters: return LetterStego.encode(payload, language: language)
                 }
             }
-            return try WireFormat.wrap(ct.serialize(), type: ct.messageType.rawValue, deflate: deflate, padded: pad,
+            return try WireFormat.wrap(serialized, type: ct.messageType.rawValue, deflate: deflate, padded: pad,
                                        pairKey: pairKey(myFingerprint, fp))
         }
 
@@ -63,20 +65,21 @@ enum SignalWire {
         return try decryptStego(payload, addr: addr, myAddr: myAddr, store: store)
     }
 
+    private static let maxStegoInputChars = 1_000_000
+
     private static func stegoPayload(_ armored: String) -> Data? {
-        TextStego.decode(armored) ?? SmartTextStego.decode(armored) ?? LetterStego.decode(armored)
+        guard armored.utf16.count <= maxStegoInputChars else { return nil }
+        return TextStego.decode(armored) ?? SmartTextStego.decode(armored) ?? LetterStego.decode(armored)
     }
 
     private static func decryptStego(_ payload: Data, addr: ProtocolAddress, myAddr: ProtocolAddress,
                                      store: PersistentSignalStore) throws -> String {
-        guard payload.count >= 2, payload.first == 0x03 else {
-            throw CipherError.notAKryptosMessage
+        guard let framed = StegoWire.unframe(payload) else {
+            throw StegoWire.carriesUnknownFlags(payload) ? CipherError.unsupportedFormat : CipherError.notAKryptosMessage
         }
-        let flags = payload[payload.startIndex + 1]
-        let plain = try signalDecryptBytes(type: flags & 0x0F,
-                                           body: payload.subdata(in: (payload.startIndex + 2) ..< payload.endIndex),
+        let plain = try signalDecryptBytes(type: framed.type, body: framed.body,
                                            addr: addr, myAddr: myAddr, store: store)
-        let data = (flags & 0x10) != 0 ? (Deflate.decompress(plain) ?? Data()) : plain
+        let data = framed.deflate ? (Deflate.decompress(plain) ?? Data()) : plain
         return String(decoding: data, as: UTF8.self)
     }
 

@@ -118,17 +118,29 @@ final class SharedSignalStore {
         catch where store.hadStaleConflict { return try body(freshStore()) }
     }
 
+    private static let metaWriteAttempts = 4
+
+    private static let metaEncoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return encoder
+    }()
+
     private func appendMessage(_ text: String, mine: Bool, to fingerprint: String, decryptedFrom armored: String? = nil) {
-        guard let enc = SharedStore.read(metaKey),
-              let box = try? AES.GCM.SealedBox(combined: enc),
-              let dec = try? AES.GCM.open(box, using: cryptKey),
-              var meta = try? JSONDecoder().decode(Meta.self, from: dec) else { return }
-        meta.messages[fingerprint, default: []].append(ChatMessage(text: text, mine: mine))
-        if let armored { meta.rememberDecrypt(armored: armored, fingerprint: fingerprint, text: text) }
-        guard let json = try? JSONEncoder().encode(meta),
-              let sealed = try? AES.GCM.seal(json, using: cryptKey),
-              let combined = sealed.combined else { return }
-        SharedStore.write(metaKey, combined)
+        for _ in 0 ..< Self.metaWriteAttempts {
+            guard let enc = SharedStore.read(metaKey),
+                  let box = try? AES.GCM.SealedBox(combined: enc),
+                  let dec = try? AES.GCM.open(box, using: cryptKey),
+                  var meta = try? JSONDecoder().decode(Meta.self, from: dec) else { return }
+            meta.messages[fingerprint, default: []].append(ChatMessage(text: text, mine: mine))
+            if let armored { meta.rememberDecrypt(armored: armored, fingerprint: fingerprint, text: text) }
+            guard let json = try? Self.metaEncoder.encode(meta),
+                  let sealed = try? AES.GCM.seal(json, using: cryptKey),
+                  let combined = sealed.combined else { return }
+            guard SharedStore.read(metaKey) == enc else { continue }
+            SharedStore.write(metaKey, combined)
+            return
+        }
     }
 
     private func withLock<T>(_ body: () throws -> T) rethrows -> T {

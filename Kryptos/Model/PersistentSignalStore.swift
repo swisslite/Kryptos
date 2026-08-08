@@ -58,6 +58,23 @@ final class PersistentSignalStore: InMemorySignalProtocolStore {
     private var expectedGeneration: UInt64 = 0
     private(set) var hadStaleConflict = false
     private(set) var loadFailed = false
+    private var diskDigest: Data?
+
+    static func digest(of blob: Data?) -> Data? {
+        guard let blob else { return nil }
+        return Data(SHA256.hash(data: blob))
+    }
+
+    static func currentDiskDigest(storageKey: String) -> Data? {
+        digest(of: SharedStore.read(storageKey))
+    }
+
+    func matchesDisk(_ other: Data?) -> Bool {
+        guard !loadFailed else { return false }
+        return diskDigest == other
+    }
+
+    func clearStaleConflict() { hadStaleConflict = false }
 
     private var revokedSignedPreKeyIds = Set<UInt32>()
     private var revokedKyberPreKeyIds = Set<UInt32>()
@@ -97,6 +114,7 @@ final class PersistentSignalStore: InMemorySignalProtocolStore {
                 loadFailed = true
                 return
             }
+            diskDigest = PersistentSignalStore.digest(of: enc)
             restore(s)
         }
     }
@@ -164,6 +182,7 @@ final class PersistentSignalStore: InMemorySignalProtocolStore {
             throw PersistError.writeFailed
         }
         expectedGeneration = next
+        diskDigest = PersistentSignalStore.digest(of: combined)
     }
 
     override func storePreKey(_ record: PreKeyRecord, id: UInt32, context: StoreContext) throws {

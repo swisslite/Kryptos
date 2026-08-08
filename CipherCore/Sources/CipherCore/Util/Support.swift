@@ -7,6 +7,7 @@ public enum CipherError: Error, Equatable {
     case decryptionFailed
     case stegoCapacityExceeded
     case invalidInput
+    case unsupportedFormat
 }
 
 public func randomBytes(_ count: Int) -> Data {

@@ -116,9 +116,10 @@ final class SmartTextStegoTests: XCTestCase {
 
     func testCompactness() {
         let payload = randomBytes(96)
+        let limit: [StegoLanguage: Int] = [.english: 1100, .russian: 1100, .german: 1400]
         for language in StegoLanguage.allCases {
             let text = SmartTextStego.encode(payload, language: language)
-            XCTAssertLessThan(text.count, 1100, "lang=\(language) count=\(text.count)")
+            XCTAssertLessThan(text.count, limit[language]!, "lang=\(language) count=\(text.count)")
         }
     }
 
@@ -135,5 +136,19 @@ final class SmartTextStegoTests: XCTestCase {
             + "Честно, мой учитель подпилил тот противень, и любой слесарь заложил один ключ.")
         XCTAssertEqual(SmartTextStego.decode(en), probe)
         XCTAssertEqual(SmartTextStego.decode(ru), probe)
+    }
+
+    func testGermanSurvivesSenderNameInNodeText() {
+        let payload = randomBytes(64)
+        let frames = ["Weber: %@ 09:31", "Richter: %@ Gelesen", "Ritter: %@ Bearbeitet 14:52",
+                      "Koch: %@ Zugestellt", "Anna: %@ Heute 08:04"]
+        for frame in frames {
+            let smart = String(format: frame, SmartTextStego.encode(payload, language: .german))
+            XCTAssertEqual(SmartTextStego.decode(smart), payload, "smart in \(frame)")
+            let words = String(format: frame, TextStego.encode(payload, language: .german))
+            XCTAssertEqual(TextStego.decode(words), payload, "words in \(frame)")
+            let letters = String(format: frame, LetterStego.encode(payload, language: .german))
+            XCTAssertEqual(LetterStego.decode(letters), payload, "letters in \(frame)")
+        }
     }
 }

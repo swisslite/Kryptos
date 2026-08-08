@@ -48,13 +48,13 @@ struct SettingsView: View {
                     Button(role: .destructive) { confirmReset = true } label: {
                         SettingsLabel("Erase everything", icon: "trash.fill", color: .red, textColor: .red)
                     }
+                    .confirmationDialog("Erase ALL data? Your identities and private keys, contacts' keys, every conversation, PGP keys and all settings will be destroyed and the app will close. This cannot be undone.",
+                                        isPresented: $confirmReset, titleVisibility: .visible) {
+                        Button("Erase everything", role: .destructive) { AppReset.eraseEverythingAndQuit() }
+                    }
                 }
             }
             .navigationTitle("Settings")
-            .confirmationDialog("Erase ALL data? Your identities and private keys, contacts' keys, every conversation, PGP keys and all settings will be destroyed and the app will close. This cannot be undone.",
-                                isPresented: $confirmReset, titleVisibility: .visible) {
-                Button("Erase everything", role: .destructive) { AppReset.eraseEverythingAndQuit() }
-            }
         }
     }
 }
@@ -96,16 +96,16 @@ private struct PrivacySettingsView: View {
             } header: {
                 Text("Security")
             } footer: {
-                Text(lockAvailable
-                     ? "Face ID or the device passcode is required to open Kryptos. Outside the app the screen is covered, so the app-switcher snapshot never shows your chats. Your keys stay encrypted in the device keychain either way — this guards the app, not the files."
-                     : "To use the lock, set a passcode on your device. Outside the app the screen is covered, so the app-switcher snapshot never shows your chats. Your keys stay encrypted in the device keychain either way — this guards the app, not the files.")
+                if !lockAvailable {
+                    Text("To use the lock, set a passcode on your device.")
+                }
             }
 
             Section {
                 NavigationLink {
                     LockCodeView(code: LockCodes.app, other: LockCodes.panic, isSet: $appCodeSet,
                                  title: "App passcode",
-                                 explanation: "An ordinary passcode that opens Kryptos when you do not want to use biometrics. Optional — you can always unlock with Face ID or your device passcode.",
+                                 explanation: "An ordinary passcode that opens Kryptos when you do not want to use biometrics. Optional.",
                                  newLabel: "New passcode", repeatLabel: "Repeat passcode",
                                  saveLabel: "Save passcode", setFooter: "At least 4 characters. It must be different from the panic password.",
                                  removeLabel: "Remove app passcode",
@@ -121,9 +121,9 @@ private struct PrivacySettingsView: View {
                 NavigationLink {
                     LockCodeView(code: LockCodes.panic, other: LockCodes.app, isSet: $panicSet,
                                  title: "Panic password",
-                                 explanation: "Type this password on the lock screen instead of unlocking, and Kryptos immediately and permanently erases everything: your identities and private keys, contacts' keys, every conversation, PGP keys, learned keyboard words and all settings. The app then opens empty, exactly like a fresh install — nothing hints that anything was erased. There is no confirmation step and no way to undo it.",
+                                 explanation: "Type it on the lock screen and Kryptos immediately and permanently erases everything, then opens empty like a fresh install.",
                                  newLabel: "New password", repeatLabel: "Repeat password",
-                                 saveLabel: "Save password", setFooter: "At least 4 characters. Pick something you would never type by accident, and that is not your device passcode or your app passcode.",
+                                 saveLabel: "Save password", setFooter: "At least 4 characters. Pick something you would never type by accident.",
                                  removeLabel: "Remove panic password",
                                  removeConfirm: "Remove the panic password? Typing it will no longer erase anything.",
                                  savedMessage: "Panic password saved.", removedMessage: "Panic password removed.")
@@ -137,7 +137,7 @@ private struct PrivacySettingsView: View {
             } header: {
                 Text("Lock screen codes")
             } footer: {
-                Text("Both codes are typed in the same field on the lock screen. The app passcode opens Kryptos. The panic password erases everything instead, then opens the app as if it were freshly installed.")
+                Text("The app passcode opens Kryptos; the panic password erases everything.")
             }
 
             Section {
@@ -152,7 +152,7 @@ private struct PrivacySettingsView: View {
             } header: {
                 Text("Clipboard")
             } footer: {
-                Text("Auto-decrypt: copy an encrypted message, open Kryptos, and it is shown at once. “This device only” keeps copied text off Universal Clipboard. Auto-clear erases whatever Kryptos copied after the chosen time.")
+                Text("“This device only” keeps copied text off your other Apple devices. Auto-clear erases it after the chosen time.")
             }
 
             Section {
@@ -160,7 +160,7 @@ private struct PrivacySettingsView: View {
             } header: {
                 Text("Metadata")
             } footer: {
-                Text("Pads the ciphertext to a fixed set of sizes so its length no longer hints at how long your message is. Makes the ciphertext somewhat larger.")
+                Text("Pads Chats and Password to fixed sizes. Not applied to photos or PGP.")
             }
         }
         .navigationTitle("Privacy")
@@ -217,8 +217,8 @@ private struct LockCodeView: View {
                     if !lockAvailable { Text("Not active right now") }
                 } footer: {
                     Text(lockAvailable
-                         ? "Codes are typed on the lock screen. Turn on the app lock so they can be used."
-                         : "This device has no passcode, so Kryptos never shows its lock screen — and a code saved here cannot be typed anywhere. Set a device passcode and turn the app lock on to make it work again.")
+                         ? "Turn on the app lock so the codes can be used."
+                         : "This device has no passcode, so Kryptos never shows its lock screen.")
                 }
             }
 
@@ -244,14 +244,14 @@ private struct LockCodeView: View {
                 Section {
                     Button(removeLabel, role: .destructive) { confirmRemove = true }
                         .disabled(busy)
+                        .confirmationDialog(removeConfirm, isPresented: $confirmRemove, titleVisibility: .visible) {
+                            Button(removeLabel, role: .destructive) { remove() }
+                        }
                 }
             }
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog(removeConfirm, isPresented: $confirmRemove, titleVisibility: .visible) {
-            Button(removeLabel, role: .destructive) { remove() }
-        }
     }
 
     private func save() {
@@ -300,7 +300,7 @@ private struct StegoSettingsView: View {
     @State private var sample = ""
 
     private var sampleKey: String {
-        "\(settings.effectiveLanguage == .russian ? "ru" : "en")-\(settings.chatStegoMode.rawValue)"
+        "\(settings.effectiveLanguage.rawValue)-\(settings.chatStegoMode.rawValue)"
     }
 
     var body: some View {
@@ -317,7 +317,7 @@ private struct StegoSettingsView: View {
                     .pickerStyle(.menu)
                 }
             } footer: {
-                Text("When on, a message in Chats is first encrypted with Signal, then wrapped in ordinary text — Mode decides how that text looks. Off, it is sent as a compact code. The encryption is identical either way — only the outer wrapping changes.")
+                Text("Signal messages are wrapped in ordinary text — Mode decides how that text looks.")
             }
 
             if settings.chatStegoEnabled {
@@ -346,11 +346,11 @@ private struct StegoSettingsView: View {
     private var exampleFooter: LocalizedStringKey {
         switch settings.chatStegoMode {
         case .words:
-            return "Your everyday messages look like this. The first message to a new contact carries the post-quantum key setup, so it is longer — but once they reply even once, every message after that is short."
+            return "This is how your messages look. The first message to a new contact is longer."
         case .smart:
-            return "Smart mode builds real, grammatical sentences that read like an ordinary note, at the cost of a somewhat longer message. Pick Simple words for a shorter cover text."
+            return "Real sentences instead of a word salad, at the cost of a longer text."
         case .letters:
-            return "The shortest mode there is — roughly half the length of Simple words. The text is a plain run of random letters, so it does not pretend to be a real message: it hides what you wrote, not the fact that you sent something."
+            return "The shortest mode — about half the length of Simple words."
         }
     }
 
@@ -373,7 +373,7 @@ private struct KeyboardSettingsView: View {
             Section {
                 Toggle("Auto-decrypt on open", isOn: $settings.keyboardAutoDecrypt)
             } footer: {
-                Text("When the clipboard holds an encrypted message, the Kryptos keyboard decrypts it the moment it opens — copy a message in any messenger and it is revealed right there, no extra taps.")
+                Text("The keyboard reveals an encrypted message from the clipboard as it opens.")
             }
 
             Section {
@@ -396,11 +396,15 @@ private struct KeyboardSettingsView: View {
                 Toggle("Emoji key", isOn: $settings.keyboardEmoji)
                 if settings.keyboardSuggestions || settings.keyboardAutocorrect {
                     Button("Forget learned words", role: .destructive) { confirmForget = true }
+                        .confirmationDialog("Forget the words the keyboard has learned from your typing? The built-in dictionaries stay.",
+                                            isPresented: $confirmForget, titleVisibility: .visible) {
+                            Button("Forget learned words", role: .destructive) { SharedStore.delete("kbdict") }
+                        }
                 }
             } header: {
                 Text("Typing")
             } footer: {
-                Text("Context-aware completions, next-word predictions and typo fixes from built-in offline dictionaries (Russian and English). Auto-correction fixes a mistyped word the moment you finish it — keyboard-slip typos and a missing space (какдела → как дела). Backspace right after — or a tap on your word shown «quoted» in the strip — undoes the fix and the keyboard never touches that word again. Everything is learned right on the device, stored encrypted, and disabled in password fields. Changes apply the next time the keyboard opens.")
+                Text("Completions and auto-correction from offline dictionaries. Off in password fields.")
             }
 
             Section {
@@ -416,15 +420,11 @@ private struct KeyboardSettingsView: View {
                 Toggle("Message field in the keyboard", isOn: $settings.keyboardCompose)
                 Toggle("Field button on the keyboard", isOn: $settings.keyboardComposeToggle)
             } footer: {
-                Text("Type your message inside the keyboard and encrypt it there. Only the encrypted result reaches the messenger — it can never store the plaintext you typed before sending. The button on the keyboard turns the field on and off without leaving the app you are in.")
+                Text("The field lets you type outside the messenger, so it cannot keep a draft. The button toggles that field from the keyboard.")
             }
         }
         .navigationTitle("Keyboard")
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog("Forget the words the keyboard has learned from your typing? The built-in dictionaries stay.",
-                            isPresented: $confirmForget, titleVisibility: .visible) {
-            Button("Forget learned words", role: .destructive) { SharedStore.delete("kbdict") }
-        }
     }
 
     private var languagesSummary: String {
@@ -437,7 +437,8 @@ private struct KeyboardSettingsView: View {
 
 private let keyboardLanguageCatalog: [(code: String, title: String.LocalizationValue)] = [
     ("en", "English"),
-    ("ru", "Russian")
+    ("ru", "Russian"),
+    ("de", "German")
 ]
 
 private struct KeyboardLanguagesView: View {
@@ -451,7 +452,7 @@ private struct KeyboardLanguagesView: View {
                         .disabled(settings.keyboardLanguages == [lang.code])
                 }
             } footer: {
-                Text("The keyboard offers a letter layout for each enabled language, and the language key switches between them. At least one language always stays on. Changes apply the next time the keyboard opens.")
+                Text("The language key switches layouts. At least one language always stays on.")
             }
         }
         .navigationTitle("Languages")
@@ -510,9 +511,9 @@ private struct KeyBackupView: View {
     var body: some View {
         List {
             Section {
-                Text("The file holds your identities and their private keys, your contacts' keys and your PGP keys. It is encrypted with the password you choose here — Kryptos keeps no copy of that password, so a lost password means a lost backup.")
+                Text("The file holds your keys, encrypted with the password you choose here. Kryptos keeps no copy of it.")
             } footer: {
-                Text("Your message history is not included. After restoring on a new phone, use only that phone: a conversation's key chain cannot run in two places at once.")
+                Text("Your message history is not included.")
             }
 
             Section {
@@ -530,7 +531,7 @@ private struct KeyBackupView: View {
             } header: {
                 Text("Export")
             } footer: {
-                Text("At least 8 characters. Anyone who gets both the file and this password gets your keys, so keep them apart.")
+                Text("At least 8 characters. Keep the file and the password apart.")
             }
 
             Section {
@@ -544,6 +545,10 @@ private struct KeyBackupView: View {
                         .textInputAutocapitalization(.never).autocorrectionDisabled()
                     Button(busy ? "Working…" : "Restore keys") { unlockArchive() }
                         .disabled(busy || importPassword.isEmpty)
+                        .confirmationDialog("Replace the keys on this device with the ones from the backup? The keys currently here will be gone.",
+                                            isPresented: $confirmImport, titleVisibility: .visible) {
+                            Button("Restore keys", role: .destructive) { applyArchive() }
+                        }
                 }
                 if let importMessage {
                     Text(importMessage)
@@ -553,7 +558,7 @@ private struct KeyBackupView: View {
             } header: {
                 Text("Import")
             } footer: {
-                Text("Restoring replaces the identities, contacts' keys and PGP keys currently on this device.")
+                Text("Restoring replaces the keys currently on this device.")
             }
 
         }
@@ -577,16 +582,14 @@ private struct KeyBackupView: View {
         .fileImporter(isPresented: $showImporter, allowedContentTypes: [.plainText, .text, .data]) { result in
             loadFile(result)
         }
-        .confirmationDialog("Replace the keys on this device with the ones from the backup? The keys currently here will be gone.",
-                            isPresented: $confirmImport, titleVisibility: .visible) {
-            Button("Restore keys", role: .destructive) { applyArchive() }
-        }
         .onChange(of: lock.isLocked) { _, locked in
             guard locked else { return }
             showExporter = false
             showImporter = false
             confirmImport = false
             document = nil
+            pending = nil
+            importText = nil
             exportPassword = ""
             exportConfirm = ""
             importPassword = ""
@@ -603,16 +606,18 @@ private struct KeyBackupView: View {
             failExport(String(localized: "The passwords do not match."))
             return
         }
-        guard let profiles = signal.archivedProfiles(), let pgpKeys = pgp.archivedIdentities() else {
-            failExport(String(localized: "Could not create the backup file."))
-            return
-        }
         let secret = exportPassword
-        let archive = KeyArchive.make(profiles: profiles,
-                                      pgpIdentities: pgpKeys,
-                                      pgpRecipients: pgp.archivedRecipients())
         busy = true
         Task { @MainActor in
+            await Task.yield()
+            guard let profiles = signal.archivedProfiles(), let pgpKeys = pgp.archivedIdentities() else {
+                busy = false
+                failExport(String(localized: "Could not create the backup file."))
+                return
+            }
+            let archive = KeyArchive.make(profiles: profiles,
+                                          pgpIdentities: pgpKeys,
+                                          pgpRecipients: pgp.archivedRecipients())
             let outcome = await Task.detached(priority: .userInitiated) { () -> Result<String, Error> in
                 do { return .success(try archive.sealed(password: secret)) } catch { return .failure(error) }
             }.value
@@ -667,17 +672,22 @@ private struct KeyBackupView: View {
 
     private func applyArchive() {
         guard let archive = pending else { return }
-        let signalOK = archive.profiles.isEmpty || signal.restoreProfiles(archive.profiles)
-        let pgpRestored = pgp.restore(identities: archive.pgpIdentities, recipients: archive.pgpRecipients)
-        let pgpOK = archive.pgpIdentities.isEmpty || pgpRestored
-        pending = nil
-        importText = nil
-        importPassword = ""
-        if signalOK, pgpOK {
-            importFailed = false
-            importMessage = String(localized: "Keys restored.")
-        } else {
-            failImport(String(localized: "Could not restore the keys from this backup."))
+        busy = true
+        Task { @MainActor in
+            await Task.yield()
+            let signalOK = archive.profiles.isEmpty || signal.restoreProfiles(archive.profiles)
+            let pgpRestored = pgp.restore(identities: archive.pgpIdentities, recipients: archive.pgpRecipients)
+            let pgpOK = archive.pgpIdentities.isEmpty || pgpRestored
+            pending = nil
+            importText = nil
+            importPassword = ""
+            busy = false
+            if signalOK, pgpOK {
+                importFailed = false
+                importMessage = String(localized: "Keys restored.")
+            } else {
+                failImport(String(localized: "Could not restore the keys from this backup."))
+            }
         }
     }
 
@@ -708,7 +718,7 @@ private struct AboutView: View {
             Section {
                 Text("Kryptos is a private-communication tool that works through any messenger. You write a message, Kryptos encrypts it on your device, and you send the result through WhatsApp, Telegram, SMS — anything. Only your contact's Kryptos can read it; the messenger only ever sees ciphertext.")
             } footer: {
-                Text("Fully offline: no servers, no accounts, no analytics. Your private keys never leave this device.")
+                Text("Fully offline: no servers, no accounts, no analytics. Keys never leave the device.")
             }
 
             Section {
@@ -731,7 +741,15 @@ private struct AboutView: View {
             } header: {
                 Text("Source code")
             } footer: {
-                Text("The full source is public: read it, check the cryptography, or build the app yourself.")
+                Text("The source is public — read it or build the app yourself.")
+            }
+
+            Section {
+                Link(destination: URL(string: "https://datakeeper.pages.dev/kryptos")!) {
+                    LinkRow(icon: "globe", title: "Kryptos", value: "datakeeper.pages.dev/kryptos")
+                }
+            } header: {
+                Text("Website")
             }
         }
         .navigationTitle("About")
@@ -802,6 +820,9 @@ private struct DeveloperView: View {
     var body: some View {
         List {
             Section {
+                Link(destination: URL(string: "https://datakeeper.pages.dev")!) {
+                    LinkRow(icon: "globe", title: "Website", value: "datakeeper.pages.dev")
+                }
                 Link(destination: URL(string: "mailto:datakeepers@proton.me")!) {
                     LinkRow(icon: "envelope.fill", title: "Email", value: "datakeepers@proton.me")
                 }
@@ -816,7 +837,7 @@ private struct DeveloperView: View {
                             title: "GitHub profile", value: "@swisslite")
                 }
             } footer: {
-                Text("Questions, ideas or a bug to report? I'd be glad to hear from you.")
+                Text("Questions, ideas or a bug? I'd be glad to hear from you.")
             }
         }
         .navigationTitle("Developer")

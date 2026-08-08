@@ -147,16 +147,21 @@ final class SteganographyTests: XCTestCase {
         XCTAssertEqual(before, after)
     }
 
-    func testPaddedHidesMessageLength() throws {
+    func testCarrierSizeNeverDependsOnMessageLength() throws {
         let cover = photo()
-        func changes(_ message: String) throws -> Int {
+        for message in ["да", String(repeating: "заметно более длинный текст ", count: 30)] {
             let stego = try ImageStego.hide(Data(message.utf8), password: "pw", rgba: cover,
-                                            width: width, height: height, pad: true)
-            return zip(cover, stego).reduce(0) { $0 + ($1.0 == $1.1 ? 0 : 1) }
+                                            width: width, height: height)
+            XCTAssertEqual(stego.count, cover.count)
         }
-        let short = try changes("да")
-        let long = try changes("нет, заметно более длинный текст!")
-        XCTAssertLessThan(abs(short - long), 80)
+    }
+
+    func testWholeCapacityStaysUsable() throws {
+        let cover = photo()
+        let capacity = ImageStego.capacity(rgba: cover, width: width, height: height)
+        let message = Data(randomBytes(capacity))
+        let stego = try ImageStego.hide(message, password: "pw", rgba: cover, width: width, height: height)
+        XCTAssertEqual(try ImageStego.reveal(rgba: stego, width: width, height: height, password: "pw"), message)
     }
 
     func testRejectsMalformedBuffer() {

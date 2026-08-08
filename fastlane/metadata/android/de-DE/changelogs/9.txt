@@ -1,0 +1,11 @@
+Neu
+- Komplett auf Deutsch: Oberfläche, QWERTZ-Layout mit Wörterbüchern, Steganografie.
+- Die Längenmaskierung greift jetzt auch bei der Steganografie.
+- Android: Die Schloss-Taste kann die Nachricht direkt senden.
+
+Behoben
+- Die Entschlüsselung am Bildschirm scheiterte an Namen und Füllwörtern.
+- Die Tastenvorschau war in Bildschirmaufnahmen auch in Passwortfeldern sichtbar.
+- Hänger beim Start und in PGP sind weg.
+
+Neues Stego-Format: ältere Versionen öffnen maskierte Nachrichten nicht.

@@ -13,6 +13,7 @@ object WireFormat {
     private const val MIN_TOKEN_BYTES = 24
     private const val MIN_TOKEN_CHARS = 32
     private const val MAX_TOKEN_CHARS = 2_000_000
+    private const val KNOWN_HEADER_BITS = 0x0F or 0x10 or 0x20
 
     fun wrap(body: ByteArray, type: Int, deflate: Boolean, padded: Boolean, pairKey: ByteArray): String =
         wrap(body, type, deflate, padded, pairKey, randomBytes(SALT_LENGTH))
@@ -38,6 +39,7 @@ object WireFormat {
         val plain = ctr(key, iv, masked)
         if (plain.isEmpty()) return null
         val header = plain[0].toInt() and 0xFF
+        if (header and KNOWN_HEADER_BITS.inv() != 0) return null
         val type = header and 0x0F
         if (type != 2 && type != 3) return null
         val inner = plain.copyOfRange(1, plain.size)

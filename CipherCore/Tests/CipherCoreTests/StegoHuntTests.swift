@@ -3,7 +3,8 @@ import XCTest
 
 final class StegoIntegrityTests: XCTestCase {
     func testWordListsAreCleanAndUnique() {
-        for words in [StegoWordlists.english, StegoWordlists.russian] {
+        for language in StegoLanguage.allCases {
+            let words = language.words
             XCTAssertEqual(words.count, 4096)
             XCTAssertEqual(Set(words).count, 4096, "duplicate words")
             for w in words {

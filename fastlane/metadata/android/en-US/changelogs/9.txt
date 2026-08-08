@@ -1,0 +1,11 @@
+New
+- Full German: interface, QWERTZ layout with its own dictionaries, steganography.
+- Length masking now covers steganography too.
+- Android: the lock key can send the message right away.
+
+Fixed
+- On-screen stego decryption broke on names and stray words.
+- The key preview showed in screen recordings inside password fields.
+- Stalls on launch, on long clipboard text and in PGP are gone.
+
+The stego format changed: older builds will not open length-masked messages.

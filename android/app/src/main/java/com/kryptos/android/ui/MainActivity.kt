@@ -35,8 +35,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -58,6 +56,7 @@ import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -65,7 +64,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -138,22 +136,31 @@ class MainActivity : FragmentActivity() {
         }
         applyShield()
         hardenWindow()
-        val storageBroken = mutableStateOf(runCatching { SignalService.ensureInitialized() }.isFailure)
-        if (!storageBroken.value && (savedInstanceState == null || !AppLock.hasLaunched)) AppLock.onLaunch(this)
+        if (savedInstanceState == null || !AppLock.hasLaunched) AppLock.onLaunch(this)
+        val boot = mutableStateOf(if (SignalService.isReady) BootState.Ready else BootState.Loading)
+        if (boot.value != BootState.Ready) {
+            @Suppress("OPT_IN_USAGE")
+            GlobalScope.launch(Dispatchers.Default) {
+                val ok = runCatching { SignalService.ensureInitialized() }.isSuccess
+                withContext(Dispatchers.Main) {
+                    boot.value = if (ok) BootState.Ready else BootState.Broken
+                }
+            }
+        }
         @Suppress("OPT_IN_USAGE")
         GlobalScope.launch(Dispatchers.Default) { runCatching { PgpService.ensureInitialized() } }
 
         setContent {
             KryptosTheme {
                 NoKeyboardLearning {
-                    if (storageBroken.value) {
-                        StorageRecoveryScreen {
-                            runCatching { com.kryptos.android.security.DataWipe.wipe(applicationContext) }
-                            storageBroken.value = !SignalService.isReady
-                        }
-                        return@NoKeyboardLearning
-                    }
                     LockGate(activity = this) {
+                    when (boot.value) {
+                        BootState.Loading -> BootScreen()
+                        BootState.Broken -> StorageRecoveryScreen {
+                            runCatching { com.kryptos.android.security.DataWipe.wipe(applicationContext) }
+                            boot.value = if (SignalService.isReady) BootState.Ready else BootState.Broken
+                        }
+                        BootState.Ready -> {
                         val ui by AppSettingsStore.ui.collectAsState()
                         val visible = ui.visibleTabs
                         var tabKey by rememberSaveable { mutableStateOf(AppSettingsStore.AppTab.CHATS.key) }
@@ -200,6 +207,8 @@ class MainActivity : FragmentActivity() {
                                 }
                             }
                         }
+                        }
+                    }
                     }
                 }
             }
@@ -228,14 +237,14 @@ class MainActivity : FragmentActivity() {
         if (!SignalService.isReady) return
         val clip = clipboardText(this)
         if (clip.isBlank() || !ClipScanMemory.markSeen(clip)) return
-        val stegoSized = clip.length in 40..64_000
-        if (!WireFormat.isToken(clip) &&
-            !(stegoSized && (TextStego.looksLikeStego(clip) || SmartTextStego.looksLikeStego(clip) ||
-                LetterStego.looksLikeStego(clip)))
-        ) return
         val appContext = applicationContext
         @Suppress("OPT_IN_USAGE")
         GlobalScope.launch(Dispatchers.Default) {
+            val stegoSized = clip.length in 40..64_000
+            if (!WireFormat.isToken(clip) &&
+                !(stegoSized && (TextStego.looksLikeStego(clip) || SmartTextStego.looksLikeStego(clip) ||
+                    LetterStego.looksLikeStego(clip)))
+            ) return@launch
             if (OwnCipherMarker.matches(clip)) return@launch
             for (contact in SignalService.contacts.value) {
                 try {
@@ -473,6 +482,23 @@ private fun TabItem(
 
 fun copySensitive(context: Context, text: String, toast: String? = null) {
     ClipboardGuard.copy(context, text, toast)
+}
+
+fun copyCipher(context: Context, text: String, toast: String? = null) {
+    OwnCipherMarker.mark(text)
+    ClipboardGuard.copy(context, text, toast)
+}
+
+private enum class BootState { Loading, Ready, Broken }
+
+@Composable
+private fun BootScreen() {
+    Box(Modifier.fillMaxSize()) {
+        ScreenBackground()
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(Modifier.size(28.dp), color = K.accent, strokeWidth = 2.dp)
+        }
+    }
 }
 
 fun clipboardText(context: Context): String {

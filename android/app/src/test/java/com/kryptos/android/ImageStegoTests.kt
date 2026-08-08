@@ -119,6 +119,14 @@ class ImageStegoTests {
     fun twoRunsProduceDifferentCarriers() {
         val cover = photo()
         val message = "одно и то же".toByteArray(Charsets.UTF_8)
+        val carrierA = ImageStego.hide("да".toByteArray(Charsets.UTF_8), "pw", cover, width, height)
+        val carrierB = ImageStego.hide(
+            "заметно более длинный текст ".repeat(30).toByteArray(Charsets.UTF_8),
+            "pw", cover, width, height,
+        )
+        assertEquals(cover.size, carrierA.size)
+        assertEquals(cover.size, carrierB.size)
+
         val a = ImageStego.hide(message, "pw", cover, width, height)
         val b = ImageStego.hide(message, "pw", cover, width, height)
         assertNotEquals(a.toList(), b.toList())

@@ -15,6 +15,7 @@ final class SignalService: ObservableObject {
     @Published private(set) var mySafetyNumber = ""
     @Published private(set) var isLoaded = false
     @Published private(set) var keyMaterialLost = false
+    @Published private(set) var hasBooted = false
 
     private var identity: IdentityKeyPair!
     private var store: PersistentSignalStore!
@@ -31,8 +32,12 @@ final class SignalService: ObservableObject {
 
     private var indexUnavailable = false
 
-    init() {
+    init() {}
+
+    func start() {
+        guard !hasBooted else { return }
         bootstrapFromIndex()
+        hasBooted = true
     }
 
     private func bootstrapFromIndex() {
@@ -56,7 +61,7 @@ final class SignalService: ObservableObject {
     private static func defaultProfileName(_ n: Int) -> String { String(localized: "Profile \(n)") }
 
     private static func relocalizedDefaultName(_ p: Profile) -> Profile {
-        for prefix in ["Profile ", "Профиль "] where p.name.hasPrefix(prefix) {
+        for prefix in ["Profile ", "Профиль ", "Profil "] where p.name.hasPrefix(prefix) {
             if let n = Int(p.name.dropFirst(prefix.count)) {
                 var q = p
                 q.name = defaultProfileName(n)
@@ -133,6 +138,7 @@ final class SignalService: ObservableObject {
     }
 
     private func wipeStorage(for id: UUID) {
+        OwnCipherMarker.clear()
         for key in [StoreKey.identity(id), StoreKey.fileKey(id), StoreKey.meta(id), StoreKey.store(id)] {
             SharedStore.delete(key)
         }
@@ -159,6 +165,7 @@ final class SignalService: ObservableObject {
         isLoaded = false
         keyMaterialLost = false
         lastMetaFingerprint = nil
+        lastMetaDigest = nil
         contacts = []
         messages = [:]
         autoDelete = [:]
@@ -230,6 +237,7 @@ final class SignalService: ObservableObject {
                 return
             }
             loadedMeta = m
+            lastMetaDigest = Data(SHA256.hash(data: dec))
         case .unavailable:
             return
         case .absent:
@@ -417,6 +425,7 @@ final class SignalService: ObservableObject {
 
     @discardableResult
     private func ensureLoaded() -> Bool {
+        if !hasBooted { start(); return isLoaded }
         if indexUnavailable {
             bootstrapFromIndex()
             if indexUnavailable { return false }
@@ -530,15 +539,23 @@ final class SignalService: ObservableObject {
         guard meta != nil, let cryptKey, let metaStorageKey else { return }
         meta.contacts = contacts
         meta.messages = messages
-        guard let json = try? JSONEncoder().encode(meta),
-              let box = try? AES.GCM.seal(json, using: cryptKey),
+        guard let json = try? SignalService.metaEncoder.encode(meta) else { return }
+        let plainDigest = Data(SHA256.hash(data: json))
+        guard plainDigest != lastMetaDigest else { return }
+        guard let box = try? AES.GCM.seal(json, using: cryptKey),
               let combined = box.combined else { return }
         guard SharedStore.write(metaStorageKey, combined) else { return }
+        lastMetaDigest = plainDigest
         lastMetaFingerprint = Data(SHA256.hash(data: combined))
     }
 
-    func myKeyString() -> String {
-        guard ensureLoaded() else { return "" }
+    struct KeyShare {
+        let payload: Data
+        var text: String { KeyText.prefix + payload.base64EncodedString() }
+    }
+
+    func myKeyShare() -> KeyShare? {
+        guard ensureLoaded() else { return nil }
         return withStoreLock {
             reloadStoreFromDisk()
             let opk = (try? store.batch { nextOneTimePreKeyForBundle() }) ?? nil
@@ -550,9 +567,11 @@ final class SignalService: ObservableObject {
                 kyberPreKeyId: meta.kyberPreKeyId, kyberPreKey: meta.kyberPreKeyPub, kyberPreKeySignature: meta.kyberPreKeySig,
                 oneTimePreKeyId: opk?.id, oneTimePreKey: opk?.pub
             )
-            return "KRYPTOS-KEY:" + SignalService.encodeBundle(payload).base64EncodedString()
+            return KeyShare(payload: SignalService.encodeBundle(payload))
         }
     }
+
+    func myKeyString() -> String { myKeyShare()?.text ?? "" }
 
     private static let bundleFormatByte: UInt8 = 0x01
 
@@ -591,24 +610,37 @@ final class SignalService: ObservableObject {
                              oneTimePreKeyId: otpId, oneTimePreKey: otp)
     }
 
+    private static func parseKeyPayload(_ blob: Data) -> BundlePayload? {
+        if blob.first == bundleFormatByte { return try? decodeBundle(blob) }
+        return try? JSONDecoder().decode(BundlePayload.self, from: blob)
+    }
+
+    private static func parseKeyText(_ raw: String) -> BundlePayload? {
+        for blob in KeyText.blobs(in: raw) {
+            if let peer = parseKeyPayload(blob) { return peer }
+        }
+        return nil
+    }
+
     @discardableResult
     func addContact(fromKeyString raw: String, displayName: String) throws -> Contact {
-        guard ensureLoaded() else { throw SignalServiceError.storageUnavailable }
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let range = trimmed.range(of: "KRYPTOS-KEY:") else { throw SignalServiceError.badKeyString }
-        let b64 = String(trimmed[range.upperBound...]).prefix { !$0.isWhitespace }
-        guard let blob = Data(base64Encoded: String(b64)) else { throw SignalServiceError.badKeyString }
-        let peer: BundlePayload
-        if blob.first == SignalService.bundleFormatByte {
-            peer = try SignalService.decodeBundle(blob)
-        } else if let j = try? JSONDecoder().decode(BundlePayload.self, from: blob) {
-            peer = j
-        } else {
-            throw SignalServiceError.badKeyString
-        }
+        guard let peer = SignalService.parseKeyText(raw) else { throw SignalServiceError.badKeyString }
+        return try addPeer(peer, displayName: displayName)
+    }
 
+    @discardableResult
+    func addContact(scanned raw: Data, displayName: String) throws -> Contact {
+        let legacy = String(data: raw, encoding: .isoLatin1) ?? String(decoding: raw, as: UTF8.self)
+        let peer = SignalService.parseKeyPayload(raw) ?? SignalService.parseKeyText(legacy)
+        guard let peer else { throw SignalServiceError.unreadableScan }
+        return try addPeer(peer, displayName: displayName)
+    }
+
+    @discardableResult
+    private func addPeer(_ peer: BundlePayload, displayName: String) throws -> Contact {
+        guard ensureLoaded() else { throw SignalServiceError.storageUnavailable }
         let fp = SignalFormat.hex(peer.identityKey)
-        guard fp != myFingerprint else { throw SignalServiceError.badKeyString }
+        guard fp != myFingerprint else { throw SignalServiceError.ownKey }
 
         let ik = try IdentityKey(bytes: peer.identityKey)
         let spk = try PublicKey(peer.signedPreKey)
@@ -673,6 +705,13 @@ final class SignalService: ObservableObject {
     }
 
     private var lastMetaFingerprint: Data?
+    private var lastMetaDigest: Data?
+
+    private static let metaEncoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return encoder
+    }()
 
     func reloadCurrentFromDisk() {
         guard ensureLoaded() else { return }
@@ -684,6 +723,7 @@ final class SignalService: ObservableObject {
                   let dec = try? AES.GCM.open(box, using: cryptKey),
                   let m = try? JSONDecoder().decode(Meta.self, from: dec) else { return }
             lastMetaFingerprint = fingerprint
+            lastMetaDigest = Data(SHA256.hash(data: dec))
             meta = m
             autoDelete = meta.autoDelete ?? [:]
             contacts = m.contacts
@@ -693,7 +733,13 @@ final class SignalService: ObservableObject {
     }
 
     private func reloadStoreFromDisk() {
-        store = PersistentSignalStore(identity: identity, registrationId: meta.registrationId, storageKey: StoreKey.store(currentID), cryptKey: cryptKey)
+        let storageKey = StoreKey.store(currentID)
+        let onDisk = PersistentSignalStore.currentDiskDigest(storageKey: storageKey)
+        if let store, store.matchesDisk(onDisk) {
+            store.clearStaleConflict()
+            return
+        }
+        store = PersistentSignalStore(identity: identity, registrationId: meta.registrationId, storageKey: storageKey, cryptKey: cryptKey)
     }
 
     private func withStoreLock<T>(_ body: () throws -> T) rethrows -> T {
@@ -711,13 +757,19 @@ final class SignalService: ObservableObject {
         }
     }
 
+    private func hasSession(with fingerprint: String) -> Bool {
+        guard let store, let addr = try? ProtocolAddress(name: fingerprint, deviceId: 1) else { return false }
+        return ((try? store.loadSession(for: addr, context: ctx)) ?? nil) != nil
+    }
+
     func encrypt(_ text: String, to contact: Contact) throws -> String {
         guard ensureLoaded() else { throw SignalServiceError.storageUnavailable }
         let cover = ChatStego.resolvedCover()
         let pad = PrivacyConfig.lengthPadding
         let armored = try withStoreLock {
             try withConflictRetry {
-                try store.batch {
+                guard hasSession(with: contact.fingerprint) else { throw SignalServiceError.sessionLost }
+                return try store.batch {
                     try SignalWire.encrypt(text, toFingerprint: contact.fingerprint, myFingerprint: myFingerprint,
                                            store: store, stego: cover.language, mode: cover.mode, pad: pad)
                 }
@@ -841,6 +893,7 @@ final class SignalService: ObservableObject {
                 return false
             }
             reloadStoreFromDisk()
+            OwnCipherMarker.clear()
             contacts = []
             messages = [:]
             meta.autoDelete = nil

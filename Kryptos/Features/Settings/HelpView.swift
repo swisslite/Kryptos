@@ -40,7 +40,7 @@ private let howToSetupSteps: [HowToStep] = [
     HowToStep(title: "Open the iOS keyboard settings",
               text: "Open the iOS Settings app, find Kryptos in the list of apps and tap Keyboards. On the same screen you can set “Paste from Other Apps” to Allow, so iOS stops asking every time a copied message is read."),
     HowToStep(title: "Enable the keyboard and Full Access",
-              text: "Turn on Kryptos, then turn on Allow Full Access — without it the keyboard cannot reach your keys and encryption in it will not work. iOS shows a general warning about third-party keyboards here; Kryptos contains no networking code at all, so what you type cannot leave the device."),
+              text: "Turn on Kryptos, then turn on Allow Full Access — without it the keyboard cannot reach your keys and encryption in it will not work. iOS shows a general warning about third-party keyboards here; Kryptos never opens a network connection, so what you type cannot leave the device."),
 ]
 
 @MainActor
@@ -62,7 +62,7 @@ private let howToNotes: [LocalizedStringKey] = [
     "The very first message to a new contact is noticeably longer than the rest: it carries the post-quantum handshake. Once they reply, messages become short.",
     "The same message decrypts only once — that is forward secrecy at work. Messages you have already read stay in the chat history.",
     "Your keys live on this device only. Before you change phones, make a key backup in Settings.",
-    "The app is completely offline: no servers, no accounts, and not a single line of networking code.",
+    "The app is completely offline: no servers, no accounts, and it never opens a network connection.",
 ]
 
 private struct HowToWalkthrough: View {
@@ -174,13 +174,17 @@ private let faqItems: [HowToStep] = [
     HowToStep(title: "Does my contact need Kryptos too?",
               text: "Yes — nothing but Kryptos can decrypt the message. Which phone each of you carries does not matter though: the iPhone and Android versions are fully compatible, and keys and messages work in both directions."),
     HowToStep(title: "Does it need an internet connection?",
-              text: "No. Kryptos has no servers, no accounts and not a single line of networking code. Encryption happens entirely on the device, and delivery is handled by whatever messenger you already use."),
+              text: "No. Kryptos has no servers and no accounts, and it never opens a network connection. Encryption happens entirely on the device, and delivery is handled by whatever messenger you already use."),
     HowToStep(title: "Can the messenger read my messages?",
               text: "No — it only ever gets text that is already encrypted. It does still see that you sent something, to whom, and roughly how much. That is metadata, and Kryptos does not hide it; you can at least mask the length in Settings → Privacy."),
     HowToStep(title: "Can I send a photo or a file through Kryptos?",
               text: "No, Kryptos encrypts text only. The Photo tab does something different: it hides a text message inside a picture, rather than sending the picture itself securely."),
     HowToStep(title: "Why is the first message so long?",
               text: "It carries the post-quantum handshake (PQXDH with Kyber), which is about two kilobytes. It is sent once; as soon as your contact replies, messages become many times shorter."),
+    HowToStep(title: "What does “Mask message length” do?",
+              text: "The length of the ciphertext normally follows the length of your text, so it still shows whether you answered in one word or wrote a page. With this on, Kryptos pads every message with random bytes up to the next size on a fixed ladder — 64 bytes, 128, 256 and so on — so texts of different lengths come out the same size. It covers Chats and Password mode, including messages hidden in ordinary text; photos and PGP are not affected. Your contact strips the padding automatically, whatever their own setting is. The price is a longer message, sometimes close to twice as long, which is why it is off by default."),
+    HowToStep(title: "What is “Message field in the keyboard” for?",
+              text: "Normally you type into the messenger's own input field, so it sees every letter before anything is encrypted — and most messengers save what you typed as a draft. Switch this field on and you type inside the Kryptos keyboard instead: the messenger receives nothing at all until you tap the lock, and then it gets only the finished ciphertext. What you are typing stays inside the keyboard, is never written to storage, and disappears with the rest of your data when you erase it. The separate “Field button on the keyboard” setting puts a button next to the lock so you can turn the field on without opening Settings."),
     HowToStep(title: "Why will a message not decrypt a second time?",
               text: "That is not a fault but forward secrecy: the key for each message is destroyed the moment it is read, so old correspondence cannot be recovered even by someone who takes your phone. Messages you have already opened remain in the chat history."),
     HowToStep(title: "It says it could not decrypt. What now?",

@@ -15,12 +15,20 @@ object SuggestionEngine {
         val sorted: Array<String>
         val size: Int
 
+        val capitalized = HashSet<String>()
+
         init {
-            byFrequency.forEachIndexed { i, w -> rank.putIfAbsent(w, i) }
+            byFrequency.forEachIndexed { i, raw ->
+                val w = raw.lowercase()
+                if (rank.putIfAbsent(w, i) == null && raw.first().isUpperCase()) capitalized.add(w)
+            }
             sorted = rank.keys.toTypedArray()
             sorted.sort()
             size = max(1, rank.size)
         }
+
+        fun display(w: String): String =
+            if (w in capitalized) w.replaceFirstChar { it.uppercase() } else w
 
         fun contains(word: String) = rank.containsKey(word)
 
@@ -122,17 +130,25 @@ object SuggestionEngine {
             fun unpackLo(v: Long) = (v ushr 32).toInt()
             fun unpackHi(v: Long) = (v and 0xFFFFFFFFL).toInt()
 
+            private const val NEWLINE = '\n'.code.toByte()
+
             fun build(dictSorted: Array<String>, rankOf: (String) -> Int, vocabBlob: ByteArray): Lexicon {
-                val text = String(vocabBlob, Charsets.UTF_8)
                 var lineCount = 0
                 var vocabChars = 0
-                var scanPos = 0
-                while (scanPos < text.length) {
-                    var e = text.indexOf('\n', scanPos)
-                    if (e < 0) e = text.length
-                    if (e > scanPos) { lineCount++; vocabChars += e - scanPos }
-                    scanPos = e + 1
+                var lineLength = 0
+                for (b in vocabBlob) {
+                    if (b == NEWLINE) {
+                        if (lineLength > 0) lineCount++
+                        lineLength = 0
+                        continue
+                    }
+                    lineLength++
+                    val v = b.toInt() and 0xFF
+                    if (v and 0xC0 != 0x80) vocabChars++
+                    if (v and 0xF8 == 0xF0) vocabChars++
                 }
+                if (lineLength > 0) lineCount++
+
                 val maxWords = dictSorted.size + lineCount
                 val starts = IntArray(maxWords + 1)
                 val ranks = IntArray(maxWords)
@@ -143,6 +159,8 @@ object SuggestionEngine {
                 var cp = 0
                 var di = 0
                 var pos = 0
+                var lineEnd = 0
+                var line: String? = null
 
                 fun appendDict() {
                     val w = dictSorted[di]
@@ -153,36 +171,42 @@ object SuggestionEngine {
                     n++; di++
                 }
 
-                fun appendVocab(from: Int, to: Int) {
+                fun appendVocab(w: String) {
                     starts[n] = cp
                     ranks[n] = NO_RANK
-                    text.toCharArray(chars, cp, from, to)
-                    cp += to - from
+                    w.toCharArray(chars, cp, 0, w.length)
+                    cp += w.length
                     n++
                 }
 
-                fun cmpRegion(from: Int, to: Int, w: String): Int {
-                    var i = from
-                    var j = 0
-                    while (i < to && j < w.length) {
-                        val d = text[i] - w[j]
-                        if (d != 0) return d
-                        i++; j++
+                fun nextLine(): String? {
+                    while (pos < vocabBlob.size) {
+                        var end = pos
+                        while (end < vocabBlob.size && vocabBlob[end] != NEWLINE) end++
+                        if (end > pos) {
+                            lineEnd = end
+                            return String(vocabBlob, pos, end - pos, Charsets.UTF_8)
+                        }
+                        pos = end + 1
                     }
-                    return (to - from) - w.length
+                    return null
                 }
 
-                while (pos < text.length || di < dictSorted.size) {
-                    if (pos >= text.length) { appendDict(); continue }
-                    var end = text.indexOf('\n', pos)
-                    if (end < 0) end = text.length
-                    if (end == pos) { pos = end + 1; continue }
-                    if (di >= dictSorted.size) { appendVocab(pos, end); pos = end + 1; continue }
-                    val c = cmpRegion(pos, end, dictSorted[di])
+                line = nextLine()
+                while (line != null || di < dictSorted.size) {
+                    val current = line
+                    if (current == null) { appendDict(); continue }
+                    if (di >= dictSorted.size) {
+                        appendVocab(current)
+                        pos = lineEnd + 1
+                        line = nextLine()
+                        continue
+                    }
+                    val c = current.compareTo(dictSorted[di])
                     when {
-                        c < 0 -> { appendVocab(pos, end); pos = end + 1 }
+                        c < 0 -> { appendVocab(current); pos = lineEnd + 1; line = nextLine() }
                         c > 0 -> appendDict()
-                        else -> { appendDict(); pos = end + 1 }
+                        else -> { appendDict(); pos = lineEnd + 1; line = nextLine() }
                     }
                 }
                 starts[n] = cp
@@ -215,6 +239,7 @@ object SuggestionEngine {
 
     private val RU_ROWS = listOf("йцукенгшщзх", "фывапролджэ", "ячсмитьбю")
     private val EN_ROWS = listOf("qwertyuiop", "asdfghjkl", "zxcvbnm")
+    private val DE_ROWS = listOf("qwertzuiopü", "asdfghjklöä", "yxcvbnmß")
 
     private fun buildNeighbors(rows: List<String>): Map<Char, Set<Char>> {
         val map = HashMap<Char, MutableSet<Char>>()
@@ -236,23 +261,67 @@ object SuggestionEngine {
 
     private val RU_NEIGHBORS = buildNeighbors(RU_ROWS)
     private val EN_NEIGHBORS = buildNeighbors(EN_ROWS)
+    private val DE_NEIGHBORS = buildNeighbors(DE_ROWS)
 
     private val RU_CONFUSABLE = setOf("еи", "ие", "ао", "оа", "ея", "яе", "ьъ", "ъь")
+    private val DE_CONFUSABLE = setOf("äa", "aä", "öo", "oö", "üu", "uü", "ßs", "sß", "ei", "ie")
     private const val EN_VOWELS = "aeiou"
+    private const val DE_VOWELS = "aeiouäöü"
 
     private val RU_ALPHABET = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя".toCharArray()
     private val EN_ALPHABET = "abcdefghijklmnopqrstuvwxyz".toCharArray()
+    private val DE_ALPHABET = "abcdefghijklmnopqrstuvwxyzäöüß".toCharArray()
 
     private const val START_TOKEN = "^"
     private val RU_COMMON = listOf("привет", "да", "нет", "спасибо", "как", "хорошо", "я", "что")
     private val EN_COMMON = listOf("hi", "yes", "no", "thanks", "how", "okay", "i", "the")
+    private val DE_COMMON = listOf("hallo", "ja", "nein", "danke", "wie", "gut", "ich", "das")
 
-    @Volatile private var en: Dict? = null
-    @Volatile private var ru: Dict? = null
-    @Volatile private var enBigrams: Bigrams? = null
-    @Volatile private var ruBigrams: Bigrams? = null
-    @Volatile private var enLex: Lexicon? = null
-    @Volatile private var ruLex: Lexicon? = null
+    val SUPPORTED_LANGUAGES = setOf("en", "ru", "de")
+
+    private fun alphabetOf(code: String) = when (code) {
+        "ru" -> RU_ALPHABET
+        "de" -> DE_ALPHABET
+        else -> EN_ALPHABET
+    }
+
+    private fun neighborsOf(code: String) = when (code) {
+        "ru" -> RU_NEIGHBORS
+        "de" -> DE_NEIGHBORS
+        else -> EN_NEIGHBORS
+    }
+
+    private fun commonOf(code: String) = when (code) {
+        "ru" -> RU_COMMON
+        "de" -> DE_COMMON
+        else -> EN_COMMON
+    }
+
+    private fun confusableOf(code: String) = when (code) {
+        "ru" -> RU_CONFUSABLE
+        "de" -> DE_CONFUSABLE
+        else -> emptySet()
+    }
+
+    private fun vowelsOf(code: String) = when (code) {
+        "ru" -> ""
+        "de" -> DE_VOWELS
+        else -> EN_VOWELS
+    }
+
+    private fun isLatin(code: String) = code != "ru"
+
+    private fun codeFor(firstChar: Char?, active: String): String = when {
+        firstChar == null -> active
+        firstChar in 'а'..'я' || firstChar in 'А'..'Я' || firstChar == 'ё' || firstChar == 'Ё' -> "ru"
+        firstChar in "äöüßÄÖÜ" -> "de"
+        firstChar in 'a'..'z' || firstChar in 'A'..'Z' -> if (isLatin(active)) active else "en"
+        else -> active
+    }
+
+    private val dicts = java.util.concurrent.ConcurrentHashMap<String, Dict>()
+    private val bigramTables = java.util.concurrent.ConcurrentHashMap<String, Bigrams>()
+    private val lexicons = java.util.concurrent.ConcurrentHashMap<String, Lexicon>()
 
     private fun buildLexicon(dict: Dict, vocabBlob: ByteArray): Lexicon =
         Lexicon.build(dict.sorted, { dict.rank[it] ?: Lexicon.NO_RANK }, vocabBlob)
@@ -263,15 +332,11 @@ object SuggestionEngine {
     @Volatile private var loadGeneration = 0
 
     private fun release(code: String) {
-        if (code == "ru") {
-            ru = null; ruBigrams = null; ruLex = null
-        } else {
-            en = null; enBigrams = null; enLex = null
-        }
+        dicts.remove(code); bigramTables.remove(code); lexicons.remove(code)
     }
 
     fun warmUp(context: Context, languages: Set<String>, typingAids: Boolean) {
-        val wanted = if (typingAids) languages.intersect(setOf("en", "ru")) else emptySet()
+        val wanted = if (typingAids) languages.intersect(SUPPORTED_LANGUAGES) else emptySet()
         val toLoad: List<String>
         synchronized(claimed) {
             val stale = claimed.filter { it !in wanted }
@@ -296,11 +361,7 @@ object SuggestionEngine {
                     val lex = buildLexicon(dict, app.assets.open("dict/vocab-$code.txt").readBytes())
                     synchronized(claimed) {
                         if (generation != loadGeneration || code !in claimed) return@synchronized
-                        if (code == "ru") {
-                            ruBigrams = pairs; ruLex = lex; ru = dict
-                        } else {
-                            enBigrams = pairs; enLex = lex; en = dict
-                        }
+                        bigramTables[code] = pairs; lexicons[code] = lex; dicts[code] = dict
                     }
                 }.onFailure { synchronized(claimed) { claimed.remove(code) } }
             }
@@ -313,13 +374,22 @@ object SuggestionEngine {
     ) {
         val ruDict = Dict(ruWords)
         val enDict = Dict(enWords)
-        ruBigrams = Bigrams(ruPairs)
-        enBigrams = Bigrams(enPairs)
-        ruLex = buildLexicon(ruDict, ruForms.toByteArray(Charsets.UTF_8))
-        enLex = buildLexicon(enDict, enForms.toByteArray(Charsets.UTF_8))
-        ru = ruDict
-        en = enDict
+        dicts["ru"] = ruDict
+        dicts["en"] = enDict
+        bigramTables["ru"] = Bigrams(ruPairs)
+        bigramTables["en"] = Bigrams(enPairs)
+        lexicons["ru"] = buildLexicon(ruDict, ruForms.toByteArray(Charsets.UTF_8))
+        lexicons["en"] = buildLexicon(enDict, enForms.toByteArray(Charsets.UTF_8))
         claimed.addAll(listOf("en", "ru"))
+        personalLoaded.set(true)
+    }
+
+    internal fun loadLanguageForTest(code: String, words: List<String>, pairs: List<String>, forms: String) {
+        val dict = Dict(words)
+        dicts[code] = dict
+        bigramTables[code] = Bigrams(pairs)
+        lexicons[code] = buildLexicon(dict, forms.toByteArray(Charsets.UTF_8))
+        claimed.add(code)
         personalLoaded.set(true)
     }
 
@@ -463,6 +533,7 @@ object SuggestionEngine {
     }
 
     private class Lang(
+        val code: String,
         val dict: Dict,
         val bigrams: Bigrams?,
         val lex: Lexicon?,
@@ -472,17 +543,10 @@ object SuggestionEngine {
         fun knows(w: String) = dict.contains(w) || lex?.contains(w) == true
     }
 
-    private fun langFor(firstChar: Char?, russianPlane: Boolean): Lang? {
-        val useRu = when {
-            firstChar != null && (firstChar in 'а'..'я' || firstChar == 'ё') -> true
-            firstChar != null && firstChar in 'a'..'z' -> false
-            else -> russianPlane
-        }
-        return if (useRu) {
-            ru?.let { Lang(it, ruBigrams, ruLex, RU_ALPHABET, RU_NEIGHBORS) }
-        } else {
-            en?.let { Lang(it, enBigrams, enLex, EN_ALPHABET, EN_NEIGHBORS) }
-        }
+    private fun langFor(firstChar: Char?, active: String): Lang? {
+        val code = codeFor(firstChar, active)
+        val dict = dicts[code] ?: return null
+        return Lang(code, dict, bigramTables[code], lexicons[code], alphabetOf(code), neighborsOf(code))
     }
 
     private const val OOV_LM = -12.0
@@ -534,9 +598,9 @@ object SuggestionEngine {
 
     private fun subAdjust(orig: Char, a: Char, lang: Lang): Double = when {
         (orig == 'е' && a == 'ё') || (orig == 'ё' && a == 'е') -> SUB_YO
-        "$orig$a" in RU_CONFUSABLE -> SUB_RU_CONFUSE
+        "$orig$a" in confusableOf(lang.code) -> SUB_RU_CONFUSE
         lang.neighbors[orig]?.contains(a) == true -> SUB_ADJACENT
-        orig in EN_VOWELS && a in EN_VOWELS -> SUB_EN_VOWEL
+        orig in vowelsOf(lang.code) && a in vowelsOf(lang.code) -> SUB_EN_VOWEL
         else -> SUB_OTHER
     }
 
@@ -701,10 +765,10 @@ object SuggestionEngine {
         return out
     }
 
-    fun suggest(prefix: String, previous: String?, russianPlane: Boolean, limit: Int = 3): List<String> {
-        if (prefix.isEmpty()) return predictEmpty(previous, russianPlane, limit)
+    fun suggest(prefix: String, previous: String?, language: String, limit: Int = 3): List<String> {
+        if (prefix.isEmpty()) return predictEmpty(previous, language, limit)
         val folded = prefix.lowercase()
-        val lang = langFor(folded.first(), russianPlane) ?: return emptyList()
+        val lang = langFor(folded.first(), language) ?: return emptyList()
         val prevNorm = previous?.let { normalize(it) }
 
         val cands = HashMap<String, Cand>()
@@ -759,7 +823,7 @@ object SuggestionEngine {
         val ranked = cands.entries
             .map { it.key to base(it.key, lang, prevNorm) + it.value.adjust }
             .sortedByDescending { it.second }
-        return ranked.take(limit).map { matchCase(prefix, it.first) }
+        return ranked.take(limit).map { matchCase(prefix, lang.dict.display(it.first)) }
     }
 
     @Synchronized private fun continuationsOf(prev: String, lang: Lang, limit: Int): List<String> {
@@ -775,53 +839,68 @@ object SuggestionEngine {
         return out.toList()
     }
 
-    @Synchronized private fun personalMatches(folded: String): List<String> =
-        userWords.entries
-            .asSequence()
-            .filter { it.value >= 2 && it.key.length > folded.length && it.key.startsWith(folded) }
-            .sortedByDescending { it.value }
-            .take(3)
-            .map { it.key }
-            .toList()
+    private fun outranks(a: Pair<String, Int>, b: Pair<String, Int>): Boolean =
+        if (a.second != b.second) a.second > b.second else a.first < b.first
 
-    @Synchronized private fun predictEmpty(previous: String?, russianPlane: Boolean, limit: Int): List<String> {
+    private fun keepTop(item: Pair<String, Int>, best: MutableList<Pair<String, Int>>, limit: Int) {
+        if (limit <= 0) return
+        if (best.size < limit) {
+            val at = best.indexOfFirst { outranks(item, it) }
+            best.add(if (at < 0) best.size else at, item)
+            return
+        }
+        if (!outranks(item, best[best.size - 1])) return
+        val at = best.indexOfFirst { outranks(item, it) }
+        best.add(if (at < 0) best.size - 1 else at, item)
+        best.removeAt(best.size - 1)
+    }
+
+    @Synchronized private fun personalMatches(folded: String): List<String> {
+        val best = ArrayList<Pair<String, Int>>()
+        for ((word, count) in userWords) {
+            if (count >= 2 && word.length > folded.length && word.startsWith(folded)) {
+                keepTop(word to count, best, 3)
+            }
+        }
+        return best.map { it.first }
+    }
+
+    @Synchronized private fun predictEmpty(previous: String?, language: String, limit: Int): List<String> {
         val atStart = previous == null
         val prevNorm = previous?.let { normalize(it) }
         val out = LinkedHashSet<String>()
         fun add(raw: String) {
             if (raw == prevNorm) return
-            if (!matchesScript(raw, russianPlane)) return
+            if (!matchesScript(raw, language)) return
             out.add(if (atStart) raw.replaceFirstChar { it.uppercaseChar() } else raw)
         }
         if (atStart) {
             continuationsOfUser(START_TOKEN, limit * 2).forEach { add(it) }
         } else if (prevNorm != null) {
             continuationsOfUser(prevNorm, limit * 2).forEach { add(it) }
-            val bigrams = if (prevNorm.first() in 'а'..'я' || prevNorm.first() == 'ё') ruBigrams else enBigrams
+            val bigrams = bigramTables[codeFor(prevNorm.first(), language)]
             bigrams?.next?.get(prevNorm)?.forEach { if (out.size < limit) add(it) }
         }
         if (out.size < limit) {
-            userWords.entries.asSequence()
-                .filter { it.value >= 2 }
-                .sortedByDescending { it.value }
-                .take(limit * 2)
-                .forEach { add(it.key) }
+            val best = ArrayList<Pair<String, Int>>()
+            for ((word, count) in userWords) {
+                if (count >= 2) keepTop(word to count, best, limit * 2)
+            }
+            best.forEach { add(it.first) }
         }
         if (atStart && out.size < limit) {
-            (if (russianPlane) RU_COMMON else EN_COMMON).forEach { if (out.size < limit) add(it) }
+            commonOf(language).forEach { if (out.size < limit) add(it) }
         }
         return out.take(limit)
     }
 
     private fun continuationsOfUser(prev: String, limit: Int): List<String> {
         val marker = "$prev "
-        return userBigrams.entries
-            .asSequence()
-            .filter { it.key.startsWith(marker) }
-            .sortedByDescending { it.value }
-            .take(limit)
-            .map { it.key.substring(marker.length) }
-            .toList()
+        val best = ArrayList<Pair<String, Int>>()
+        for ((key, count) in userBigrams) {
+            if (key.startsWith(marker)) keepTop(key.substring(marker.length) to count, best, limit)
+        }
+        return best.map { it.first }
     }
 
     private const val AC_MARGIN_OOV = 0.8
@@ -838,7 +917,7 @@ object SuggestionEngine {
     )
     private val INFORMAL_RU = setOf("спс", "пж", "плз", "мб", "хз", "крч", "оч", "прив", "пон", "лан", "збс", "кст", "чел")
 
-    fun autocorrect(word: String, previous: String?, russianPlane: Boolean, deep: Boolean = true): String? {
+    fun autocorrect(word: String, previous: String?, language: String, deep: Boolean = true): String? {
         val folded = word.lowercase()
         if (!folded.all { it.isLetter() || it == '\'' || it == '-' || it == '’' }) return null
         if (folded == "i" && word != "I") {
@@ -849,7 +928,7 @@ object SuggestionEngine {
         val cyr = folded.count { it in 'а'..'я' || it == 'ё' }
         val lat = folded.count { it in 'a'..'z' }
         if (cyr > 0 && lat > 0) return null
-        val lang = langFor(folded.first(), russianPlane) ?: return null
+        val lang = langFor(folded.first(), language) ?: return null
 
         if (lang.bigrams?.vocab?.contains(folded) == true) return null
         if (folded in INFORMAL_EN || folded in INFORMAL_RU) return null
@@ -963,13 +1042,13 @@ object SuggestionEngine {
             }
         }
         if (!b.contextual && second > b.score - AC_NEAR_TIE) return null
-        return matchCase(word, b.word)
+        return matchCase(word, lang.dict.display(b.word))
     }
 
-    private fun matchesScript(w: String, russianPlane: Boolean): Boolean {
-        val c = w.lowercase().firstOrNull { it.isLetter() } ?: return true
-        if (c in 'а'..'я' || c == 'ё') return russianPlane
-        if (c in 'a'..'z') return !russianPlane
+    private fun matchesScript(w: String, language: String): Boolean {
+        val c = w.firstOrNull { it.isLetter() } ?: return true
+        if (c in 'а'..'я' || c in 'А'..'Я' || c == 'ё' || c == 'Ё') return language == "ru"
+        if (c in 'a'..'z' || c in 'A'..'Z' || c in "äöüßÄÖÜ") return isLatin(language)
         return true
     }
 

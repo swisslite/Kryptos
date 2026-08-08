@@ -8,6 +8,7 @@ import com.kryptos.android.core.Padding
 import com.kryptos.android.core.PasswordCipher
 import com.kryptos.android.core.SmartTextStego
 import com.kryptos.android.core.StegoLanguage
+import com.kryptos.android.core.StegoWire
 import com.kryptos.android.core.TextStego
 import com.kryptos.android.core.WireFormat
 import com.kryptos.android.screen.ScreenDecryptor
@@ -15,6 +16,7 @@ import com.kryptos.android.signal.DecryptCacheKey
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -75,6 +77,103 @@ class CrossPlatformVectorTests {
         }
         assertNull(Padding.unframe(byteArrayOf(0, 0)))
         assertNull(Padding.unframe(byteArrayOf(-1, -1, -1, -1, 1)))
+    }
+
+    private fun hex(s: String): ByteArray =
+        ByteArray(s.length / 2) { ((s[it * 2].digitToInt(16) shl 4) or s[it * 2 + 1].digitToInt(16)).toByte() }
+
+    private fun stegoPayload(ciphertext: Int, padded: Boolean): ByteArray =
+        StegoWire.frame(ByteArray(ciphertext) { (it * 31 and 0xFF).toByte() }, 2, false, padded)
+
+    private fun unwrapStegoPayload(payload: ByteArray): ByteArray? = StegoWire.unframe(payload)?.body
+
+    @Test
+    fun paddedStegoPayloadRoundTrips() {
+        for (ciphertext in intArrayOf(1, 40, 55, 60, 300)) {
+            val body = ByteArray(ciphertext) { (it * 17 and 0xFF).toByte() }
+            val payload = StegoWire.frame(body, 3, true, true)
+            assertEquals(StegoWire.payloadSize(ciphertext, true), payload.size)
+            val back = StegoWire.unframe(payload)!!
+            assertArrayEquals(body, back.body)
+            assertEquals(3, back.type)
+            assertTrue(back.deflate)
+        }
+        assertNull(StegoWire.unframe(ByteArray(0)))
+        assertNull(StegoWire.unframe(byteArrayOf(0x03)))
+        assertNull(StegoWire.unframe(byteArrayOf(0x04, 0x22, 0, 0, 0, 0)))
+        assertNull(StegoWire.unframe(byteArrayOf(0x03, 0x22, -1, -1, -1, -1)))
+    }
+
+    @Test
+    fun paddedStegoHidesCiphertextLength() {
+        val sameBucket = intArrayOf(1, 20, 40, 55)
+        for (language in StegoLanguage.entries) {
+            val wordCounts = HashSet<Int>()
+            val letterLengths = HashSet<Int>()
+            val smartWordCounts = HashSet<Int>()
+            for (ciphertext in sameBucket) {
+                val payload = stegoPayload(ciphertext, padded = true)
+                assertEquals(2 + Padding.target(4 + ciphertext), payload.size)
+                val words = TextStego.encode(payload, language)
+                wordCounts.add(words.split(' ', '\n').count { it.isNotEmpty() })
+                letterLengths.add(LetterStego.encode(payload, language).length)
+                val smart = SmartTextStego.encode(payload, language)
+                smartWordCounts.add(smart.split(' ', '\n').count { it.isNotEmpty() })
+                assertArrayEquals(unwrapStegoPayload(payload), unwrapStegoPayload(TextStego.decode(words)!!))
+            }
+            assertEquals("$language word count leaks the ciphertext size", 1, wordCounts.size)
+            assertEquals("$language letter run leaks the ciphertext size", 1, letterLengths.size)
+            assertTrue("$language smart sentence count varies too much", smartWordCounts.size <= 4)
+        }
+    }
+
+    @Test
+    fun opensIosPaddedStegoPayload() {
+        val expected = hex("001f3e5d7c9bbad9f81736557493b2d1f00f2e4d6c8baac9e80726456483a2c1e0ff1e3d5c7b9ab9")
+        val words = "Уайт повод, дверь окон, гусь мэру рота слух? Тно, ведет филип обои вудс едва " +
+            "сбить? Фонд, данн стол немо тон. Собак, штаны мамой луны нашем армии вера нелл моих? " +
+            "Этой любое уэйд, майки съел вашем лис? Удачи май танцы, раса вини. Воин, рут бар штуки шериф чью."
+        val letters = "гхфшълпгьвэфдгофмафбйэдшвгъаифжирсвнсиздърамреефггипййжрэвтоицварткжбквфосмнбэ" +
+            "вгугэяпщоанзыгщдрнмыьчлвфэгищцарьш"
+        for (cover in listOf(TextStego.decode(words), LetterStego.decode(letters))) {
+            val payload = assertNotNull(cover).let { cover!! }
+            assertEquals(0x03, payload[0].toInt() and 0xFF)
+            assertEquals(0x20, payload[1].toInt() and 0x20)
+            assertArrayEquals(expected, unwrapStegoPayload(payload))
+        }
+    }
+
+    @Test
+    fun stegoPaddingIsDroppedBeforeStegoIsAbandoned() {
+        for (ciphertext in intArrayOf(16382, 20000, 32000)) {
+            assertTrue("$ciphertext must still fit unpadded", StegoWire.fits(ciphertext, false))
+            assertFalse("$ciphertext must not fit padded", StegoWire.fits(ciphertext, true))
+        }
+        for (ciphertext in intArrayOf(70, 200, 1900, 16000)) {
+            assertTrue("$ciphertext is a realistic size and must stay padded", StegoWire.fits(ciphertext, true))
+        }
+        assertEquals(2 + 64, StegoWire.payloadSize(40, true))
+        assertEquals(2 + 40, StegoWire.payloadSize(40, false))
+    }
+
+    @Test
+    fun unpaddedStegoStillLeaksLength() {
+        val short = stegoPayload(5, padded = false)
+        val long = stegoPayload(55, padded = false)
+        assertNotEquals(
+            LetterStego.encode(short, StegoLanguage.RUSSIAN).length,
+            LetterStego.encode(long, StegoLanguage.RUSSIAN).length,
+        )
+    }
+
+    @Test
+    fun stegoPaddingSeparatesBuckets() {
+        assertEquals(64, Padding.target(4 + 55))
+        assertEquals(128, Padding.target(4 + 70))
+        assertTrue(
+            LetterStego.encode(stegoPayload(55, padded = true), StegoLanguage.RUSSIAN).length <
+                LetterStego.encode(stegoPayload(70, padded = true), StegoLanguage.RUSSIAN).length,
+        )
     }
 
     @Test
@@ -499,4 +598,58 @@ class CrossPlatformVectorTests {
     private fun sha256Hex(data: ByteArray): String =
         java.security.MessageDigest.getInstance("SHA-256").digest(data)
             .joinToString("") { "%02x".format(it) }
+
+    @Test
+    fun germanStegoMatchesIosVectors() {
+        val payload = ByteArray(0x21) { it.toByte() }
+        assertEquals(
+            "Lauter marke betrag regen festes fahre gegen. Hassen news fleck nichte seins. " +
+                "Hartes fehlt hebe graue umhang gatte surren strafe mitte. Herum wow seiten, bandit.",
+            TextStego.encode(payload, StegoLanguage.GERMAN, seed = 0x41),
+        )
+        val probe = byteArrayOf(
+            0x03, 0x02, 0xAB.toByte(), 0xCD.toByte(), 0xEF.toByte(), 0x10,
+            0x22, 0x77, 0x91.toByte(), 0x04, 0x5C, 0xBE.toByte(),
+        )
+        assertEquals(
+            "Ehrlich malten meine Priester unsere Geigen. Seine Boten sendeten alle Brunnen. " +
+                "Offenbar sperrten diese Enkel meine Boote gerade. " +
+                "Bekanntlich benutzten unsere Boten meine Tische zusammen! " +
+                "Alle Lehrer stapelten die Tische oft!",
+            SmartTextStego.encode(probe, StegoLanguage.GERMAN, seed = 0x41),
+        )
+    }
+
+    @Test
+    fun germanStegoRoundTrips() {
+        val rnd = java.util.Random(9)
+        for (n in intArrayOf(1, 7, 32, 120)) {
+            val data = ByteArray(n).also { rnd.nextBytes(it) }
+            assertArrayEquals(data, TextStego.decode(TextStego.encode(data, StegoLanguage.GERMAN)))
+            assertArrayEquals(data, SmartTextStego.decode(SmartTextStego.encode(data, StegoLanguage.GERMAN)))
+            assertArrayEquals(data, LetterStego.decode(LetterStego.encode(data, StegoLanguage.GERMAN)))
+        }
+    }
+
+    @Test
+    fun germanStegoSurvivesGermanScreenChrome() {
+        val payload = ByteArray(64) { (it * 5).toByte() }
+        val chrome = listOf(
+            "Anna: %s Bearbeitet 14:52", "%s\nZugestellt", "Weber: %s 09:31 ✓✓",
+            "Richter: %s Gelesen", "Ritter: %s 08:04", "Koch: %s Heute", "Bauer: %s Wolf 12:00",
+        )
+        for (frame in chrome) {
+            val words = frame.format(TextStego.encode(payload, StegoLanguage.GERMAN))
+            assertArrayEquals("words in <$frame>", payload, TextStego.decode(words))
+            assertTrue(ScreenDecryptor.quickCheck(words))
+
+            val smart = frame.format(SmartTextStego.encode(payload, StegoLanguage.GERMAN))
+            assertArrayEquals("smart in <$frame>", payload, SmartTextStego.decode(smart))
+            assertTrue(ScreenDecryptor.quickCheck(smart))
+
+            val letters = frame.format(LetterStego.encode(payload, StegoLanguage.GERMAN))
+            assertArrayEquals("letters in <$frame>", payload, LetterStego.decode(letters))
+            assertTrue(ScreenDecryptor.quickCheck(letters))
+        }
+    }
 }

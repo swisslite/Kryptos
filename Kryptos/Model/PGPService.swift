@@ -34,6 +34,10 @@ enum PGPAlgo: String, Codable, CaseIterable, Identifiable {
         case .rsa4096: return "RSA 4096 (strongest)"
         }
     }
+
+    static func matching(label: String) -> PGPAlgo? {
+        allCases.first { $0.label == label || $0.rawValue == label }
+    }
 }
 
 enum PGPVerification { case verified, unverified }
@@ -60,7 +64,9 @@ private struct PGPIndex: Codable {
 final class PGPService: ObservableObject {
     @Published private(set) var identities: [PGPIdentity] = []
     @Published private(set) var currentID = UUID()
-    @Published private(set) var recipients: [PGPRecipient] = []
+    @Published private(set) var recipients: [PGPRecipient] = [] {
+        didSet { cachedRecipientKeys = nil }
+    }
     @Published private(set) var myPublicKey = ""
     @Published private(set) var ready = false
     @Published private(set) var busy = false
@@ -78,11 +84,16 @@ final class PGPService: ObservableObject {
 
     private var storeUnavailable = false
 
-    init() {
-        bootstrap()
+    init() {}
+
+    private var booted = false
+
+    func start() {
+        retryBootstrapIfNeeded()
     }
 
     private func bootstrap() {
+        booted = true
         storeUnavailable = false
         guard let loadedRecipients = Self.loadRecipientsStrict(),
               var index = Self.loadIndexStrict() else {
@@ -112,10 +123,12 @@ final class PGPService: ObservableObject {
     }
 
     private func retryBootstrapIfNeeded() {
-        if storeUnavailable { bootstrap() }
+        if !booted || storeUnavailable { bootstrap() }
     }
 
     func archivedIdentities() -> [KeyArchive.ArchivedPgpIdentity]? {
+        retryBootstrapIfNeeded()
+        guard !storeUnavailable else { return nil }
         var out: [KeyArchive.ArchivedPgpIdentity] = []
         for ident in identities {
             guard case .found(let secret) = Keychain.loadStrict(account: Self.secretAccount(ident.id)),
@@ -130,7 +143,8 @@ final class PGPService: ObservableObject {
     }
 
     func archivedRecipients() -> [KeyArchive.ArchivedPgpRecipient] {
-        recipients.map {
+        retryBootstrapIfNeeded()
+        return recipients.map {
             KeyArchive.ArchivedPgpRecipient(name: $0.name, publicKey: $0.publicKey, fingerprint: $0.fingerprint)
         }
     }
@@ -140,19 +154,30 @@ final class PGPService: ObservableObject {
                  recipients incoming: [KeyArchive.ArchivedPgpRecipient]) -> Bool {
         retryBootstrapIfNeeded()
         guard !storeUnavailable else { return false }
-        for ident in identities { Keychain.delete(account: Self.secretAccount(ident.id)) }
 
-        var restored: [PGPIdentity] = []
+        var staged: [(identity: PGPIdentity, secret: Data)] = []
         var seen = Set<String>()
         for entry in list {
             guard seen.insert(entry.id).inserted,
-                  let id = UUID(uuidString: entry.id), !entry.secret.isEmpty,
-                  (try? ObjectivePGP.readKeys(from: Data(entry.secret.utf8)))?.first != nil,
-                  Keychain.save(Data(entry.secret.utf8), account: Self.secretAccount(id)) else { continue }
-            restored.append(PGPIdentity(id: id, name: entry.name, email: entry.email,
-                                        fingerprint: entry.fingerprint, algo: entry.algo,
-                                        createdAt: Date(timeIntervalSince1970: Double(entry.created) / 1000),
-                                        publicKey: entry.publicKey))
+                  let id = UUID(uuidString: entry.id), !entry.secret.isEmpty else { continue }
+            let secret = Data(entry.secret.utf8)
+            guard (try? ObjectivePGP.readKeys(from: secret))?.first != nil else { continue }
+            staged.append((PGPIdentity(id: id, name: entry.name, email: entry.email,
+                                       fingerprint: entry.fingerprint, algo: entry.algo,
+                                       createdAt: Date(timeIntervalSince1970: Double(entry.created) / 1000),
+                                       publicKey: entry.publicKey), secret))
+        }
+        guard list.isEmpty || !staged.isEmpty else { return false }
+
+        var restored: [PGPIdentity] = []
+        for item in staged where Keychain.save(item.secret, account: Self.secretAccount(item.identity.id)) {
+            restored.append(item.identity)
+        }
+        guard list.isEmpty || !restored.isEmpty else { return false }
+
+        let keep = Set(restored.map(\.id))
+        for ident in identities where !keep.contains(ident.id) {
+            Keychain.delete(account: Self.secretAccount(ident.id))
         }
 
         recipients = incoming.map {
@@ -378,8 +403,13 @@ final class PGPService: ObservableObject {
         saveRecipients()
     }
 
+    private var cachedRecipientKeys: [Key]?
+
     private func allRecipientKeys() -> [Key] {
-        recipients.flatMap { (try? ObjectivePGP.readKeys(from: Data($0.publicKey.utf8))) ?? [] }
+        if let cachedRecipientKeys { return cachedRecipientKeys }
+        let keys = recipients.flatMap { (try? ObjectivePGP.readKeys(from: Data($0.publicKey.utf8))) ?? [] }
+        cachedRecipientKeys = keys
+        return keys
     }
 
     func encrypt(_ text: String, to recipient: PGPRecipient) throws -> String {

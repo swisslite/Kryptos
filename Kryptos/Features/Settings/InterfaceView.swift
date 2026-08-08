@@ -15,11 +15,12 @@ struct InterfaceView: View {
                     Text("Automatic").tag("auto")
                     Text("English").tag("en")
                     Text("Russian").tag("ru")
+                    Text("German").tag("de")
                 }
             } header: {
                 Text("Appearance")
             } footer: {
-                Text("Automatic follows the system. The theme changes at once; a new language applies when Kryptos starts again.")
+                Text("Automatic follows the system. A new language applies the next time Kryptos starts.")
             }
 
             if settings.uiLanguage != AppLanguage.launchLanguage {
@@ -45,7 +46,7 @@ struct InterfaceView: View {
             } header: {
                 Text("Tab bar")
             } footer: {
-                Text("Tabs you switch off disappear from the tab bar. Settings cannot be hidden, and at least one other tab stays on.")
+                Text("Tabs you switch off disappear from the bottom bar.")
             }
         }
         .navigationTitle("Interface")
