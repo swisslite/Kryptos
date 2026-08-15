@@ -5,7 +5,7 @@
   <img src="assets/banner-light.png" width="100%" alt="Kryptos">
 </picture>
 
-<sub>[Русский](README.ru.md) &nbsp;·&nbsp; [Website](https://datakeeper.pages.dev/kryptos) &nbsp;·&nbsp; [Privacy policy](https://datakeeper.pages.dev/kryptos/privacy)</sub>
+<sub>[Русский](README.ru.md) &nbsp;·&nbsp; [Website](https://datakeeper.pages.dev/kryptos) &nbsp;·&nbsp; [News](https://t.me/KryptosApp) &nbsp;·&nbsp; [Privacy policy](https://datakeeper.pages.dev/kryptos/privacy)</sub>
 
 <br>
 
@@ -108,6 +108,7 @@ agreed on, PGP needs the recipient's public key.
 - **Network** — neither app contains networking code. The Android manifest declares only `CAMERA`,
   `VIBRATE` and `HIDE_OVERLAY_WINDOWS`: there is no `INTERNET` permission, so the app cannot reach the
   network. There are no accounts, no phone numbers and no servers either.
+- **Reporting a vulnerability** — privately, as described in [SECURITY.md](SECURITY.md).
 - **Android hardening** — `FLAG_SECURE` on the app and keyboard windows, personalized learning
   disabled for third-party keyboards, anti-tapjacking, empty `taskAffinity`, backups and
   device-to-device transfer disabled, R8 shrinking and obfuscation. The panic wipe destroys the

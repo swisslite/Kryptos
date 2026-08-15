@@ -5,7 +5,7 @@
   <img src="assets/banner-ru-light.png" width="100%" alt="Kryptos">
 </picture>
 
-<sub>[English](README.md) &nbsp;·&nbsp; [Сайт](https://datakeeper.pages.dev/kryptos) &nbsp;·&nbsp; [Политика конфиденциальности](https://datakeeper.pages.dev/kryptos/privacy)</sub>
+<sub>[English](README.md) &nbsp;·&nbsp; [Сайт](https://datakeeper.pages.dev/kryptos) &nbsp;·&nbsp; [Новости](https://t.me/KryptosApp) &nbsp;·&nbsp; [Политика конфиденциальности](https://datakeeper.pages.dev/kryptos/privacy)</sub>
 
 <br>
 
@@ -108,6 +108,7 @@ Kryptos — приложение для iPhone и Android, которое шиф
 - **Сеть** — сетевого кода нет ни в одном из приложений. Манифест Android объявляет только `CAMERA`,
   `VIBRATE` и `HIDE_OVERLAY_WINDOWS`: разрешения `INTERNET` там нет, поэтому выйти в сеть приложение
   не может. Аккаунтов, номеров телефона и серверов тоже нет.
+- **Сообщить об уязвимости** — приватно, порядок описан в [SECURITY.md](SECURITY.md).
 - **Защита на Android** — `FLAG_SECURE` для окон приложения и клавиатуры, отключённое
   персонализированное обучение сторонних клавиатур, защита от tapjacking, пустой `taskAffinity`,
   отключённые резервные копии и перенос между устройствами, сжатие и обфускация R8. Аварийное
