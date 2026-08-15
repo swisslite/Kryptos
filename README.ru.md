@@ -2,18 +2,14 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/banner-ru-dark.png">
-  <img src="assets/banner-ru-light.png" width="792" alt="Kryptos">
+  <img src="assets/banner-ru-light.png" width="100%" alt="Kryptos">
 </picture>
 
 <sub>[English](README.md) &nbsp;·&nbsp; [Сайт](https://datakeeper.pages.dev/kryptos) &nbsp;·&nbsp; [Политика конфиденциальности](https://datakeeper.pages.dev/kryptos/privacy)</sub>
 
 <br>
 
-<img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/1.jpg" width="155" alt="Сквозное шифрование">
-<img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/2.jpg" width="155" alt="Обмен ключами">
-<img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/3.jpg" width="155" alt="Режим PGP">
-<img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/4.jpg" width="155" alt="Любой мессенджер">
-<img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/5.jpg" width="155" alt="Стеганография">
+<img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/1.jpg" width="20%" alt="Сквозное шифрование"><img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/2.jpg" width="20%" alt="Обмен ключами"><img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/3.jpg" width="20%" alt="Режим PGP"><img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/4.jpg" width="20%" alt="Любой мессенджер"><img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/5.jpg" width="20%" alt="Стеганография">
 
 </div>
 

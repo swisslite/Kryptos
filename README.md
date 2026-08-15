@@ -2,18 +2,14 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.png">
-  <img src="assets/banner-light.png" width="792" alt="Kryptos">
+  <img src="assets/banner-light.png" width="100%" alt="Kryptos">
 </picture>
 
 <sub>[Русский](README.ru.md) &nbsp;·&nbsp; [Website](https://datakeeper.pages.dev/kryptos) &nbsp;·&nbsp; [Privacy policy](https://datakeeper.pages.dev/kryptos/privacy)</sub>
 
 <br>
 
-<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg" width="155" alt="End-to-end encryption">
-<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg" width="155" alt="Key exchange">
-<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.jpg" width="155" alt="PGP mode">
-<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg" width="155" alt="Any messenger">
-<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg" width="155" alt="Steganography">
+<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg" width="20%" alt="End-to-end encryption"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg" width="20%" alt="Key exchange"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.jpg" width="20%" alt="PGP mode"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg" width="20%" alt="Any messenger"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg" width="20%" alt="Steganography">
 
 </div>
 
