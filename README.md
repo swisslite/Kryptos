@@ -1,199 +1,157 @@
-# Kryptos 🔐
+<div align="center">
 
-**English** · [Русский](README.ru.md)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.png">
+  <img src="assets/banner-light.png" width="792" alt="Kryptos">
+</picture>
 
-**Encrypt anywhere. Talk over any channel.**
+<sub>[Русский](README.ru.md) &nbsp;·&nbsp; [Website](https://datakeeper.pages.dev/kryptos) &nbsp;·&nbsp; [Privacy policy](https://datakeeper.pages.dev/kryptos/privacy)</sub>
 
-Kryptos is an end-to-end encryption app for **iOS and Android** that works *through* any messenger
-or SMS. You encrypt a message inside Kryptos (or on its keyboard), paste the resulting code into
-WhatsApp / Telegram / iMessage / Signal / VK / SMS / anything, and your correspondent decrypts it
-with Kryptos on their side. The messenger only ever carries what looks like random noise — the
-plaintext never touches it.
+<br>
 
-No accounts. No phone number. No servers. No telemetry. The app has **no networking code at all**
-(the Android build ships without the `INTERNET` permission), and keys are generated on-device and
-never leave it.
+<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg" width="155" alt="End-to-end encryption">
+<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg" width="155" alt="Key exchange">
+<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.jpg" width="155" alt="PGP mode">
+<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg" width="155" alt="Any messenger">
+<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg" width="155" alt="Steganography">
 
-**iOS and Android are first-class equals**, native on both (SwiftUI / Jetpack Compose) and
-byte-for-byte compatible — an iPhone and an Android phone talk to each other seamlessly, so it never
-matters which one you or your friend carry. And it's built to be **used every day, not just for
-"special" secret messages**: encrypting is a single tap and the code is already on your clipboard;
-the reply is decrypted right on your screen or in the keyboard, without leaving the chat. There's no
-new app to talk your friends into and nothing to set up — Kryptos slips into the messengers you
-already use all day.
+</div>
 
-- 🌍 Website & docs: <https://datakeeper.pages.dev/kryptos>
-- 📣 News: Telegram [@KryptosApp](https://t.me/KryptosApp)
+# [Kryptos](https://datakeeper.pages.dev/kryptos)
 
-## Download
+[![Release](https://img.shields.io/github/v/release/swisslite/Kryptos?label=release&color=2f62e9)](https://github.com/swisslite/Kryptos/releases/latest)
+[![F-Droid](https://img.shields.io/f-droid/v/com.kryptos.android?logo=fdroid&logoColor=white&label=F-Droid&color=2f62e9)](https://f-droid.org/packages/com.kryptos.android/)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-2f62e9)](LICENSE)
 
-- **F-Droid** — [f-droid.org/packages/com.kryptos.android](https://f-droid.org/packages/com.kryptos.android/).
-  F-Droid builds Kryptos from source, and the build is signed with the same key as the files here, so
-  it installs over a copy you already have without removing anything, and updates are offered
-  automatically. The simplest route on Android.
-- **Android, direct** — `Kryptos.apk` from any [Release](../../releases) or from the
-  [website](https://datakeeper.pages.dev/kryptos), self-signed. Enable "install unknown apps",
-  minimum Android 8.0. Updates this way are manual.
-- **iOS** — `Kryptos.ipa`, **unsigned**, minimum iOS 17. Which route you need depends on whether you
-  already have a signing certificate:
-  - **With your own certificate** (a `.p12` plus a provisioning profile) — open the downloaded `.ipa`
-    in Feather, ESign or Scarlet and tap install. No computer needed.
-  - **Without one** — add the [AltStore-format repository](https://datakeeper.pages.dev/altstore.json)
-    to AltStore or SideStore. They sign with your ordinary Apple ID, so there is nothing to buy: one
-    tap to install and new versions arrive on their own. The signature lasts 7 days and is renewed
-    with Refresh in the same app.
+Kryptos is an iPhone and Android app that encrypts conversations inside any messenger.
 
-SHA-256 checksums are published with every release and on the website. Prefer to build it yourself?
-See [Building](#building).
+You type the message straight into WhatsApp, Telegram or an SMS, tap the padlock on the Kryptos
+keyboard, and the field holds ciphertext instead of your text. On the other end it works the other
+way round: on Android Kryptos decrypts the text on screen without leaving the messenger, on iPhone
+it shows the text above the keyboard once the ciphertext is copied. The messenger, the carrier and
+anyone who intercepts the message on the way see a run of characters they cannot read.
 
-## Screenshots
+The app is the same on both systems and uses one format, so it does not matter which phone your
+contact carries.
 
-| End-to-end encryption | Key exchange | PGP mode | Any messenger | Steganography |
-|:---:|:---:|:---:|:---:|:---:|
-| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg" width="130" alt="End-to-end encryption"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg" width="130" alt="Key exchange"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.jpg" width="130" alt="PGP mode"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg" width="130" alt="Any messenger"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg" width="130" alt="Steganography"> |
+## Features
 
-## What makes Kryptos different
+- The Kryptos keyboard installs like any ordinary system keyboard and encrypts the text right in the input field of any app
+- It is a full keyboard as well: completions, autocorrection, emoji and three layouts. English, Russian and German, all of it working offline
+- On Android the ciphertext is decrypted right on screen, over the message in the chat. Nothing has to be copied or opened separately - the conversation reads like an ordinary one. The feature works only with your contacts and is off by default
+- Conversations run on the Signal Protocol: a new key is created for every message, and the initial key exchange is protected even against future quantum computers
+- You exchange keys with a contact once, by QR code or as a string. Several profiles can be kept in the app
+- If a key exchange is not wanted, a shared-password mode is available. PGP is built in as well, for those who work with it
+- Photo steganography: the ciphertext hides inside an ordinary picture, and the file gives no way to tell that anything is in it
+- Text steganography disguises the ciphertext as harmless text: a run of words, connected sentences, or an unbroken run of letters
+- Length masking pads messages to fixed sizes, so the length of the ciphertext does not give away the length of the original
+- Unlock by fingerprint or face and a separate app passcode. There is also a panic password: instead of opening the app it erases every key, chat and contact
+- The clipboard clears itself, messages can be deleted on a timer, and screenshots can be blocked on Android
+- Every key can be exported into one password-protected file and restored on a new phone
+- The app language is set apart from the system one, there are light and dark themes, and a built-in walkthrough answers the common questions
 
-Most secure messengers (Signal, Session, Threema…) are **their own network** — everyone has to be
-on the same app for it to work. Classic PGP tools, on the other hand, wrap messages in an obvious
-`-----BEGIN PGP MESSAGE-----` block that screams "this person is hiding something." Kryptos is built
-around a different idea:
+## Requirements
 
-- **A keyboard that does the crypto in place.** The bundled keyboard (iOS extension / Android IME)
-  encrypts the field or decrypts the clipboard **inside any app**, so you never switch back and
-  forth.
+- iOS 17 or newer
+- Android 8.0 (API 26) or newer, `arm64-v8a` or `armeabi-v7a`
 
-- **It reads messages right where they are.** On **Android**, Kryptos can recognize its messages in
-  any app and lay the decrypted text **live on top of the ciphertext as you scroll the chat** — only
-  for your contacts, and never while the app is locked. On **iOS**, a copied message opens already
-  decrypted. Messages are found by the *shape* of the token, so stray timestamps, ticks or a sender
-  name glued on by the messenger don't break detection.
+## Installation
 
-- **It rides on top of the channels you already use.** There is no Kryptos network. You keep using
-  WhatsApp, Telegram, iMessage, Discord, email or plain SMS — Kryptos just turns your text into a
-  blob before it goes out and back into text on the other end. Only the two of you need Kryptos;
-  everyone and everything in between sees ciphertext.
+**F-Droid** — [f-droid.org/packages/com.kryptos.android](https://f-droid.org/packages/com.kryptos.android/).
+The app is built there from source and signed with the same key as the APK in the releases, so it
+installs over an existing copy and updates itself.
 
-- **The ciphertext looks like pure random noise — no tell-tale markers.** Since version 2.1 there
-  are no recognizable prefixes at all. Each message is whitened with AES-256-CTR keyed by HKDF-SHA256
-  over the pair's fingerprints plus a fresh random salt, so the output is indistinguishable from
-  random, **hides even the message type, and looks completely different every time** — even if you
-  send the same text twice. Inside that envelope is the real Signal ciphertext.
+**Android, direct** — `Kryptos.apk` from the [releases](../../releases) or from the
+[website](https://datakeeper.pages.dev/kryptos). The file is signed with the developer's own key
+rather than a store's, so the phone has to allow installing unknown apps. Updates then have to be
+installed by hand.
 
-- **Real Signal Protocol, not home-made crypto.** Kryptos links Signal's own official
-  [`libsignal`](https://github.com/signalapp/libsignal) — **PQXDH** (post-quantum X3DH + Kyber) for
-  the initial handshake and the **Double Ratchet** for the conversation: a brand-new key for every
-  single message, forward secrecy, and self-healing if a key is ever exposed. No re-implementations,
-  no rolled-your-own primitives.
+**iOS** — `Kryptos.ipa` comes unsigned and has to be signed by you. There are two ways:
 
-- **Optional length masking.** Turn it on and every ciphertext is padded up to fixed size buckets
-  (64 / 128 / 256 …), so its length no longer betrays how long your message was. The format is
-  self-describing, so the recipient strips the padding regardless of their own settings.
+- with your own certificate (a `.p12` and a provisioning profile), open the `.ipa` in Feather, ESign
+  or Scarlet and install it from there;
+- without one, add the [AltStore-format repository](https://datakeeper.pages.dev/altstore.json) to
+  AltStore or SideStore: they sign the app with your Apple ID. That signature lasts 7 days and is
+  renewed with Refresh in the same app.
 
-- **Two ways to hide a message in plain sight (steganography).** Bury an already-encrypted payload
-  in the low bits of an ordinary **photo**, or disguise it as an innocent-looking run of **real,
-  grammatical words/sentences** (EN, RU + DE) — so even the fact that a message exists can be hidden.
+Sign an update with the same certificate as the previous install, otherwise the keychain access
+group changes and the app starts as a fresh install. SHA-256 checksums are published with every
+release and on the website.
 
-- **Same app, either phone.** Both platforms are complete native apps, not a port with a "lite"
-  side — everything (Signal chats, PGP, password mode, both kinds of steganography, the keyboard)
-  works on iOS and Android alike, and they interoperate exactly.
+## Usage
 
-- **Simple enough to actually use daily.** The point was never a lab tool for one-off secrets but
-  something convenient for ordinary chatting: one-tap encrypt with auto-copy, automatic detection
-  and decryption of incoming messages, the in-keyboard crypto bar, light and dark themes, an app
-  language you can set independently of the system one, and a built-in guide with an FAQ. Strong crypto
-  that doesn't get in your way.
+1. Open the Chats tab and show your contact your key: My key, then Show QR code, or copy it as a string. Add their key with Add contact.
+2. Write the message in the app or on the Kryptos keyboard and encrypt it.
+3. Send the resulting block through any messenger.
+4. The recipient reads it in the app, in the keyboard, or on screen on Android.
 
-## Three ways to encrypt
+Password mode and PGP mode do without the first step: password mode needs only a word the two of you
+agreed on, PGP needs the recipient's public key.
 
-| Mode | Key exchange | Best for |
-|------|--------------|----------|
-| **Signal chat** | one-time key swap (QR or text), then automatic | ongoing private conversations with a contact |
-| **Password (Quick)** | none — just a shared passphrase | a quick secret with someone new (Argon2id 64 MiB / t=3 / p=1 → AES-256-GCM) |
-| **PGP** | exchange public keys | interop with existing OpenPGP setups (sign + encrypt) |
+## Security
 
-## How it works
+- **Signal Protocol** — the official [libsignal](https://github.com/signalapp/libsignal) v0.96.4,
+  built from source on both platforms. PQXDH (X3DH with Kyber-1024) for the initial agreement and the
+  Double Ratchet for the conversation itself. Signed and Kyber prekeys are rotated every two days, and
+  retired generations are deleted after 30 days.
+- **Wire format** — `salt ‖ AES-256-CTR(HKDF-SHA256(pairKey, salt) → key/IV, header ‖ body)`,
+  base64url, with no prefix and no plaintext header. Nothing in the output says that Kryptos produced
+  it, and the same text gives a different result every time. DEFLATE compression and length padding
+  are negotiated in a single header byte.
+- **Password mode** — Argon2id, 64 MiB, t=3, p=1 (the RFC 9106 profile), then AES-256-GCM with a
+  per-message random salt. On iOS this is the PHC reference implementation of Argon2, on Android it
+  is Bouncy Castle; both are tested against the official vectors and against each other.
+- **PGP** — ObjectivePGP on iOS, PGPainless and Bouncy Castle on Android.
+- **Photo steganography** — carrier pixels are selected by local brightness variance in the red and
+  green channels, which stay untouched, so both sides compute the same positions. Bits ride in
+  the blue channel as LSB matching, placement comes from an HMAC-SHA256 keystream, and the length is
+  masked. The container has no magic bytes and no plaintext header.
+- **Key storage** — iOS Keychain with `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`; Android
+  Keystore with an AES/GCM master key: StrongBox is used when the device has it, and where the
+  hardware supports it the key only works while the phone is unlocked.
+- **Network** — neither app contains networking code. The Android manifest declares only `CAMERA`,
+  `VIBRATE` and `HIDE_OVERLAY_WINDOWS`: there is no `INTERNET` permission, so the app cannot reach the
+  network. There are no accounts, no phone numbers and no servers either.
+- **Android hardening** — `FLAG_SECURE` on the app and keyboard windows, personalized learning
+  disabled for third-party keyboards, anti-tapjacking, empty `taskAffinity`, backups and
+  device-to-device transfer disabled, R8 shrinking and obfuscation. The panic wipe destroys the
+  Keystore master key, so data left in flash cannot be decrypted.
 
-1. **Write & encrypt** — type in Kryptos or on its keyboard; one tap turns the text into code.
-2. **Send it anywhere** — paste the code into any chat. To everyone else it's just random characters.
-3. **Decrypt on screen** — your contact's Kryptos reveals the real text (live overlay on Android, or
-   one tap / auto on a copied message on iOS).
+libsignal ships a networking module that Kryptos never calls. It is present in the binary, but no
+execution path reaches it.
 
-## Under the hood
-
-- **Signal Protocol** via official `libsignal` v0.96.4 (PQXDH + Double Ratchet, Kyber prekeys,
-  one-time prekeys, rotation) — built from source and linked into each app.
-- **Wire format v2** — `salt ‖ AES-256-CTR(HKDF-SHA256(pairKey, salt) → key/IV, header ‖ body)`,
-  base64url, no prefix; optional DEFLATE compression and fixed-bucket padding, all negotiated by a
-  single header byte.
-- **Password mode** — Argon2id (64 MiB, t=3, p=1, the RFC 9106 profile) → AES-256-GCM, per-message
-  random salt, DEFLATE where it helps.
-- **Photo steganography** — keyed adaptive LSB matching in the blue channel, with the carrier
-  positions chosen from the untouched red and green channels so both sides agree, a masked length and
-  no plaintext marker of any kind, so a container holds nothing testable without the password.
-- **Wire-compatible across platforms** — messages, key strings, password blobs, hidden-in-words text
-  and stego photos cross-decrypt between iOS and Android, proven by unit tests that decode vectors
-  produced by the other platform.
-- **Smart offline keyboard** — context-aware suggestions and autocorrect from on-device dictionaries
-  (~360k Russian / ~177k German / ~110k English word forms), learned on-device, stored encrypted, disabled in
-  password fields. No network, ever.
-
-## Security & privacy
-
-- **Fully offline** — no servers, accounts, phone numbers, analytics or metadata; keys live in the
-  iOS **Keychain** / **Android Keystore** (StrongBox-preferred) and never sync or leave the device.
-- **App lock** — Face ID / biometrics with an app-switcher privacy cover so snapshots never show your
-  chats.
-- **Clipboard hygiene** — auto-clear after a delay, clips flagged sensitive to stay out of history.
-- **Multiple identities** — create, switch, rename, regenerate or delete separate profiles.
-- **Lock screen codes** — an optional **app passcode** that unlocks Kryptos, and a **panic password**
-  that wipes everything for good instead: keys, chats, contacts, PGP keys, learned words, caches and
-  settings. Both are typed into the same field, so the field itself never reveals whether a panic
-  password is set, and the check takes the same time either way.
-- **Key backup** — profiles, private keys, contact keys and PGP keys export into a single
-  password-encrypted file (Argon2id → AES-256-GCM) and restore on a new phone. Message history is
-  deliberately left out.
-- **Disappearing messages** — an optional per-chat timer that erases messages once it expires,
-  including the copies cached by the keyboard and the on-screen overlay.
-- **Android hardening** — screenshot and app-switcher blocking (`FLAG_SECURE`); anti-tapjacking and
-  task-hijacking (StrandHogg) defences; device-integrity warnings (root / emulator / debugger /
-  hooking framework / re-signed APK); backups and device-transfer disabled; R8 shrink + obfuscate.
-
-Report a vulnerability privately — see [SECURITY.md](SECURITY.md).
-
-## Repository layout
+## Architecture
 
 ```
-.
-├── CipherCore/         Swift package: password mode, steganography, wire-token format (unit-tested)
-├── Kryptos/            iOS app (SwiftUI): Signal chats, PGP, password, photo stego
-├── KryptosKeyboard/    iOS keyboard extension (encrypt/decrypt in any app)
-├── Kryptos.xcodeproj/  Xcode project
-├── android/            Android app (Kotlin + Jetpack Compose), wire-compatible with iOS
-├── ThirdParty/
-│   └── ObjectivePGP/   OpenPGP for iOS (prebuilt xcframework, MIT)
-├── patches/            the small patch Kryptos applies to libsignal
-├── scripts/            setup-libsignal.sh — fetch + patch + build libsignal
-├── build-ipa.sh        build the unsigned iOS .ipa
-└── BUILDING.md         full build instructions
+CipherCore/         Swift package: Argon2id, password mode, steganography, wire format, tests
+Kryptos/            iOS app (SwiftUI): chats, PGP, password mode, steganography, settings
+KryptosKeyboard/    iOS keyboard (an app extension) together with its dictionaries
+android/app/        Android app (Kotlin, Jetpack Compose)
+  core/               the Kotlin counterpart of CipherCore
+  signal/ pgp/        protocol services and stores
+  keyboard/           the IME
+  screen/             the on-screen decryption service
+android/libsignal/  local module that compiles libsignal for Android
+ThirdParty/         ObjectivePGP (prebuilt xcframework)
+patches/            the patch applied to libsignal
+scripts/            setup-libsignal.sh
 ```
 
-`libsignal` is **not vendored** here (it is AGPL-3.0 and its build artifacts are hundreds of MB). It
-is fetched and patched from its real upstream at the exact pinned version by
-`scripts/setup-libsignal.sh` — see [BUILDING.md](BUILDING.md).
+The libsignal sources are not part of this repository. The `scripts/setup-libsignal.sh` script clones
+them at the pinned tag, applies `patches/libsignal-v0.96.4-kryptos.patch` (an Android ByteBuffer cast
+and the removal of swift-docc-plugin) and builds the library.
 
-## Building
-
-Most people should just download from [Releases](../../releases). Building from source is for
-contributors, auditors, and packaging (F-Droid builds from source). Full details are in
-**[BUILDING.md](BUILDING.md)**; in short:
+## Development
 
 ```bash
-scripts/setup-libsignal.sh --ios --android      # fetch + patch + build the Signal library
-./build-ipa.sh                                  # iOS: unsigned .ipa
-cd android && ./gradlew :app:assembleRelease    # Android: APK
+scripts/setup-libsignal.sh --ios --android
+./build-ipa.sh
+cd android && ./gradlew :app:assembleRelease
 ```
+
+Building libsignal needs the Rust toolchain, CMake, protoc and Clang with libclang. The detailed
+instructions are in [BUILDING.md](BUILDING.md).
 
 ## License
 
-Kryptos is licensed under the **GNU Affero General Public License v3.0** — see [LICENSE](LICENSE).
+AGPL-3.0, required by libsignal. The licence text is in [LICENSE](LICENSE).
