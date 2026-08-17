@@ -38,10 +38,20 @@ extension StegoMode {
     }
 }
 
+extension KeyboardConfig.FieldSize {
+    var title: LocalizedStringKey {
+        switch self {
+        case .small: return "Small"
+        case .medium: return "Medium"
+        case .large: return "Large"
+        }
+    }
+}
+
 @MainActor
 final class AppSettings: ObservableObject {
     enum LanguageChoice: String, CaseIterable, Identifiable {
-        case auto, english, russian, german
+        case auto, english, russian, german, chinese
         var id: String { rawValue }
         var title: LocalizedStringKey {
             switch self {
@@ -49,6 +59,7 @@ final class AppSettings: ObservableObject {
             case .english: return "English"
             case .russian: return "Russian"
             case .german: return "German"
+            case .chinese: return "Chinese"
             }
         }
     }
@@ -94,6 +105,14 @@ final class AppSettings: ObservableObject {
     }
 
     @Published var keyboardComposeToggle: Bool {
+        didSet { persistKeyboard() }
+    }
+
+    @Published var keyboardShield: Bool {
+        didSet { persistKeyboard() }
+    }
+
+    @Published var keyboardFieldSize: KeyboardConfig.FieldSize {
         didSet { persistKeyboard() }
     }
 
@@ -196,6 +215,8 @@ final class AppSettings: ObservableObject {
         keyboardEmoji = KeyboardConfig.emoji
         keyboardAutocorrect = KeyboardConfig.autocorrect
         keyboardComposeToggle = KeyboardConfig.composeToggle
+        keyboardShield = KeyboardConfig.shield
+        keyboardFieldSize = KeyboardConfig.fieldSize
         keyboardLanguages = KeyboardConfig.languages
         appLock = PrivacyConfig.appLock
         privacyShield = PrivacyConfig.shield
@@ -223,6 +244,8 @@ final class AppSettings: ObservableObject {
         keyboardEmoji = KeyboardConfig.emoji
         keyboardAutocorrect = KeyboardConfig.autocorrect
         keyboardComposeToggle = KeyboardConfig.composeToggle
+        keyboardShield = KeyboardConfig.shield
+        keyboardFieldSize = KeyboardConfig.fieldSize
         keyboardLanguages = KeyboardConfig.languages
         langsExplicit = KeyboardConfig.storedLanguages != nil
         appLock = PrivacyConfig.appLock
@@ -246,7 +269,9 @@ final class AppSettings: ObservableObject {
                             sounds: keyboardSounds, autoDecrypt: keyboardAutoDecrypt,
                             suggestions: keyboardSuggestions, emoji: keyboardEmoji,
                             autocorrect: keyboardAutocorrect, composeToggle: keyboardComposeToggle,
-                            languages: langsExplicit ? keyboardLanguages : nil)
+                            shield: keyboardShield,
+                            languages: langsExplicit ? keyboardLanguages : nil,
+                            fieldSize: keyboardFieldSize)
     }
     private func persistPrivacy() {
         guard !loading else { return }
@@ -260,6 +285,7 @@ final class AppSettings: ObservableObject {
         case .english: return .english
         case .russian: return .russian
         case .german: return .german
+        case .chinese: return .chinese
         case .auto: return .forSystem()
         }
     }

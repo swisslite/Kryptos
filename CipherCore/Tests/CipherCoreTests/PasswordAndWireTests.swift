@@ -158,11 +158,11 @@ final class PasswordAndWireTests: XCTestCase {
             for ciphertext in sameBucket {
                 let payload = stegoPayload(ciphertext: ciphertext, padded: true)
                 XCTAssertEqual(payload.count, 2 + Padding.target(4 + ciphertext))
-                let words = TextStego.encode(payload, language: language)
-                wordCounts.insert(words.split(whereSeparator: { $0 == " " || $0 == "\n" }).count)
-                letterLengths.insert(LetterStego.encode(payload, language: language).count)
-                let smart = SmartTextStego.encode(payload, language: language)
-                smartWordCounts.insert(smart.split(whereSeparator: { $0 == " " || $0 == "\n" }).count)
+                let words = try XCTUnwrap(TextStego.encode(payload, language: language))
+                wordCounts.insert(StegoTokenizer.split(words).count)
+                letterLengths.insert(try XCTUnwrap(LetterStego.encode(payload, language: language)).count)
+                let smart = try XCTUnwrap(SmartTextStego.encode(payload, language: language))
+                smartWordCounts.insert(StegoTokenizer.split(smart).count)
                 XCTAssertEqual(unwrapStegoPayload(try XCTUnwrap(TextStego.decode(words))),
                                unwrapStegoPayload(payload))
             }
@@ -187,20 +187,20 @@ final class PasswordAndWireTests: XCTestCase {
         XCTAssertEqual(StegoWire.payloadSize(ciphertext: 40, padded: false), 2 + 40)
     }
 
-    func testUnpaddedStegoStillLeaksLength() {
+    func testUnpaddedStegoStillLeaksLength() throws {
         let short = stegoPayload(ciphertext: 5, padded: false)
         let long = stegoPayload(ciphertext: 55, padded: false)
-        XCTAssertNotEqual(LetterStego.encode(short, language: .russian).count,
-                          LetterStego.encode(long, language: .russian).count)
+        XCTAssertNotEqual(try XCTUnwrap(LetterStego.encode(short, language: .russian)).count,
+                          try XCTUnwrap(LetterStego.encode(long, language: .russian)).count)
     }
 
-    func testStegoPaddingSeparatesBuckets() {
+    func testStegoPaddingSeparatesBuckets() throws {
         let low = stegoPayload(ciphertext: 55, padded: true)
         let high = stegoPayload(ciphertext: 70, padded: true)
         XCTAssertEqual(Padding.target(4 + 55), 64)
         XCTAssertEqual(Padding.target(4 + 70), 128)
-        XCTAssertLessThan(LetterStego.encode(low, language: .russian).count,
-                          LetterStego.encode(high, language: .russian).count)
+        XCTAssertLessThan(try XCTUnwrap(LetterStego.encode(low, language: .russian)).count,
+                          try XCTUnwrap(LetterStego.encode(high, language: .russian)).count)
     }
 
     func testPasswordPaddedHidesLength() throws {

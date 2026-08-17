@@ -236,9 +236,7 @@ class KryptosSignalStore(
         fun writeArchive(storageKey: String, parts: Map<String, Map<String, String>>) {
             fun dec(name: String): MutableMap<String, Blob> {
                 val out = mutableMapOf<String, Blob>()
-                parts[name]?.forEach { (k, v) ->
-                    runCatching { Base64.getDecoder().decode(v) }.getOrNull()?.let { out[k] = it }
-                }
+                parts[name]?.forEach { (k, v) -> out[k] = Base64.getDecoder().decode(v) }
                 return out
             }
             val snap = Snapshot(

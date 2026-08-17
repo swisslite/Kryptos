@@ -4,19 +4,24 @@ public enum StegoLanguage: String, Sendable, CaseIterable {
     case english
     case russian
     case german
+    case chinese
 
     var words: [String] {
         switch self {
         case .english: return StegoWordlists.english
         case .russian: return StegoWordlists.russian
         case .german: return StegoWordlists.german
+        case .chinese: return StegoWordlists.chinese
         }
     }
+
+    var isHan: Bool { self == .chinese }
 
     public static func forSystem() -> StegoLanguage {
         let code = (Locale.preferredLanguages.first ?? "en").lowercased()
         if code.hasPrefix("ru") { return .russian }
         if code.hasPrefix("de") { return .german }
+        if code.hasPrefix("zh") { return .chinese }
         return .english
     }
 }
@@ -25,12 +30,15 @@ public enum TextStego {
     private static let bitsPerWord = 12
     private static let wordMask = 0xFFF
     private static let resyncStarts = 3
+    private static let hanResyncStarts = 8
     private static let magic: UInt8 = 0xC7
 
     public static let maxPayloadBytes = 0x7FFF
 
-    public static func encode(_ data: Data, language: StegoLanguage = .forSystem()) -> String {
-        encode(data, language: language, seed: Int.random(in: 0 ... 255))
+    public static func encode(_ data: Data, language: StegoLanguage = .forSystem()) -> String? {
+        StegoSafety.firstCleanCover(payload: data.count) { seed in
+            encode(data, language: language, seed: seed)
+        }
     }
 
     static func encode(_ data: Data, language: StegoLanguage, seed: Int) -> String {
@@ -72,7 +80,7 @@ public enum TextStego {
         }
         if bits > 0 { indices.append((acc << (bitsPerWord - bits)) & wordMask) }
 
-        return prettify(indices.map { words[$0] }, seed: seed)
+        return prettify(indices.map { words[$0] }, seed: seed, language: language)
     }
 
     public static func decode(_ text: String) -> Data? {
@@ -89,16 +97,17 @@ public enum TextStego {
     private static func decode(tokens: [String], language: StegoLanguage) -> Data? {
         let index = language.indexMap
         let kept = tokens.filter { index[$0] != nil }
-        for start in 0 ..< min(resyncStarts, kept.count) {
-            if let data = decodeFrom(Array(kept[start...]), index: index) { return data }
+        let starts = language.isHan ? hanResyncStarts : resyncStarts
+        for start in 0 ..< min(starts, kept.count) {
+            if let data = decodeFrom(kept[start...], index: index) { return data }
         }
         return nil
     }
 
-    private static func decodeFrom(_ tokens: [String], index: [String: Int]) -> Data? {
+    private static func decodeFrom(_ tokens: ArraySlice<String>, index: [String: Int]) -> Data? {
         var acc = 0, bits = 0
         var bytes: [UInt8] = []
-        bytes.reserveCapacity(tokens.count * bitsPerWord / 8 + 1)
+        bytes.reserveCapacity(min(tokens.count * bitsPerWord / 8 + 1, 1024))
         for token in tokens {
             guard let value = index[token] else { continue }
             acc = (acc << bitsPerWord) | value
@@ -106,6 +115,8 @@ public enum TextStego {
             while bits >= 8 {
                 bits -= 8
                 bytes.append(UInt8((acc >> bits) & 0xFF))
+                if bytes.count == 2,
+                   bytes[1] ^ UInt8((Int(bytes[0]) * 197 + 91) & 0xFF) != magic { return nil }
             }
         }
         guard bytes.count >= 4 else { return nil }
@@ -144,8 +155,9 @@ public enum TextStego {
         return UInt8(crc)
     }
 
-    private static func prettify(_ words: [String], seed: Int) -> String {
+    private static func prettify(_ words: [String], seed: Int, language: StegoLanguage) -> String {
         guard !words.isEmpty else { return "" }
+        let han = language.isHan
         var x = (seed ^ 0xA5) & 0xFF
         func next() -> Int {
             x = (x * 197 + 91) & 0xFF
@@ -154,33 +166,28 @@ public enum TextStego {
         var sentences: [String] = []
         var i = 0
         while i < words.count {
-            let len = 4 + next() % 6
+            let len = han ? 8 + next() % 12 : 4 + next() % 6
             let chunk = Array(words[i ..< min(i + len, words.count)])
             var sentence = ""
             for (k, word) in chunk.enumerated() {
-                if k > 0 { sentence += " " }
+                if k > 0, !han { sentence += " " }
                 sentence += word
-                if k < chunk.count - 1, next() % 6 == 0 { sentence += "," }
+                if k < chunk.count - 1, next() % 6 == 0 { sentence += han ? "\u{FF0C}" : "," }
             }
             let mark: String
             switch next() % 10 {
-            case 8: mark = "?"
-            case 9: mark = "!"
-            default: mark = "."
+            case 8: mark = han ? "\u{FF1F}" : "?"
+            case 9: mark = han ? "\u{FF01}" : "!"
+            default: mark = han ? "\u{3002}" : "."
             }
-            sentence = sentence.prefix(1).uppercased() + sentence.dropFirst()
+            if !han { sentence = sentence.prefix(1).uppercased() + sentence.dropFirst() }
             sentences.append(sentence + mark)
             i += len
         }
-        return sentences.joined(separator: " ")
+        return sentences.joined(separator: han ? "" : " ")
     }
 
-    private static func tokenize(_ text: String) -> [String] {
-        let normalized = text.precomposedStringWithCanonicalMapping.lowercased()
-        return normalized
-            .split(whereSeparator: { !$0.isLetter })
-            .map(String.init)
-    }
+    private static func tokenize(_ text: String) -> [String] { StegoTokenizer.split(text) }
 }
 
 private extension StegoLanguage {

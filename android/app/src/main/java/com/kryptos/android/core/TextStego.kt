@@ -1,24 +1,27 @@
 package com.kryptos.android.core
 
-import java.security.SecureRandom
 import java.text.Normalizer
 import java.util.Locale
 
 enum class StegoLanguage {
-    ENGLISH, RUSSIAN, GERMAN;
+    ENGLISH, RUSSIAN, GERMAN, CHINESE;
 
     val words: List<String>
         get() = when (this) {
             ENGLISH -> Wordlists.english
             RUSSIAN -> Wordlists.russian
             GERMAN -> Wordlists.german
+            CHINESE -> Wordlists.chinese
         }
+
+    val isHan: Boolean get() = this == CHINESE
 
     internal val indexMap: Map<String, Int>
         get() = when (this) {
             ENGLISH -> Wordlists.englishIndex
             RUSSIAN -> Wordlists.russianIndex
             GERMAN -> Wordlists.germanIndex
+            CHINESE -> Wordlists.chineseIndex
         }
 
     companion object {
@@ -26,6 +29,7 @@ enum class StegoLanguage {
             when (Locale.getDefault().language.lowercase()) {
                 "ru" -> RUSSIAN
                 "de" -> GERMAN
+                "zh" -> CHINESE
                 else -> ENGLISH
             }
     }
@@ -35,14 +39,16 @@ internal object Wordlists {
     val english: List<String> by lazy { load("english") }
     val russian: List<String> by lazy { load("russian") }
     val german: List<String> by lazy { load("german") }
+    val chinese: List<String> by lazy { load("chinese") }
     val englishIndex: Map<String, Int> by lazy { index(english) }
     val russianIndex: Map<String, Int> by lazy { index(russian) }
     val germanIndex: Map<String, Int> by lazy { index(german) }
+    val chineseIndex: Map<String, Int> by lazy { index(chinese) }
 
     private fun load(name: String): List<String> {
         val stream = Wordlists::class.java.classLoader!!.getResourceAsStream("wordlists/$name.txt")
             ?: error("wordlist $name missing from resources")
-        val words = stream.bufferedReader(Charsets.UTF_8).readLines().filter { it.isNotBlank() }
+        val words = stream.use { it.bufferedReader(Charsets.UTF_8).readLines().filter { line -> line.isNotBlank() } }
         check(words.size == 4096) { "word list must hold exactly 4096 words, got ${words.size}" }
         return words
     }
@@ -55,14 +61,13 @@ object TextStego {
     private const val BITS_PER_WORD = 12
     private const val WORD_MASK = 0xFFF
     private const val RESYNC_STARTS = 3
+    private const val HAN_RESYNC_STARTS = 8
     private const val MAGIC = 0xC7
 
     const val MAX_PAYLOAD_BYTES = 0x7FFF
 
-    private val random = SecureRandom()
-
-    fun encode(data: ByteArray, language: StegoLanguage = StegoLanguage.forSystem()): String =
-        encode(data, language, random.nextInt(256))
+    fun encode(data: ByteArray, language: StegoLanguage = StegoLanguage.forSystem()): String? =
+        StegoSafety.firstCleanCover(data.size) { seed -> encode(data, language, seed) }
 
     internal fun encode(data: ByteArray, language: StegoLanguage, seed: Int): String {
         val words = language.words
@@ -102,7 +107,7 @@ object TextStego {
         }
         if (bits > 0) indices.add((acc shl (BITS_PER_WORD - bits)) and WORD_MASK)
 
-        return prettify(indices.map { words[it] }, seed)
+        return prettify(indices.map { words[it] }, seed, language)
     }
 
     fun decode(text: String): ByteArray? {
@@ -126,7 +131,7 @@ object TextStego {
     private fun decode(tokens: List<String>, language: StegoLanguage): ByteArray? {
         val index = language.indexMap
         val kept = tokens.filter { index.containsKey(it) }
-        val starts = minOf(RESYNC_STARTS, kept.size)
+        val starts = minOf(if (language.isHan) HAN_RESYNC_STARTS else RESYNC_STARTS, kept.size)
         for (start in 0 until starts) {
             decodeFrom(kept, start, index)?.let { return it }
         }
@@ -137,7 +142,7 @@ object TextStego {
         val tokens = if (start == 0) kept else kept.subList(start, kept.size)
         var acc = 0L
         var bits = 0
-        var bytes = ByteArray(tokens.size * BITS_PER_WORD / 8 + 2)
+        var bytes = ByteArray(minOf(tokens.size * BITS_PER_WORD / 8 + 2, 1024))
         var count = 0
         for (token in tokens) {
             val value = index[token] ?: continue
@@ -147,6 +152,10 @@ object TextStego {
                 bits -= 8
                 if (count == bytes.size) bytes = bytes.copyOf(bytes.size * 2 + 2)
                 bytes[count++] = ((acc shr bits) and 0xFF).toByte()
+                if (count == 2) {
+                    val mask = ((bytes[0].toInt() and 0xFF) * 197 + 91) and 0xFF
+                    if (((bytes[1].toInt() and 0xFF) xor mask) != MAGIC) return null
+                }
             }
         }
         if (count < 4) return null
@@ -184,8 +193,9 @@ object TextStego {
         return crc
     }
 
-    private fun prettify(words: List<String>, seed: Int): String {
+    private fun prettify(words: List<String>, seed: Int, language: StegoLanguage): String {
         if (words.isEmpty()) return ""
+        val han = language.isHan
         var x = (seed xor 0xA5) and 0xFF
         fun next(): Int {
             x = (x * 197 + 91) and 0xFF
@@ -194,23 +204,24 @@ object TextStego {
         val sentences = ArrayList<String>()
         var i = 0
         while (i < words.size) {
-            val len = 4 + next() % 6
+            val len = if (han) 8 + next() % 12 else 4 + next() % 6
             val chunk = words.subList(i, minOf(i + len, words.size))
             val sb = StringBuilder()
             for ((k, word) in chunk.withIndex()) {
-                if (k > 0) sb.append(' ')
+                if (k > 0 && !han) sb.append(' ')
                 sb.append(word)
-                if (k < chunk.size - 1 && next() % 6 == 0) sb.append(',')
+                if (k < chunk.size - 1 && next() % 6 == 0) sb.append(if (han) '\uFF0C' else ',')
             }
             val mark = when (next() % 10) {
-                8 -> "?"
-                9 -> "!"
-                else -> "."
+                8 -> if (han) "\uFF1F" else "?"
+                9 -> if (han) "\uFF01" else "!"
+                else -> if (han) "\u3002" else "."
             }
-            sentences.add(sb.toString().replaceFirstChar { it.uppercase() } + mark)
+            val body = if (han) sb.toString() else sb.toString().replaceFirstChar { it.uppercase() }
+            sentences.add(body + mark)
             i += len
         }
-        return sentences.joinToString(" ")
+        return sentences.joinToString(if (han) "" else " ")
     }
 
     private fun tokenize(text: String): List<String> = StegoTokenizer.split(text)

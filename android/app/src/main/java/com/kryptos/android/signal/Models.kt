@@ -1,6 +1,8 @@
 package com.kryptos.android.signal
 
 import com.kryptos.android.core.CachePurge
+import com.kryptos.android.core.hexOf
+import com.kryptos.android.core.sha256Hex
 import com.kryptos.android.core.LetterStego
 import com.kryptos.android.core.SmartTextStego
 import com.kryptos.android.core.TextStego
@@ -13,7 +15,6 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import java.security.MessageDigest
 import java.util.Base64
 import java.util.UUID
 
@@ -41,10 +42,12 @@ data class ChatMessage(
     val text: String,
     val mine: Boolean,
     val date: Long = System.currentTimeMillis(),
-)
+) {
+    override fun toString(): String = "ChatMessage(id=$id, mine=$mine, date=$date)"
+}
 
 object SignalFormat {
-    fun hex(d: ByteArray): String = d.joinToString("") { "%02x".format(it) }
+    fun hex(d: ByteArray): String = hexOf(d)
 
     fun safetyNumber(fingerprintHex: String): String =
         fingerprintHex.take(24).chunked(4).joinToString(" ").uppercase()
@@ -73,7 +76,9 @@ data class CachedDecrypt(
     val text: String,
     val date: Long = System.currentTimeMillis(),
     val mine: Boolean = false,
-)
+) {
+    override fun toString(): String = "CachedDecrypt(fingerprint=$fingerprint, mine=$mine, date=$date)"
+}
 
 object DecryptCacheKey {
     private val STEGO_CHARS = 40..64_000
@@ -82,7 +87,7 @@ object DecryptCacheKey {
         val payload = stegoPayload(armored)
             ?: tokenPayload(armored)
             ?: armored.trim().toByteArray(Charsets.UTF_8)
-        return MessageDigest.getInstance("SHA-256").digest(payload).joinToString("") { "%02x".format(it) }
+        return sha256Hex(payload)
     }
 
     private fun tokenPayload(armored: String): ByteArray? =
@@ -163,6 +168,11 @@ data class Meta(
         decryptCache = cache
     }
 
+    fun purgeDecrypted(fingerprint: String, text: String) {
+        if (decryptCache.isEmpty()) return
+        decryptCache = decryptCache.filterValues { !(it.fingerprint == fingerprint && it.text == text) }
+    }
+
     fun purgeDecryptCache(fingerprint: String? = null, maxAgeMs: Long? = null) {
         if (decryptCache.isEmpty()) return
         val now = System.currentTimeMillis()
@@ -174,6 +184,9 @@ data class Meta(
             }
         }
     }
+
+    override fun toString(): String =
+        "Meta(registrationId=$registrationId, contacts=${contacts.size}, chats=${messages.size})"
 }
 
 @Serializable

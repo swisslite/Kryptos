@@ -21,6 +21,12 @@
             "state": "translated",
             "value": "Сканирование QR-кодов для безопасного обмена ключами."
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "扫描二维码以安全地交换密钥。"
+          }
         }
       }
     },
@@ -43,6 +49,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Разблокировка приложения Kryptos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解锁 Kryptos 应用。"
           }
         }
       }

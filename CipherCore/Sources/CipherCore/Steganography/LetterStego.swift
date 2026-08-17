@@ -2,7 +2,7 @@ import Foundation
 
 public enum LetterStego {
     private static let magic: [UInt8] = [0xC5, 0x3A]
-    private static let minChars = 8
+    private static let minFrameBytes = 5
 
     private struct Alphabet: Sendable {
         let letters: [Character]
@@ -13,6 +13,7 @@ public enum LetterStego {
         let charsForBytes: [Int]
         let bytesForChars: [Int: Int]
         let limits: [Int]
+        let minChars: Int
     }
 
     private static func alphabet(_ source: String, blockBytes: Int) -> Alphabet {
@@ -41,25 +42,36 @@ public enum LetterStego {
         }
         let blockChars = charsForBytes[blockBytes]
         precondition(bytesForChars[blockChars] == nil, "tail length collides with a full block")
+        let rest = minFrameBytes % blockBytes
+        let minChars = (minFrameBytes / blockBytes) * blockChars + (rest == 0 ? 0 : charsForBytes[rest])
         return Alphabet(letters: letters, index: index, base: base,
                         blockBytes: blockBytes, blockChars: blockChars,
-                        charsForBytes: charsForBytes, bytesForChars: bytesForChars, limits: limits)
+                        charsForBytes: charsForBytes, bytesForChars: bytesForChars, limits: limits,
+                        minChars: minChars)
     }
 
     private static let russian = alphabet("абвгдежзийклмнопрстуфхцчшщъыьэюя", blockBytes: 5)
     private static let english = alphabet("abcdefghijklmnopqrstuvwxyz", blockBytes: 7)
+    private static let chinese = alphabet("一不与丢个中为久么之乔也买了事于些什仍从令以们份但住使信俩借假停像先克全关其再写冷刚别到前办加却又另只叫号吃名后向吧听吹呀呆呢和哇哈哎哦哪哭唱啊啥啦喂喝嗨嘛嘿回因在坏块多够太她好如妳字它完家对将少就已带年弧当往很得德心忘忙快怎怕怪总恨恩您想懂成我或戴所才扔把抓抱拍拜拿挂指按挺换掉提搞搬救敢斯新於无时是晚更曾替最月有未来查梦欠次正此每比水求没滚点热爸特猜猫玩球用由画留疼病盯盾看真着睡瞧碰祝神离秒穿站笑第等算米糟约给美老而耶能脚脸腿臭船花若著街被要见让讲读谁谈谢赢跑跟躲躺车达还这远连送选都酒里金错长问间陪饿高鱼", blockBytes: 1)
 
-    private static let tables = [russian, english]
+    private static let tables = [russian, english, chinese]
 
     private static func table(for language: StegoLanguage) -> Alphabet {
         switch language {
         case .russian: return russian
+        case .chinese: return chinese
         case .english, .german: return english
         }
     }
 
-    public static func encode(_ data: Data, language: StegoLanguage = .forSystem()) -> String {
-        encode(data, language: language, seed: Int.random(in: 0 ... 255))
+    static func alphabetCharacters(for language: StegoLanguage) -> [Character] {
+        table(for: language).letters
+    }
+
+    public static func encode(_ data: Data, language: StegoLanguage = .forSystem()) -> String? {
+        StegoSafety.firstCleanCover(payload: data.count) { seed in
+            encode(data, language: language, seed: seed)
+        }
     }
 
     static func encode(_ data: Data, language: StegoLanguage, seed: Int) -> String {
@@ -82,10 +94,11 @@ public enum LetterStego {
     }
 
     public static func decode(_ text: String) -> Data? {
-        for token in tokenize(text) where token.count >= minChars {
+        for token in tokenize(text) {
             let chars = Array(token)
             for a in tables {
-                guard a.index[chars[0]] != nil, structurallyValid(chars.count, a) else { continue }
+                guard chars.count >= a.minChars, a.index[chars[0]] != nil,
+                      structurallyValid(chars.count, a) else { continue }
                 guard let framed = unpack(chars, a) else { continue }
                 if let payload = unframe(framed) { return payload }
             }
@@ -179,7 +192,5 @@ public enum LetterStego {
         return UInt8(crc)
     }
 
-    private static func tokenize(_ text: String) -> [Substring] {
-        text.precomposedStringWithCanonicalMapping.lowercased().split(whereSeparator: { !$0.isLetter })
-    }
+    private static func tokenize(_ text: String) -> [Substring] { StegoTokenizer.runs(text) }
 }

@@ -4,8 +4,12 @@ struct RootView: View {
     @EnvironmentObject private var settings: AppSettings
     @State private var selection: AppTab = .chats
 
+    private var current: AppTab {
+        settings.visibleTabs.contains(selection) ? selection : (settings.visibleTabs.first ?? .settings)
+    }
+
     var body: some View {
-        TabView(selection: $selection) {
+        TabView(selection: Binding(get: { current }, set: { selection = $0 })) {
             ForEach(settings.visibleTabs) { tab in
                 screen(for: tab)
                     .tabItem { Label(tab.title, systemImage: tab.icon) }
@@ -13,11 +17,6 @@ struct RootView: View {
             }
         }
         .tint(KTheme.accent)
-        .onChange(of: settings.hiddenTabs) { _, _ in
-            if !settings.visibleTabs.contains(selection) {
-                selection = settings.visibleTabs.first ?? .settings
-            }
-        }
     }
 
     @ViewBuilder

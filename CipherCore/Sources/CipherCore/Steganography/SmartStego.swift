@@ -4,8 +4,10 @@ public enum SmartTextStego {
     private static let magic: UInt8 = 0xC6
     public static let maxPayloadBytes = 0x7FFF
 
-    public static func encode(_ data: Data, language: StegoLanguage = .forSystem()) -> String {
-        encode(data, language: language, seed: Int.random(in: 0 ... 255))
+    public static func encode(_ data: Data, language: StegoLanguage = .forSystem()) -> String? {
+        StegoSafety.firstCleanCover(payload: data.count) { seed in
+            encode(data, language: language, seed: seed)
+        }
     }
 
     static func encode(_ data: Data, language: StegoLanguage, seed: Int) -> String {
@@ -27,9 +29,10 @@ public enum SmartTextStego {
                     parts.append(g.slots[type][reader.read(g.slotBits[type])])
                 }
             }
-            bodies.append(render(opener: g.openers[openerIdx], kind: g.openerKind[openerIdx], parts: parts))
+            bodies.append(render(opener: g.openers[openerIdx], kind: g.openerKind[openerIdx],
+                                 parts: parts, style: g.style))
         }
-        return assemble(bodies, seed: seed)
+        return assemble(bodies, seed: seed, style: g.style)
     }
 
     public static func decode(_ text: String) -> Data? {
@@ -44,13 +47,38 @@ public enum SmartTextStego {
     public static func looksLikeStego(_ text: String) -> Bool { decode(text) != nil }
 
     private static func decode(tokens rawTokens: [String], grammar g: Grammar) -> Data? {
-        let tokens = rawTokens.filter { g.vocab.contains($0) }
+        guard g.style.unit > 1 else {
+            return scanStarts(rawTokens.filter { g.vocab.contains($0) }, grammar: g)
+        }
+        let chars = rawTokens.filter { g.charVocab.contains($0) }
+        guard chars.count >= g.style.unit else { return nil }
+        for alignment in 0 ..< g.style.unit {
+            if let data = scanStarts(group(chars, unit: g.style.unit, from: alignment), grammar: g) {
+                return data
+            }
+        }
+        return nil
+    }
+
+    private static func group(_ chars: [String], unit: Int, from alignment: Int) -> [String] {
+        var symbols: [String] = []
+        symbols.reserveCapacity(max(0, (chars.count - alignment) / unit))
+        var i = alignment
+        while i + unit <= chars.count {
+            symbols.append(chars[i ..< i + unit].joined())
+            i += unit
+        }
+        return symbols
+    }
+
+    private static func scanStarts(_ tokens: [String], grammar g: Grammar) -> Data? {
         guard !tokens.isEmpty else { return nil }
+        let limit = g.style.unit > 1 ? hanResyncStarts : resyncStarts
         var tried = 0
         for start in tokens.indices where g.openerIndex[tokens[start]] != nil {
             if let data = decodeFrom(tokens, start: start, grammar: g) { return data }
             tried += 1
-            if tried >= resyncStarts { break }
+            if tried >= limit { break }
         }
         return nil
     }
@@ -88,20 +116,32 @@ public enum SmartTextStego {
     }
 
     private static let resyncStarts = 3
+    private static let hanResyncStarts = 8
 
-    private static let commaBefore: Set<String> = ["but", "so", "yet", "then", "while", "because", "though", "aber", "denn", "sondern", "и", "но", "а", "затем", "потом", "пока", "когда", "поэтому"]
+    private static let commaBefore: Set<String> = ["but", "so", "yet", "then", "while", "because", "though", "aber", "denn", "sondern", "и", "но", "а", "затем", "потом", "пока", "когда", "поэтому", "\u{800C}\u{4E14}", "\u{4F46}\u{662F}", "\u{7136}\u{540E}", "\u{56E0}\u{6B64}"]
 
-    private static func render(opener: String, kind: Int, parts: [String]) -> String {
-        var sentence = opener.prefix(1).uppercased() + opener.dropFirst()
-        if kind == 0 { sentence += "," }
+    struct Style {
+        let unit: Int
+        let space: String
+        let comma: String
+        let stop: String
+        let bang: String
+
+        static let latin = Style(unit: 1, space: " ", comma: ",", stop: ".", bang: "!")
+        static let han = Style(unit: 2, space: "", comma: "\u{FF0C}", stop: "\u{3002}", bang: "\u{FF01}")
+    }
+
+    private static func render(opener: String, kind: Int, parts: [String], style: Style) -> String {
+        var sentence = style.unit > 1 ? opener : opener.prefix(1).uppercased() + opener.dropFirst()
+        if kind == 0 { sentence += style.comma }
         for part in parts {
-            if commaBefore.contains(part) { sentence += "," }
-            sentence += " " + part
+            if commaBefore.contains(part) { sentence += style.comma }
+            sentence += style.space + part
         }
         return sentence
     }
 
-    private static func assemble(_ bodies: [String], seed: Int) -> String {
+    private static func assemble(_ bodies: [String], seed: Int, style: Style) -> String {
         var x = (seed ^ 0x3B) & 0xFF
         func next() -> Int {
             x = (x * 197 + 91) & 0xFF
@@ -109,9 +149,9 @@ public enum SmartTextStego {
         }
         var out = ""
         for (i, body) in bodies.enumerated() {
-            if i > 0 { out += next() % 7 == 0 ? "\n" : " " }
+            if i > 0 { out += next() % 7 == 0 ? "\n" : style.space }
             out += body
-            out += next() % 10 == 9 ? "!" : "."
+            out += next() % 10 == 9 ? style.bang : style.stop
         }
         return out
     }
@@ -177,21 +217,19 @@ public enum SmartTextStego {
         return UInt8(crc)
     }
 
-    private static func tokenize(_ text: String) -> [String] {
-        text.precomposedStringWithCanonicalMapping.lowercased()
-            .split(whereSeparator: { !$0.isLetter })
-            .map(String.init)
-    }
+    private static func tokenize(_ text: String) -> [String] { StegoTokenizer.split(text) }
 
-    private static let englishGrammar = Grammar(SmartStegoData.english)
-    private static let russianGrammar = Grammar(SmartStegoData.russian)
-    private static let germanGrammar = Grammar(SmartStegoData.german)
-    private static let grammars = [englishGrammar, russianGrammar, germanGrammar]
+    private static let englishGrammar = Grammar(SmartStegoData.english, style: .latin)
+    private static let russianGrammar = Grammar(SmartStegoData.russian, style: .latin)
+    private static let germanGrammar = Grammar(SmartStegoData.german, style: .latin)
+    private static let chineseGrammar = Grammar(SmartStegoData.chinese, style: .han)
+    private static let grammars = [englishGrammar, russianGrammar, germanGrammar, chineseGrammar]
 
     private static func grammar(_ language: StegoLanguage) -> Grammar {
         switch language {
         case .russian: return russianGrammar
         case .german: return germanGrammar
+        case .chinese: return chineseGrammar
         case .english: return englishGrammar
         }
     }
@@ -212,8 +250,11 @@ public enum SmartTextStego {
         let openerIndex: [String: Int]
         let slotIndex: [[String: Int]]
         let vocab: Set<String>
+        let charVocab: Set<String>
+        let style: Style
 
-        init(_ raw: SmartStegoData.Grammar) {
+        init(_ raw: SmartStegoData.Grammar, style: Style) {
+            self.style = style
             let normalizedOpeners = raw.openers.map { $0.precomposedStringWithCanonicalMapping }
             let normalizedSlots = raw.slots.map { $0.map { $0.precomposedStringWithCanonicalMapping } }
             openers = normalizedOpeners
@@ -244,6 +285,15 @@ public enum SmartTextStego {
                 }
             }
             vocab = allWords
+            if style.unit > 1 {
+                var characters = Set<String>()
+                for word in allWords {
+                    for character in word { characters.insert(String(character)) }
+                }
+                charVocab = characters
+            } else {
+                charVocab = []
+            }
         }
 
         static func bits(_ n: Int) -> Int {

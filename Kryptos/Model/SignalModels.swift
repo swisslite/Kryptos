@@ -63,13 +63,17 @@ enum DecryptCacheKey {
     private static let stegoChars = 40 ... 64_000
 
     static func key(for armored: String) -> String {
-        let payload = stegoPayload(armored)
+        key(for: armored, stego: stegoPayload(armored))
+    }
+
+    static func key(for armored: String, stego: Data?) -> String {
+        let payload = stego
             ?? tokenPayload(armored)
             ?? Data(armored.trimmingCharacters(in: .whitespacesAndNewlines).utf8)
         return SHA256.hash(data: payload).map { String(format: "%02x", $0) }.joined()
     }
 
-    private static func stegoPayload(_ armored: String) -> Data? {
+    static func stegoPayload(_ armored: String) -> Data? {
         guard stegoChars.contains(armored.utf16.count) else { return nil }
         return TextStego.decode(armored) ?? SmartTextStego.decode(armored) ?? LetterStego.decode(armored)
     }
@@ -119,19 +123,19 @@ enum OwnCipherMarker {
 }
 
 enum ClipProbe: Sendable {
-    private static let stegoChars = 40 ... 64_000
-
-    static func looksEncrypted(_ text: String) -> Bool {
-        if WireFormat.isToken(text) { return true }
-        guard stegoChars.contains(text.utf16.count) else { return false }
-        return TextStego.looksLikeStego(text) || SmartTextStego.looksLikeStego(text)
-            || LetterStego.looksLikeStego(text)
+    struct Verdict: Sendable {
+        let worthDecrypting: Bool
+        let stego: Data?
     }
 
-    static func isWorthDecrypting(_ text: String, ownMarker: String?) -> Bool {
-        guard looksEncrypted(text) else { return false }
-        guard let ownMarker else { return true }
-        return ownMarker != DecryptCacheKey.key(for: text)
+    static func inspect(_ text: String, ownMarker: String?) -> Verdict {
+        let stego = DecryptCacheKey.stegoPayload(text)
+        guard stego != nil || WireFormat.isToken(text) else {
+            return Verdict(worthDecrypting: false, stego: nil)
+        }
+        guard let ownMarker else { return Verdict(worthDecrypting: true, stego: stego) }
+        let mine = ownMarker == DecryptCacheKey.key(for: text, stego: stego)
+        return Verdict(worthDecrypting: !mine, stego: stego)
     }
 }
 
@@ -157,9 +161,10 @@ struct Meta: Codable {
 
     var autoDelete: [String: Double]?
 
-    mutating func rememberDecrypt(armored: String, fingerprint: String, text: String) {
+    mutating func rememberDecrypt(armored: String, fingerprint: String, text: String, stego: Data?? = nil) {
         var cache = decryptCache ?? [:]
-        cache[DecryptCacheKey.key(for: armored)] = CachedDecrypt(fingerprint: fingerprint, text: text, date: Date())
+        let key = DecryptCacheKey.key(for: armored, stego: stego ?? DecryptCacheKey.stegoPayload(armored))
+        cache[key] = CachedDecrypt(fingerprint: fingerprint, text: text, date: Date())
         let cap = 300
         if cache.count > cap {
             for (key, _) in cache.sorted(by: { $0.value.date < $1.value.date }).prefix(cache.count - cap) {
@@ -169,8 +174,15 @@ struct Meta: Codable {
         decryptCache = cache
     }
 
-    func cachedDecrypt(for armored: String) -> CachedDecrypt? {
-        decryptCache?[DecryptCacheKey.key(for: armored)]
+    func cachedDecrypt(for armored: String, stego: Data?? = nil) -> CachedDecrypt? {
+        guard let decryptCache, !decryptCache.isEmpty else { return nil }
+        return decryptCache[DecryptCacheKey.key(for: armored, stego: stego ?? DecryptCacheKey.stegoPayload(armored))]
+    }
+
+    mutating func purgeDecrypted(fingerprint: String, text: String) {
+        guard var cache = decryptCache, !cache.isEmpty else { return }
+        cache = cache.filter { !($0.value.fingerprint == fingerprint && $0.value.text == text) }
+        decryptCache = cache.isEmpty ? nil : cache
     }
 
     mutating func purgeDecryptCache(fingerprint: String? = nil, olderThan age: TimeInterval? = nil) {

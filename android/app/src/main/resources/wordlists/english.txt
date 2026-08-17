@@ -78,12 +78,10 @@ hit
 fun
 set
 cut
-war
 met
 wow
 bye
 buy
-gun
 bed
 dog
 six
@@ -135,7 +133,6 @@ bob
 yep
 shh
 fit
-gay
 jim
 low
 arm
@@ -563,7 +560,6 @@ paw
 hag
 pea
 vey
-tit
 zac
 edo
 gel
@@ -620,7 +616,6 @@ ryo
 hwa
 sap
 ahn
-cum
 zap
 aya
 eta
@@ -1004,7 +999,6 @@ hep
 bla
 lis
 ofa
-tot
 heo
 sao
 wag
@@ -1173,7 +1167,6 @@ hear
 same
 show
 else
-kill
 next
 care
 went
@@ -1246,7 +1239,6 @@ goes
 able
 lady
 gets
-shot
 city
 walk
 town
@@ -1288,7 +1280,6 @@ luck
 fast
 cold
 seem
-hang
 till
 felt
 sign
@@ -1328,7 +1319,6 @@ paid
 ring
 bill
 york
-army
 lead
 fair
 fool
@@ -1370,7 +1360,6 @@ evil
 joke
 huge
 holy
-jail
 shop
 quit
 wine
@@ -1378,7 +1367,6 @@ slow
 cash
 push
 tree
-gift
 bear
 grab
 beer
@@ -1418,13 +1406,11 @@ roll
 cost
 nose
 band
-bomb
 neck
 warm
 dogs
 wild
 camp
-guns
 whom
 bird
 keys
@@ -1433,7 +1419,6 @@ jane
 skin
 cook
 hall
-drug
 main
 rose
 code
@@ -1766,7 +1751,6 @@ sync
 joan
 fort
 pole
-coke
 diet
 knee
 lads
@@ -1800,13 +1784,11 @@ pork
 lazy
 bits
 fond
-wars
 pill
 mall
 soil
 sail
 poem
-weed
 tons
 flip
 barn
@@ -1824,7 +1806,6 @@ vast
 pump
 coin
 sack
-dope
 nest
 palm
 noah
@@ -1863,7 +1844,6 @@ cart
 chan
 oops
 sire
-stab
 inch
 tara
 toes
@@ -1905,7 +1885,6 @@ mere
 raid
 folk
 drum
-arse
 ally
 dull
 kent
@@ -1939,7 +1918,6 @@ vera
 cafe
 bare
 hans
-nazi
 tomb
 pace
 lick
@@ -2018,9 +1996,7 @@ tess
 asia
 echo
 aids
-fart
 otto
-riot
 sole
 hugo
 mode
@@ -2232,7 +2208,6 @@ iran
 dorm
 barb
 maps
-meth
 ammo
 luca
 kitt
@@ -2281,7 +2256,6 @@ fitz
 yuan
 nash
 peas
-coup
 zeus
 mute
 leah
@@ -2432,7 +2406,6 @@ peck
 jaws
 loaf
 plum
-puss
 rags
 knox
 trek
@@ -2496,9 +2469,7 @@ shag
 amos
 katy
 dart
-gays
 teal
-twat
 wand
 taps
 flea
@@ -2535,7 +2506,6 @@ bein
 wimp
 pens
 apes
-slay
 hari
 bien
 honk
@@ -2555,7 +2525,6 @@ sari
 toto
 mein
 smug
-isis
 paws
 nino
 roxy
@@ -2612,7 +2581,6 @@ kari
 lyon
 tung
 tofu
-goon
 pulp
 nile
 veal
@@ -2675,11 +2643,9 @@ tyre
 rift
 feat
 lest
-orgy
 zane
 prue
 lili
-gras
 amar
 worf
 grad
@@ -2731,7 +2697,6 @@ mega
 irma
 olaf
 amir
-dyke
 whiz
 saga
 diva
@@ -2838,7 +2803,6 @@ mika
 hymn
 gore
 kali
-slag
 lyla
 pant
 redo
@@ -3087,7 +3051,6 @@ javi
 sami
 mime
 alms
-shiv
 emir
 hurl
 lear
@@ -3140,7 +3103,6 @@ enid
 snip
 eels
 flex
-wank
 yves
 ufos
 olly
@@ -3272,7 +3234,6 @@ levy
 nani
 tiff
 rina
-coca
 nona
 corp
 taft
@@ -3322,7 +3283,6 @@ vila
 soto
 fiji
 hula
-narc
 timo
 tact
 nils
@@ -3579,7 +3539,6 @@ lode
 tris
 hops
 duds
-coon
 bram
 ikea
 jase
@@ -3746,7 +3705,6 @@ small
 lives
 uncle
 earth
-shoot
 touch
 sound
 human
@@ -3890,7 +3848,6 @@ gasps
 grand
 press
 blame
-drugs
 rings
 named
 paris
@@ -3947,7 +3904,6 @@ grace
 pants
 beach
 faith
-knife
 devil
 tommy
 stars
@@ -4026,7 +3982,6 @@ spare
 shake
 loose
 paint
-naked
 sugar
 doors
 block
@@ -4091,6 +4046,51 @@ pizza
 image
 plate
 mercy
-shots
 drove
 wound
+terms
+chose
+stood
+below
+aside
+spell
+awake
+prime
+piano
+moves
+value
+union
+media
+songs
+pride
+metal
+candy
+bride
+claim
+solve
+theme
+false
+falls
+tires
+toast
+notes
+rooms
+coast
+steps
+files
+signs
+shift
+exact
+score
+marks
+pilot
+grade
+juice
+tower
+wheel
+fruit
+talks
+range
+youth
+eaten
+knees

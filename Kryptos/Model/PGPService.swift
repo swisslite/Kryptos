@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import ObjectivePGP
 
 struct PGPIdentity: Codable, Identifiable, Hashable {
@@ -27,7 +28,24 @@ struct PGPRecipient: Codable, Identifiable, Hashable {
 enum PGPAlgo: String, Codable, CaseIterable, Identifiable {
     case curve25519, rsa3072, rsa4096
     var id: String { rawValue }
-    var label: String {
+
+    var token: String {
+        switch self {
+        case .curve25519: return "Curve25519"
+        case .rsa3072: return "RSA 3072"
+        case .rsa4096: return "RSA 4096"
+        }
+    }
+
+    var title: LocalizedStringKey {
+        switch self {
+        case .curve25519: return "Curve25519 (fast, recommended)"
+        case .rsa3072: return "RSA 3072 (compatible)"
+        case .rsa4096: return "RSA 4096 (strongest)"
+        }
+    }
+
+    private var legacyLabel: String {
         switch self {
         case .curve25519: return "Curve25519 (fast, recommended)"
         case .rsa3072: return "RSA 3072 (compatible)"
@@ -36,7 +54,7 @@ enum PGPAlgo: String, Codable, CaseIterable, Identifiable {
     }
 
     static func matching(label: String) -> PGPAlgo? {
-        allCases.first { $0.label == label || $0.rawValue == label }
+        allCases.first { $0.token == label || $0.rawValue == label || $0.legacyLabel == label }
     }
 }
 
@@ -70,6 +88,7 @@ final class PGPService: ObservableObject {
     @Published private(set) var myPublicKey = ""
     @Published private(set) var ready = false
     @Published private(set) var busy = false
+    @Published private(set) var failure: String?
 
     private var currentKey: Key?
 
@@ -106,10 +125,16 @@ final class PGPService: ObservableObject {
         if index.identities.isEmpty, let data = Keychain.load(account: Self.legacySecret),
            let key = try? ObjectivePGP.readKeys(from: data).first {
             let ident = PGPIdentity(id: UUID(), name: "My key", email: "", fingerprint: Self.fingerprint(of: key), algo: "imported", createdAt: Date(), publicKey: Self.exportPublicArmored(key))
-            Keychain.save(Self.exportSecret(key), account: Self.secretAccount(ident.id))
-            Keychain.delete(account: Self.legacySecret)
-            index = PGPIndex(identities: [ident], currentID: ident.id)
-            Self.saveIndex(index)
+            let secret = Self.exportSecret(key)
+            if !secret.isEmpty, Keychain.save(secret, account: Self.secretAccount(ident.id)) {
+                let migrated = PGPIndex(identities: [ident], currentID: ident.id)
+                if Self.saveIndex(migrated) {
+                    Keychain.delete(account: Self.legacySecret)
+                    index = migrated
+                } else {
+                    Keychain.delete(account: Self.secretAccount(ident.id))
+                }
+            }
         }
 
         identities = index.identities
@@ -167,13 +192,20 @@ final class PGPService: ObservableObject {
                                        createdAt: Date(timeIntervalSince1970: Double(entry.created) / 1000),
                                        publicKey: entry.publicKey), secret))
         }
-        guard list.isEmpty || !staged.isEmpty else { return false }
+        guard !list.isEmpty else {
+            recipients = incoming.map {
+                PGPRecipient(name: $0.name, publicKey: $0.publicKey, fingerprint: $0.fingerprint)
+            }
+            saveRecipients()
+            return true
+        }
+        guard !staged.isEmpty else { return false }
 
         var restored: [PGPIdentity] = []
         for item in staged where Keychain.save(item.secret, account: Self.secretAccount(item.identity.id)) {
             restored.append(item.identity)
         }
-        guard list.isEmpty || !restored.isEmpty else { return false }
+        guard !restored.isEmpty else { return false }
 
         let keep = Set(restored.map(\.id))
         for ident in identities where !keep.contains(ident.id) {
@@ -185,13 +217,6 @@ final class PGPService: ObservableObject {
         }
         saveRecipients()
 
-        if restored.isEmpty {
-            identities = []
-            currentID = UUID()
-            persistIndex()
-            generate(name: "My key", email: "", algo: .curve25519)
-            return false
-        }
         identities = restored
         currentID = restored[0].id
         persistIndex()
@@ -207,6 +232,7 @@ final class PGPService: ObservableObject {
         currentID = UUID()
         ready = false
         busy = false
+        failure = nil
         storeUnavailable = false
         bootstrap()
     }
@@ -226,12 +252,21 @@ final class PGPService: ObservableObject {
             return PGPIndex(identities: [], currentID: UUID())
         }
     }
-    private static func saveIndex(_ index: PGPIndex) {
-        if let d = try? JSONEncoder().encode(index) { SharedStore.write(indexStoreKey, d) }
+    @discardableResult
+    private static func saveIndex(_ index: PGPIndex) -> Bool {
+        guard let d = try? JSONEncoder().encode(index) else { return false }
+        return SharedStore.write(indexStoreKey, d)
     }
-    private func persistIndex() {
-        guard !storeUnavailable else { return }
-        Self.saveIndex(PGPIndex(identities: identities, currentID: currentID))
+
+    @discardableResult
+    private func persistIndex() -> Bool {
+        guard !storeUnavailable else { return false }
+        guard Self.saveIndex(PGPIndex(identities: identities, currentID: currentID)) else {
+            storeUnavailable = true
+            ready = false
+            return false
+        }
+        return true
     }
 
     private static func loadRecipientsStrict() -> [PGPRecipient]? {
@@ -261,7 +296,7 @@ final class PGPService: ObservableObject {
         case .found(let stored):
             data = stored
         case .absent:
-            currentKey = nil; myPublicKey = ""; ready = !identities.isEmpty
+            currentKey = nil; myPublicKey = ""; ready = false
             return
         case .unavailable:
             storeUnavailable = true
@@ -313,6 +348,7 @@ final class PGPService: ObservableObject {
         retryBootstrapIfNeeded()
         guard !storeUnavailable else { return }
         busy = true
+        failure = nil
         let userID = PGPIdentity(id: UUID(), name: name, email: email, fingerprint: "", algo: algo.rawValue, createdAt: Date()).userID
         Task.detached(priority: .userInitiated) {
             let key = Self.generator(for: algo).generate(for: userID, passphrase: nil)
@@ -320,13 +356,24 @@ final class PGPService: ObservableObject {
             let pub = Self.exportPublicArmored(key)
             let fp = Self.fingerprint(of: key)
             await MainActor.run {
-                let ident = PGPIdentity(id: UUID(), name: name, email: email, fingerprint: fp, algo: algo.label, createdAt: Date(), publicKey: pub)
-                Keychain.save(secret, account: Self.secretAccount(ident.id))
+                self.busy = false
+                let ident = PGPIdentity(id: UUID(), name: name, email: email, fingerprint: fp, algo: algo.token, createdAt: Date(), publicKey: pub)
+                guard !secret.isEmpty, Keychain.save(secret, account: Self.secretAccount(ident.id)) else {
+                    self.failure = String(localized: "Could not save the key to the keychain.")
+                    return
+                }
+                let previousIdentities = self.identities
+                let previousCurrent = self.currentID
                 self.identities.append(ident)
                 self.currentID = ident.id
-                self.persistIndex()
+                guard self.persistIndex() else {
+                    self.identities = previousIdentities
+                    self.currentID = previousCurrent
+                    Keychain.delete(account: Self.secretAccount(ident.id))
+                    self.failure = String(localized: "Could not save the key to the keychain.")
+                    return
+                }
                 self.loadCurrent()
-                self.busy = false
             }
         }
     }
@@ -343,6 +390,7 @@ final class PGPService: ObservableObject {
         retryBootstrapIfNeeded()
         guard !storeUnavailable, let ident = currentIdentity else { return }
         busy = true
+        failure = nil
         let userID = ident.userID
         let id = ident.id
         Task.detached(priority: .userInitiated) {
@@ -351,32 +399,44 @@ final class PGPService: ObservableObject {
             let pub = Self.exportPublicArmored(key)
             let fp = Self.fingerprint(of: key)
             await MainActor.run {
-                Keychain.save(secret, account: Self.secretAccount(id))
+                self.busy = false
+                guard !secret.isEmpty, Keychain.save(secret, account: Self.secretAccount(id)) else {
+                    self.failure = String(localized: "Could not save the key to the keychain.")
+                    return
+                }
                 if let idx = self.identities.firstIndex(where: { $0.id == id }) {
                     self.identities[idx].fingerprint = fp
-                    self.identities[idx].algo = algo.label
+                    self.identities[idx].algo = algo.token
                     self.identities[idx].createdAt = Date()
                     self.identities[idx].publicKey = pub
                 }
-                self.persistIndex()
+                guard self.persistIndex() else {
+                    self.failure = String(localized: "Could not save the key to the keychain.")
+                    return
+                }
                 self.loadCurrent()
-                self.busy = false
             }
         }
     }
 
     func deleteIdentity(_ id: UUID) {
         retryBootstrapIfNeeded()
-        guard !storeUnavailable else { return }
+        guard !storeUnavailable, identities.contains(where: { $0.id == id }) else { return }
+        let previousIdentities = identities
+        let previousCurrent = currentID
+        let remaining = identities.filter { $0.id != id }
+        identities = remaining
+        if currentID == id { currentID = remaining.first?.id ?? UUID() }
+        guard persistIndex() else {
+            identities = previousIdentities
+            currentID = previousCurrent
+            return
+        }
         Keychain.delete(account: Self.secretAccount(id))
-        identities.removeAll { $0.id == id }
-        if identities.isEmpty {
-            persistIndex()
+        if remaining.isEmpty {
             generate(name: "My key", email: "", algo: .curve25519)
             return
         }
-        if currentID == id { currentID = identities[0].id }
-        persistIndex()
         loadCurrent()
     }
 

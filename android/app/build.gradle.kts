@@ -22,8 +22,8 @@ android {
         applicationId = "com.kryptos.android"
         minSdk = 26
         targetSdk = 34
-        versionCode = 9
-        versionName = "2.3.1"
+        versionCode = 10
+        versionName = "2.3.2"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 

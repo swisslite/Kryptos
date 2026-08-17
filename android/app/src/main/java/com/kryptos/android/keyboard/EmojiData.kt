@@ -113,6 +113,12 @@ object EmojiData {
         runCatching { writer.execute { recents() } }
     }
 
+    fun cachedRecents(): List<String> {
+        cached?.let { return it }
+        prefetch()
+        return emptyList()
+    }
+
     fun recents(): List<String> {
         cached?.let { return it }
         val list = runCatching {
@@ -126,13 +132,16 @@ object EmojiData {
     }
 
     fun addRecent(emoji: String) {
-        val list = (listOf(emoji) + recents().filter { it != emoji }).take(MAX_RECENTS)
-        cached = list
         val gen = generation
-        val blob = list.joinToString(" ").toByteArray(Charsets.UTF_8)
         runCatching {
             writer.execute {
-                if (gen == generation) runCatching { SecureStore.write(STORE_RECENTS, blob) }
+                if (gen != generation) return@execute
+                val list = (listOf(emoji) + recents().filter { it != emoji }).take(MAX_RECENTS)
+                if (gen != generation) return@execute
+                cached = list
+                runCatching {
+                    SecureStore.write(STORE_RECENTS, list.joinToString(" ").toByteArray(Charsets.UTF_8))
+                }
             }
         }
     }

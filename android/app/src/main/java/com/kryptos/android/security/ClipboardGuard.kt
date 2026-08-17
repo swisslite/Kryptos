@@ -10,6 +10,7 @@ import android.os.Looper
 import android.os.PersistableBundle
 import android.widget.Toast
 import com.kryptos.android.core.CachePurge
+import com.kryptos.android.core.sha256Hex
 import com.kryptos.android.signal.AppSettingsStore
 
 object ClipboardGuard {
@@ -21,6 +22,7 @@ object ClipboardGuard {
         CachePurge.register { forget() }
     }
 
+    @Synchronized
     fun forget() {
         pending?.let { handler.removeCallbacks(it) }
         pending = null
@@ -46,23 +48,38 @@ object ClipboardGuard {
         scheduleClear(app, text)
     }
 
+    @Synchronized
+    fun copyPlain(context: Context, text: String, toast: String? = null) {
+        val app = context.applicationContext
+        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        forget()
+        cm.setPrimaryClip(ClipData.newPlainText("Kryptos", text))
+        toast?.let { message -> handler.post { Toast.makeText(app, message, Toast.LENGTH_SHORT).show() } }
+    }
+
+    @Synchronized
     private fun scheduleClear(context: Context, text: String) {
         pending?.let { handler.removeCallbacks(it) }
+        pending = null
         val seconds = AppSettingsStore.clipboardClearSeconds
         if (seconds <= 0) { lastCopied = null; return }
-        lastCopied = text
-        val appContext = context.applicationContext
-        val task = Runnable { if (lastCopied == text) clearIfOurs(appContext, text) }
+        val fingerprint = digest(text)
+        lastCopied = fingerprint
+        val task = Runnable { if (lastCopied == fingerprint) clearMatching(context, fingerprint) }
         pending = task
         handler.postDelayed(task, seconds * 1000L)
     }
 
-    fun clearIfOurs(context: Context, text: String) {
+    private fun digest(text: String): String = sha256Hex(text.toByteArray(Charsets.UTF_8))
+
+    fun clearIfOurs(context: Context, text: String) = clearMatching(context, digest(text))
+
+    private fun clearMatching(context: Context, fingerprint: String) {
         val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val current = runCatching {
             cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text?.toString()
         }.getOrNull()
-        if (current == null || current == text) wipe(cm)
+        if (current == null || digest(current) == fingerprint) wipe(cm)
         lastCopied = null
     }
 

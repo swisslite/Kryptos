@@ -52,13 +52,44 @@ enum ConfigCaches {
 enum AppGroup {
     static let fallbackIdentifier = "group.com.kryptos.app"
 
-    static let identifier: String = {
+    private static let identifierLock = NSLock()
+    private nonisolated(unsafe) static var resolvedIdentifier: String?
+
+    static var identifier: String {
+        identifierLock.lock()
+        if let resolvedIdentifier {
+            identifierLock.unlock()
+            return resolvedIdentifier
+        }
+        identifierLock.unlock()
+        let fresh = resolveIdentifier()
+        identifierLock.lock()
+        if resolvedIdentifier == nil { resolvedIdentifier = fresh }
+        let value = resolvedIdentifier ?? fresh
+        identifierLock.unlock()
+        return value
+    }
+
+    static func revalidate() {
+        identifierLock.lock()
+        let current = resolvedIdentifier
+        identifierLock.unlock()
+        guard current == fallbackIdentifier else { return }
+        KeychainProbe.forget()
+        let fresh = resolveIdentifier()
+        guard fresh != fallbackIdentifier else { return }
+        identifierLock.lock()
+        resolvedIdentifier = fresh
+        identifierLock.unlock()
+    }
+
+    private static func resolveIdentifier() -> String {
         let fm = FileManager.default
         var seen = Set<String>()
         let candidates = allCandidateGroups().filter { seen.insert($0).inserted }
         let working = candidates.filter { fm.containerURL(forSecurityApplicationGroupIdentifier: $0) != nil }
         return working.sorted().first ?? fallbackIdentifier
-    }()
+    }
 
     private static func allCandidateGroups() -> [String] {
         var groups = provisionedGroups()
@@ -133,6 +164,7 @@ enum ChatStego {
         case "english": language = .english
         case "russian": language = .russian
         case "german": language = .german
+        case "chinese": language = .chinese
         default: language = .forSystem()
         }
         return (language, mode(of: c))
@@ -193,7 +225,7 @@ enum PrivacyConfig {
 }
 
 enum InterfaceConfig {
-    static let supportedLanguages = ["en", "ru", "de"]
+    static let supportedLanguages = ["en", "ru", "de", "zh-Hans"]
 
     private static let key = "interface"
     private struct Config: Codable {
@@ -228,6 +260,23 @@ enum InterfaceConfig {
 }
 
 enum KeyboardConfig {
+    enum FieldSize: String, CaseIterable, Sendable {
+        case small, medium, large
+
+        var height: CGFloat {
+            switch self {
+            case .small: return 50
+            case .medium: return 86
+            case .large: return 122
+            }
+        }
+
+        static func resolve(_ raw: String?) -> FieldSize {
+            guard let raw, let size = FieldSize(rawValue: raw) else { return .small }
+            return size
+        }
+    }
+
     private static let key = "kbconfig"
     private struct Config: Codable {
         var haptics = true
@@ -238,7 +287,9 @@ enum KeyboardConfig {
         var emoji: Bool? = true
         var autocorrect: Bool? = true
         var composeToggle: Bool? = true
+        var shield: Bool? = true
         var langs: [String]? = nil
+        var fieldSize: String? = nil
     }
 
     private static let cache = ConfigCache<Config>()
@@ -253,12 +304,14 @@ enum KeyboardConfig {
     }
 
     static func save(haptics: Bool, compose: Bool, sounds: Bool, autoDecrypt: Bool, suggestions: Bool,
-                     emoji: Bool, autocorrect: Bool, composeToggle: Bool, languages: [String]?) {
+                     emoji: Bool, autocorrect: Bool, composeToggle: Bool, shield: Bool,
+                     languages: [String]?, fieldSize: FieldSize) {
         if let d = try? JSONEncoder().encode(Config(haptics: haptics, compose: compose, sounds: sounds,
                                                     autoDecrypt: autoDecrypt, suggestions: suggestions,
                                                     emoji: emoji, autocorrect: autocorrect,
-                                                    composeToggle: composeToggle,
-                                                    langs: languages.map(cleaned))) {
+                                                    composeToggle: composeToggle, shield: shield,
+                                                    langs: languages.map(cleaned),
+                                                    fieldSize: fieldSize.rawValue)) {
             SharedStore.write(key, d)
         }
         cache.invalidate()
@@ -275,12 +328,14 @@ enum KeyboardConfig {
         var haptics: Bool
         var compose: Bool
         var composeToggle: Bool
+        var shield: Bool
         var sounds: Bool
         var autoDecrypt: Bool
         var suggestions: Bool
         var autocorrect: Bool
         var emoji: Bool
         var languages: [String]
+        var fieldSize: FieldSize
     }
 
     static func snapshot() -> Snapshot {
@@ -289,12 +344,14 @@ enum KeyboardConfig {
         return Snapshot(haptics: c.haptics,
                         compose: c.compose,
                         composeToggle: c.composeToggle ?? true,
+                        shield: c.shield ?? true,
                         sounds: c.sounds,
                         autoDecrypt: c.autoDecrypt ?? true,
                         suggestions: c.suggestions ?? true,
                         autocorrect: c.autocorrect ?? true,
                         emoji: c.emoji ?? true,
-                        languages: langs.isEmpty ? defaultLanguages : langs)
+                        languages: langs.isEmpty ? defaultLanguages : langs,
+                        fieldSize: FieldSize.resolve(c.fieldSize))
     }
 
     static var haptics: Bool { config().haptics }
@@ -305,6 +362,8 @@ enum KeyboardConfig {
     static var emoji: Bool { config().emoji ?? true }
     static var autocorrect: Bool { config().autocorrect ?? true }
     static var composeToggle: Bool { config().composeToggle ?? true }
+    static var shield: Bool { config().shield ?? true }
+    static var fieldSize: FieldSize { FieldSize.resolve(config().fieldSize) }
     static var languages: [String] { storedLanguages ?? defaultLanguages }
 
     static var storedLanguages: [String]? {
@@ -313,9 +372,7 @@ enum KeyboardConfig {
         return langs.isEmpty ? nil : langs
     }
 
-    static var systemPrefersRussian: Bool { StegoLanguage.forSystem() == .russian }
-
-    private static let nonLatinLanguages: Set<String> = ["ru"]
+    private static let nonLatinLanguages: Set<String> = ["ru", "zh"]
 
     static var defaultLanguages: [String] {
         let sys = systemLanguage
@@ -327,10 +384,11 @@ enum KeyboardConfig {
         let code = Bundle.main.preferredLocalizations.first ?? "en"
         if code.hasPrefix("ru") { return "ru" }
         if code.hasPrefix("de") { return "de" }
+        if code.hasPrefix("zh") { return "zh" }
         return "en"
     }
 
-    static let supported = ["en", "ru", "de"]
+    static let supported = ["en", "ru", "de", "zh"]
 
     private static func cleaned(_ raw: [String]) -> [String] { supported.filter(raw.contains) }
 }

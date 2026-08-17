@@ -7,7 +7,7 @@ import com.kryptos.android.signal.AppSettingsStore
 import java.util.Locale
 
 object AppLanguage {
-    val supported = listOf("en", "ru", "de")
+    val supported = listOf("en", "ru", "de", "zh")
 
     fun systemLocale(): Locale = Resources.getSystem().configuration.locales[0]
 

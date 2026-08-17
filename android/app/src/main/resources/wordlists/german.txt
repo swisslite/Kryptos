@@ -22,7 +22,6 @@ hat
 hier
 haben
 sind
-war
 von
 wenn
 dich
@@ -219,7 +218,6 @@ welt
 unter
 habt
 andere
-tot
 getan
 darf
 erst
@@ -400,7 +398,6 @@ nehme
 ersten
 guter
 chance
-krieg
 tage
 gehst
 allen
@@ -434,7 +431,6 @@ drauf
 reicht
 fest
 besten
-waffe
 kaum
 klingt
 platz
@@ -538,7 +534,6 @@ findet
 wovon
 sobald
 herren
-waffen
 weh
 bringe
 klasse
@@ -607,7 +602,6 @@ bild
 neu
 seien
 starb
-leiche
 auge
 zieh
 nimmt
@@ -676,7 +670,6 @@ gottes
 holt
 fehlt
 gehabt
-kriegt
 tief
 lage
 kraft
@@ -722,7 +715,6 @@ anruf
 karte
 euren
 schade
-kriege
 stirbt
 bleibe
 sonne
@@ -733,12 +725,10 @@ nase
 ewig
 singen
 bank
-toten
 naja
 henry
 show
 gold
-drogen
 wein
 fotos
 manche
@@ -764,7 +754,6 @@ wohnen
 weder
 kaputt
 zweite
-armee
 tee
 don
 stellt
@@ -819,7 +808,6 @@ brauch
 vorne
 stopp
 unsinn
-messer
 gesund
 pro
 davor
@@ -888,7 +876,6 @@ treten
 trifft
 blumen
 rief
-schuss
 fassen
 meer
 bein
@@ -923,7 +910,6 @@ hinaus
 vorhin
 fahrt
 gebaut
-bombe
 hasst
 kosten
 zeige
@@ -952,13 +938,11 @@ lehrer
 hoffen
 isst
 risiko
-knast
 gilt
 held
 daraus
 erstes
 prima
-gewalt
 liebes
 tor
 jagen
@@ -977,7 +961,6 @@ atmen
 hose
 city
 prinz
-tote
 karten
 natur
 mami
@@ -1021,7 +1004,6 @@ fern
 scherz
 womit
 rot
-soldat
 reisen
 termin
 gang
@@ -1096,7 +1078,6 @@ trage
 bieten
 bestes
 fuhr
-dick
 stuhl
 dreh
 bester
@@ -1142,7 +1123,6 @@ tritt
 trauen
 trick
 roten
-killer
 antun
 locker
 ums
@@ -1165,7 +1145,6 @@ rote
 zugang
 liest
 vorn
-sexy
 story
 madam
 halben
@@ -1199,8 +1178,8 @@ extra
 babys
 wehtun
 zog
+iss
 echten
-nackt
 montag
 steigt
 trug
@@ -1215,7 +1194,6 @@ jacke
 wild
 nenne
 meins
-gift
 ton
 akten
 find
@@ -1228,11 +1206,9 @@ weint
 rock
 ellen
 crew
-gewehr
 hauen
 ross
 wetter
-schwul
 regel
 armer
 gucken
@@ -1240,7 +1216,6 @@ strafe
 zelle
 langen
 altes
-gras
 kenn
 brot
 nehm
@@ -1310,7 +1285,6 @@ mittel
 fliege
 lebte
 beides
-ficken
 stoff
 eilig
 stammt
@@ -1360,7 +1334,6 @@ ziehst
 bart
 klo
 durchs
-geil
 nieder
 solch
 stress
@@ -1449,7 +1422,6 @@ miete
 klaus
 gabe
 landes
-mordes
 nennst
 planet
 suppe
@@ -1469,7 +1441,6 @@ mutig
 linken
 not
 eng
-morde
 dusche
 rund
 fieber
@@ -1537,7 +1508,6 @@ sohnes
 ginge
 durfte
 wirft
-titten
 todes
 hohe
 holmes
@@ -1588,7 +1558,6 @@ teller
 steck
 bibel
 kopie
-toter
 deck
 narr
 geirrt
@@ -1624,7 +1593,6 @@ motiv
 lernte
 weich
 echtes
-verrat
 hexen
 live
 taub
@@ -1638,7 +1606,6 @@ warne
 laune
 stille
 asche
-spion
 puppe
 linke
 couch
@@ -1662,11 +1629,9 @@ rettet
 jahres
 pilot
 colt
-nigger
 grade
 leib
 stecke
-knarre
 phase
 bande
 treu
@@ -1746,7 +1711,6 @@ stift
 warf
 handel
 schuh
-bomben
 ken
 tapfer
 tiefe
@@ -1897,7 +1861,6 @@ rasse
 kummer
 partei
 welten
-heroin
 erfuhr
 dummer
 stabil
@@ -1911,13 +1874,11 @@ halbes
 action
 achte
 innere
-kanone
 eklig
 armes
 avenue
 marine
 kissen
-geisel
 trost
 vieh
 lautes
@@ -2027,7 +1988,6 @@ tucker
 etage
 objekt
 wobei
-kokain
 wolken
 pardon
 ungut
@@ -2046,7 +2006,6 @@ sodass
 volkes
 golf
 summt
-shit
 zielen
 fans
 dinner
@@ -2131,7 +2090,6 @@ sowohl
 steak
 loser
 wacht
-morden
 fox
 weiten
 maya
@@ -2209,7 +2167,6 @@ nest
 helm
 bingo
 herbst
-nazis
 stamm
 braves
 tank
@@ -2288,7 +2245,6 @@ anruft
 weist
 frohes
 geldes
-dealer
 januar
 kranke
 sprang
@@ -2325,7 +2281,6 @@ mode
 songs
 breche
 hahn
-folter
 speck
 piept
 tore
@@ -2341,7 +2296,6 @@ totale
 level
 spinnt
 bienen
-koks
 piepen
 langem
 hasste
@@ -2358,7 +2312,6 @@ abzug
 becher
 geste
 hinauf
-huren
 khan
 wagt
 ernste
@@ -2431,13 +2384,10 @@ lehre
 films
 erregt
 trag
-raub
 firmen
-fickt
 belle
 bluten
 futter
-muschi
 aktien
 karre
 bedarf
@@ -2452,7 +2402,6 @@ ruht
 statue
 finale
 rahmen
-fotze
 fehlte
 klub
 jubeln
@@ -2517,7 +2466,6 @@ schere
 stoppt
 reiner
 meile
-spione
 organe
 fell
 lache
@@ -2554,7 +2502,6 @@ tussi
 reite
 radar
 strich
-stab
 maler
 boxer
 rasch
@@ -2573,7 +2520,6 @@ ideale
 eiern
 farmer
 obst
-droge
 enge
 juhu
 lungen
@@ -2615,13 +2561,11 @@ casino
 zahlst
 kurve
 les
-pissen
 klarer
 outfit
 reinen
 pest
 vagina
-nutten
 zoll
 region
 riefen
@@ -2706,7 +2650,6 @@ wurf
 samen
 sultan
 hauch
-pornos
 weinte
 merci
 kluge
@@ -2715,7 +2658,6 @@ juckt
 tausch
 jet
 power
-junkie
 vati
 topf
 packe
@@ -2735,7 +2677,6 @@ sofern
 album
 regnen
 point
-pussy
 kuppel
 hinzu
 wrack
@@ -2765,7 +2706,6 @@ center
 leide
 note
 datei
-nackte
 quere
 wecker
 lobby
@@ -2825,7 +2765,6 @@ gewebe
 wachte
 barbie
 poker
-lesbe
 konten
 vulkan
 sinken
@@ -2958,7 +2897,6 @@ drohte
 codes
 bumsen
 taktik
-ass
 clowns
 freies
 gier
@@ -2971,7 +2909,6 @@ bauten
 teich
 duell
 wange
-geile
 enorm
 ups
 dax
@@ -2991,7 +2928,6 @@ orbit
 kapsel
 zeile
 gabst
-neger
 minen
 sessel
 baten
@@ -3066,7 +3002,6 @@ chefs
 physik
 dosen
 beging
-streik
 tipps
 starte
 beruht
@@ -3159,7 +3094,6 @@ stumme
 winde
 wirbel
 kakao
-pisse
 beck
 kurier
 zeilen
@@ -3169,7 +3103,6 @@ unheil
 wiege
 herb
 freaks
-rauben
 cognac
 blas
 becken
@@ -3268,7 +3201,6 @@ gehn
 immun
 umhang
 trefft
-galgen
 stiles
 klippe
 umweg
@@ -3287,7 +3219,6 @@ ratet
 sushi
 enorme
 biene
-totes
 ast
 lappen
 unruhe
@@ -3352,7 +3283,6 @@ lern
 lehne
 buh
 jaja
-giftig
 rausch
 solide
 legten
@@ -3368,7 +3298,6 @@ kurzes
 haupt
 umarme
 dankt
-lesben
 armeen
 heu
 eule
@@ -3417,7 +3346,6 @@ reiste
 pfanne
 komma
 konsul
-bomber
 lachs
 siehe
 poster
@@ -3434,7 +3362,7 @@ waise
 vorrat
 fusion
 haie
-homo
+innern
 basta
 riese
 brenne
@@ -3477,7 +3405,6 @@ glatze
 steaks
 massen
 bosse
-fickst
 sehne
 klick
 makler
@@ -3504,6 +3431,7 @@ breite
 weis
 beton
 nimmer
+wagens
 blutes
 trab
 hetero
@@ -3532,7 +3460,6 @@ wale
 franks
 ruck
 padre
-coup
 vers
 wag
 ahoi
@@ -3563,7 +3490,6 @@ circa
 obere
 spitz
 viper
-pisser
 malte
 kripo
 yacht
@@ -3608,7 +3534,6 @@ klon
 app
 briggs
 seile
-geiler
 donut
 weide
 ekel
@@ -3696,7 +3621,6 @@ alldem
 bliebe
 ferkel
 orakel
-ficke
 gebote
 knaben
 lest
@@ -3842,7 +3766,6 @@ demut
 amis
 oberin
 geizig
-raubt
 visum
 ansah
 romane
@@ -3900,7 +3823,6 @@ campen
 dakota
 leihst
 diplom
-opium
 grabe
 mieze
 kupfer
@@ -4094,3 +4016,81 @@ toren
 unsern
 satans
 pudel
+wandel
+stamme
+fokus
+bares
+stande
+urne
+ladet
+gurke
+quoten
+rocken
+rubin
+erbin
+winkt
+welpe
+hastig
+lehn
+omas
+grinst
+ledig
+sorten
+wiesel
+marken
+stute
+umsatz
+milz
+teste
+lasen
+krampf
+waldes
+zweien
+sonnen
+starre
+linkes
+essig
+dorn
+tasten
+tatest
+maxime
+letzt
+muskel
+engeln
+tobt
+lau
+hege
+wund
+ringt
+heiter
+teilst
+schob
+wagte
+schutt
+klone
+funke
+saat
+zuteil
+kante
+taugen
+teils
+kreuzt
+brech
+traten
+zaum
+raste
+grenzt
+fauler
+birgt
+eitel
+hofe
+uralte
+buckel
+fohlen
+niest
+flehte
+manch
+wahn
+futsch
+klugen
+hegen

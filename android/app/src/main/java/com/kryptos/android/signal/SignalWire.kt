@@ -43,11 +43,12 @@ object SignalWire {
             val padded = pad && StegoWire.fits(serialized.size, true)
             val payload = StegoWire.frame(serialized, ct.type, deflate, padded)
             if (payload.size <= TextStego.MAX_PAYLOAD_BYTES) {
-                return when (mode) {
+                val cover = when (mode) {
                     StegoMode.WORDS -> TextStego.encode(payload, stego)
                     StegoMode.SMART -> SmartTextStego.encode(payload, stego)
                     StegoMode.LETTERS -> LetterStego.encode(payload, stego)
                 }
+                if (cover != null) return cover
             }
             return WireFormat.wrap(serialized, ct.type, deflate, pad, pairKey(myFingerprint, toFingerprint))
         }
@@ -68,8 +69,7 @@ object SignalWire {
         if (unwrapped != null) {
             try {
                 val raw = signalDecrypt(cipher, unwrapped.type, unwrapped.body)
-                val data = if (unwrapped.deflate) Deflate.decompress(raw) ?: ByteArray(0) else raw
-                return String(data, Charsets.UTF_8)
+                return inflate(raw, unwrapped.deflate)
             } catch (e: Exception) {
                 val fallback = stegoPayload(armored) ?: throw e
                 return decryptStego(cipher, fallback)
@@ -93,7 +93,13 @@ object SignalWire {
             else CipherException.Kind.NOT_A_KRYPTOS_MESSAGE
         )
         val raw = signalDecrypt(cipher, framed.type, framed.body)
-        val data = if (framed.deflate) Deflate.decompress(raw) ?: ByteArray(0) else raw
+        return inflate(raw, framed.deflate)
+    }
+
+    private fun inflate(raw: ByteArray, deflate: Boolean): String {
+        if (!deflate) return String(raw, Charsets.UTF_8)
+        val data = Deflate.decompress(raw)
+            ?: throw CipherException(CipherException.Kind.DECRYPTION_FAILED)
         return String(data, Charsets.UTF_8)
     }
 

@@ -1,19 +1,31 @@
 package com.kryptos.android.core
 
-import java.security.SecureRandom
 import java.text.Normalizer
 
 object SmartTextStego {
     private const val MAGIC = 0xC6
     const val MAX_PAYLOAD_BYTES = 0x7FFF
 
-    private val random = SecureRandom()
     private const val RESYNC_STARTS = 3
+    private const val HAN_RESYNC_STARTS = 8
 
-    private val commaBefore = setOf("but", "so", "yet", "then", "while", "because", "though", "aber", "denn", "sondern", "и", "но", "а", "затем", "потом", "пока", "когда", "поэтому")
+    private val commaBefore = setOf("but", "so", "yet", "then", "while", "because", "though", "aber", "denn", "sondern", "и", "но", "а", "затем", "потом", "пока", "когда", "поэтому", "\u800C\u4E14", "\u4F46\u662F", "\u7136\u540E", "\u56E0\u6B64")
 
-    fun encode(data: ByteArray, language: StegoLanguage = StegoLanguage.forSystem()): String =
-        encode(data, language, random.nextInt(256))
+    private class Style(
+        val unit: Int,
+        val space: String,
+        val comma: String,
+        val stop: String,
+        val bang: String,
+    ) {
+        companion object {
+            val LATIN = Style(1, " ", ",", ".", "!")
+            val HAN = Style(2, "", "\uFF0C", "\u3002", "\uFF01")
+        }
+    }
+
+    fun encode(data: ByteArray, language: StegoLanguage = StegoLanguage.forSystem()): String? =
+        StegoSafety.firstCleanCover(data.size) { seed -> encode(data, language, seed) }
 
     internal fun encode(data: ByteArray, language: StegoLanguage, seed: Int): String {
         require(data.size <= MAX_PAYLOAD_BYTES) { "payload too large for the smart stego frame" }
@@ -31,9 +43,9 @@ object SmartTextStego {
                     is Element.Slot -> parts.add(g.slots[element.type][reader.read(g.slotBits[element.type])])
                 }
             }
-            bodies.add(render(g.openers[openerIdx], g.openerKind[openerIdx], parts))
+            bodies.add(render(g.openers[openerIdx], g.openerKind[openerIdx], parts, g.style))
         }
-        return assemble(bodies, seed)
+        return assemble(bodies, seed, g.style)
     }
 
     fun decode(text: String): ByteArray? {
@@ -49,17 +61,37 @@ object SmartTextStego {
         val tokens = tokenize(text.take(240))
         if (tokens.size < sample) return false
         val head = tokens.take(8)
-        return grammars.any { g -> head.any { g.openerIndex.containsKey(it) } }
+        return grammars.any { g -> head.any { g.startTokens.contains(it) } }
     }
 
     private fun decode(rawTokens: List<String>, g: Grammar): ByteArray? {
-        val tokens = rawTokens.filter { it in g.vocab }
+        if (g.style.unit == 1) return scanStarts(rawTokens.filter { it in g.vocab }, g)
+        val chars = rawTokens.filter { it in g.charVocab }
+        if (chars.size < g.style.unit) return null
+        for (alignment in 0 until g.style.unit) {
+            scanStarts(group(chars, g.style.unit, alignment), g)?.let { return it }
+        }
+        return null
+    }
+
+    private fun group(chars: List<String>, unit: Int, alignment: Int): List<String> {
+        val symbols = ArrayList<String>(maxOf(0, (chars.size - alignment) / unit))
+        var i = alignment
+        while (i + unit <= chars.size) {
+            symbols.add(chars.subList(i, i + unit).joinToString(""))
+            i += unit
+        }
+        return symbols
+    }
+
+    private fun scanStarts(tokens: List<String>, g: Grammar): ByteArray? {
         if (tokens.isEmpty()) return null
+        val limit = if (g.style.unit > 1) HAN_RESYNC_STARTS else RESYNC_STARTS
         var tried = 0
         for (start in tokens.indices) {
             if (!g.openerIndex.containsKey(tokens[start])) continue
             decodeFrom(tokens, start, g)?.let { return it }
-            if (++tried >= RESYNC_STARTS) break
+            if (++tried >= limit) break
         }
         return null
     }
@@ -99,18 +131,18 @@ object SmartTextStego {
         return frameDecode(writer.bytes())
     }
 
-    private fun render(opener: String, kind: Int, parts: List<String>): String {
+    private fun render(opener: String, kind: Int, parts: List<String>, style: Style): String {
         val sb = StringBuilder()
-        sb.append(opener.replaceFirstChar { it.uppercase() })
-        if (kind == 0) sb.append(",")
+        sb.append(if (style.unit > 1) opener else opener.replaceFirstChar { it.uppercase() })
+        if (kind == 0) sb.append(style.comma)
         for (part in parts) {
-            if (part in commaBefore) sb.append(",")
-            sb.append(" ").append(part)
+            if (part in commaBefore) sb.append(style.comma)
+            sb.append(style.space).append(part)
         }
         return sb.toString()
     }
 
-    private fun assemble(bodies: List<String>, seed: Int): String {
+    private fun assemble(bodies: List<String>, seed: Int, style: Style): String {
         var x = (seed xor 0x3B) and 0xFF
         fun next(): Int {
             x = (x * 197 + 91) and 0xFF
@@ -118,9 +150,9 @@ object SmartTextStego {
         }
         val sb = StringBuilder()
         for ((i, body) in bodies.withIndex()) {
-            if (i > 0) sb.append(if (next() % 7 == 0) "\n" else " ")
+            if (i > 0) sb.append(if (next() % 7 == 0) "\n" else style.space)
             sb.append(body)
-            sb.append(if (next() % 10 == 9) "!" else ".")
+            sb.append(if (next() % 10 == 9) style.bang else style.stop)
         }
         return sb.toString()
     }
@@ -187,15 +219,17 @@ object SmartTextStego {
 
     private fun tokenize(text: String): List<String> = StegoTokenizer.split(text)
 
-    private val englishGrammar by lazy { Grammar(SmartStegoData.english) }
-    private val russianGrammar by lazy { Grammar(SmartStegoData.russian) }
-    private val germanGrammar by lazy { Grammar(SmartStegoData.german) }
-    private val grammars by lazy { listOf(englishGrammar, russianGrammar, germanGrammar) }
+    private val englishGrammar by lazy { Grammar(SmartStegoData.english, Style.LATIN) }
+    private val russianGrammar by lazy { Grammar(SmartStegoData.russian, Style.LATIN) }
+    private val germanGrammar by lazy { Grammar(SmartStegoData.german, Style.LATIN) }
+    private val chineseGrammar by lazy { Grammar(SmartStegoData.chinese, Style.HAN) }
+    private val grammars by lazy { listOf(englishGrammar, russianGrammar, germanGrammar, chineseGrammar) }
 
     private fun grammar(language: StegoLanguage): Grammar =
         when (language) {
             StegoLanguage.RUSSIAN -> russianGrammar
             StegoLanguage.GERMAN -> germanGrammar
+            StegoLanguage.CHINESE -> chineseGrammar
             StegoLanguage.ENGLISH -> englishGrammar
         }
 
@@ -204,7 +238,7 @@ object SmartTextStego {
         class Slot(val type: Int) : Element()
     }
 
-    private class Grammar(raw: SmartStegoData.Grammar) {
+    private class Grammar(raw: SmartStegoData.Grammar, val style: Style) {
         val openers: List<String> = raw.openers.map { nfc(it) }
         val openerKind: List<Int> = raw.openerKind
         val structOf: List<Int> = raw.structOf
@@ -228,6 +262,9 @@ object SmartTextStego {
                 if (element is Element.Literal) add(element.word.lowercase())
             }
         }
+        val charVocab: Set<String> =
+            if (style.unit > 1) buildSet { for (w in vocab) for (c in w) add(c.toString()) } else emptySet()
+        val startTokens: Set<String> = if (style.unit > 1) charVocab else openerIndex.keys
 
         private fun nfc(w: String): String = Normalizer.normalize(w, Normalizer.Form.NFC)
 

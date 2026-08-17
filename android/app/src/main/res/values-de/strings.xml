@@ -35,6 +35,7 @@
     <string name="auto_delete">Verschwindende Nachrichten</string>
     <string name="clear_chat">Chat leeren</string>
     <string name="delete_contact">Kontakt löschen</string>
+    <string name="delete_message">Nachricht löschen</string>
     <string name="off">Aus</string>
     <string name="s30">30 Sekunden</string>
     <string name="m5">5 Minuten</string>
@@ -45,8 +46,13 @@
 
     <string name="new_profile">Neues Profil</string>
     <string name="profile_name">Profilname</string>
+    <string name="rename">Umbenennen</string>
+    <string name="rename_profile">Profil umbenennen</string>
+    <string name="rename_contact">Kontakt umbenennen</string>
+    <string name="save">Speichern</string>
     <string name="regenerate_key">Schlüssel neu erzeugen</string>
-    <string name="regenerate_warning">Dabei entsteht eine völlig neue Identität, und alle Sitzungen dieses Profils werden ungültig.</string>
+    <string name="regenerate_warning">Dabei entsteht ein völlig neues Schlüsselpaar, und alle Sitzungen dieses Profils werden ungültig.</string>
+    <string name="profile_unavailable">Profil „%1$s“ konnte nicht geöffnet werden — sein verschlüsselter Speicher ist nicht lesbar. Versuche es später erneut.</string>
 
     <string name="password">Passwort</string>
     <string name="encrypt">Verschlüsseln</string>
@@ -61,7 +67,7 @@
     <string name="capacity_exceeded">Die Nachricht passt nicht in dieses Foto.</string>
     <string name="low_memory">Auf diesem Gerät ist zu wenig Speicher, um diesen Vorgang abzuschließen.</string>
     <string name="storage_broken_title">Verschlüsselter Speicher nicht verfügbar</string>
-    <string name="storage_broken_text">Kryptos kann seine Schlüssel nicht lesen. Das passiert normalerweise, wenn die Displaysperre vom Gerät entfernt wurde — Android zerstört dann den Hardware-Schlüssel, der die App-Daten schützt, und er lässt sich nicht wiederherstellen, auch nicht durch erneutes Einrichten der Displaysperre.\n\nDeine Schlüssel und Unterhaltungen sind unwiederbringlich verloren. Ein Neuanfang erzeugt eine frische Identität; du musst die Schlüssel mit deinen Kontakten erneut austauschen.</string>
+    <string name="storage_broken_text">Kryptos kann seine Schlüssel nicht lesen. Das passiert normalerweise, wenn die Displaysperre vom Gerät entfernt wurde — Android zerstört dann den Hardware-Schlüssel, der die App-Daten schützt, und er lässt sich nicht wiederherstellen, auch nicht durch erneutes Einrichten der Displaysperre.\n\nDeine Schlüssel und Unterhaltungen sind unwiederbringlich verloren. Ein Neuanfang erzeugt ein frisches Profil; du musst die Schlüssel mit deinen Kontakten erneut austauschen.</string>
     <string name="storage_broken_reset">Löschen und neu beginnen</string>
     <string name="stego_not_found">Keine Nachricht gefunden — falsches Passwort, oder dieses Foto enthält nichts.</string>
 
@@ -81,16 +87,20 @@
     <string name="stego_mode_smart">Sinnvolle Sätze</string>
     <string name="stego_mode_letters">Zufällige Buchstaben</string>
     <string name="stego_letters_footer">Der kürzeste Modus — etwa halb so lang wie „Einfache Wörter“.</string>
+    <string name="stego_letters_footer_han">Eine durchgehende Folge ohne Satzzeichen.</string>
     <string name="stego_smart_footer">Echte Sätze statt Wortsalat, dafür wird der Text länger.</string>
     <string name="lang_auto">Automatisch (Systemsprache)</string>
     <string name="lang_en">Englisch</string>
     <string name="lang_ru">Russisch</string>
     <string name="lang_de">Deutsch</string>
+    <string name="lang_zh">Chinesisch</string>
     <string name="settings_keyboard">Tastatur</string>
     <string name="settings_enable_keyboard">Kryptos-Tastatur aktivieren</string>
     <string name="settings_kb_autodecrypt">Zwischenablage in der Tastatur automatisch entschlüsseln</string>
     <string name="settings_kb_sendafter">Nach dem Verschlüsseln senden</string>
     <string name="settings_kb_sendafter_desc">Das Schloss verschlüsselt und sendet sofort. Das Papierflieger-Abzeichen am Schloss heißt: aktiv.</string>
+    <string name="settings_kb_sendafter_service">Der Kryptos-Dienst wird benötigt - tippe, um ihn einzuschalten.</string>
+    <string name="kb_send_needs_service">Aktiviere den Kryptos-Dienst, um in dieser App zu senden.</string>
     <string name="settings_privacy">Privatsphäre</string>
     <string name="settings_shield">Screenshots &amp; Vorschaubilder im App-Umschalter blockieren</string>
     <string name="settings_clip_autodecrypt">Zwischenablage beim Öffnen der App automatisch entschlüsseln</string>
@@ -100,6 +110,11 @@
     <string name="settings_wipe_all">Alles löschen</string>
 
     <string name="settings_about_row">Über die App</string>
+    <string name="donate_title">Projekt unterstützen</string>
+    <string name="donate_intro">Kryptos ist kostenlos, ohne Werbung und ohne Tracking. Wenn es dir nützt, kannst du die Entwicklung unterstützen.</string>
+    <string name="donate_copy">Adresse kopieren</string>
+    <string name="donate_verify">Prüfe die Adresse, bevor du sendest.</string>
+    <string name="donate_qr_unavailable">QR-Code konnte nicht erstellt werden — kopiere stattdessen die Adresse.</string>
     <string name="settings_danger_footer">Löscht die gewählten Daten unwiderruflich.</string>
     <string name="clip_section">Zwischenablage</string>
     <string name="clip_footer">Die Auto-Löschung entfernt Kopiertes nach der gewählten Zeit.</string>
@@ -147,6 +162,7 @@
     <string name="kb_select_contact">Kontakt</string>
     <string name="kb_no_contacts">Füge zuerst in der Kryptos-App einen Kontakt hinzu</string>
     <string name="kb_encrypted">Verschlüsselt ✓</string>
+    <string name="kb_field_locked">Diese App lässt die Tastatur das Feld nicht leeren - verschlüssle stattdessen in der Kryptos-App.</string>
     <string name="kb_nothing_to_encrypt">Nichts zu verschlüsseln — schreibe zuerst eine Nachricht</string>
     <string name="kb_locked">Entsperre zuerst die Kryptos-App</string>
 
@@ -237,7 +253,7 @@
     <string name="confirm_clear_chat_title">Diesen Chat leeren?</string>
     <string name="confirm_clear_chat_text">Löscht diese Unterhaltung sicher. Das lässt sich nicht rückgängig machen.</string>
     <string name="confirm_delete_profile_title">Profil löschen?</string>
-    <string name="confirm_delete_profile_text">Damit wird diese Identität endgültig entfernt — samt ihren Schlüsseln, Kontakten und Nachrichten. Das lässt sich nicht rückgängig machen.</string>
+    <string name="confirm_delete_profile_text">Damit wird dieses Profil endgültig entfernt — samt seinen Schlüsseln, Kontakten und Nachrichten. Das lässt sich nicht rückgängig machen.</string>
     <string name="confirm_wipe_chats_text">Der Nachrichtenverlauf in allen Chats wird gelöscht. Die Kontakte bleiben erhalten. Das lässt sich nicht rückgängig machen.</string>
     <string name="confirm_wipe_contacts_text">Die Schlüssel, Sitzungen und Unterhaltungen aller Kontakte werden von diesem Gerät gelöscht; dein eigener Schlüssel bleibt erhalten. Das lässt sich nicht rückgängig machen.</string>
         <string name="confirm_remove_recipient_title">Empfänger entfernen?</string>
@@ -251,6 +267,11 @@
     <string name="settings_kb_sounds">Tastentöne</string>
     <string name="settings_kb_compose">Nachrichtenfeld in der Tastatur</string>
     <string name="settings_kb_compose_toggle">Feldtaste auf der Tastatur</string>
+    <string name="settings_kb_shield">Kryptos-Symbol auf der Tastatur</string>
+    <string name="settings_kb_fieldsize">Feldgröße</string>
+    <string name="field_size_small">Klein</string>
+    <string name="field_size_medium">Mittel</string>
+    <string name="field_size_large">Groß</string>
     <string name="settings_kb_compose_desc">Das Feld lässt dich außerhalb des Messengers tippen, er behält also keinen Entwurf. Die Taste schaltet es direkt auf der Tastatur um.</string>
 
     <string name="kb_typing">Texteingabe</string>
@@ -389,7 +410,7 @@
     <string name="faq_q10">Ich habe das Passwort meines Schlüssel-Backups vergessen</string>
     <string name="faq_a10">Es gibt keine Möglichkeit, es wiederherzustellen. Die Datei ist mit diesem Passwort verschlüsselt, und Kryptos bewahrt nirgends eine Kopie davon auf. Erstelle ein neues Backup mit einem Passwort, das du nicht vergisst.</string>
     <string name="faq_q11">Wozu sind Profile da?</string>
-    <string name="faq_a11">Ein Profil ist eine eigenständige Identität mit eigenem Schlüssel und eigenen Kontakten. Du kannst mehrere davon führen und zwischen ihnen wechseln — etwa um Beruf und Privatleben zu trennen.</string>
+    <string name="faq_a11">Ein Profil ist ein eigenes Schlüsselpaar mit eigenen Kontakten. Du kannst mehrere davon führen und zwischen ihnen wechseln — etwa um Beruf und Privatleben zu trennen.</string>
     <string name="faq_q12">Wie stark ist die Verschlüsselung?</string>
     <string name="faq_a12">Die Chats verwenden Signals eigene Bibliothek libsignal — dasselbe Protokoll wie Signal selbst, einschließlich des post-quantensicheren Handshakes. Der Passwort-Modus und die Fotos verwenden Argon2id und AES-256-GCM. Kryptos enthält keine selbstgebaute Kryptografie.</string>
     <string name="faq_q13">Braucht mein Kontakt ebenfalls Kryptos?</string>
@@ -416,6 +437,7 @@
     <string name="ui_dark">Dunkel</string>
     <string name="ui_appearance_footer">Das Thema wechselt sofort. Ein Sprachwechsel startet die App neu.</string>
     <string name="ui_tabs_footer">Ausgeschaltete Bereiche verschwinden aus der unteren Leiste.</string>
+    <string name="ui_keyboard_footer">Zeigt das Symbol in der Leiste über den Tasten.</string>
     <string name="ui_tabs">Untere Leiste</string>
     <string name="kb_a11y_space">Leertaste</string>
     <string name="kb_a11y_backspace">Rücktaste</string>
@@ -435,4 +457,9 @@
     <string name="faq_q21">Wofür ist „Nachrichtenfeld in der Tastatur“?</string>
     <string name="faq_a21">Normalerweise tippst du in das Eingabefeld des Messengers, er sieht also jeden Buchstaben, bevor überhaupt verschlüsselt wird — und die meisten Messenger speichern das Getippte als Entwurf. Schaltest du dieses Feld ein, tippst du stattdessen in der Kryptos-Tastatur: Der Messenger bekommt gar nichts, bis du auf das Schloss tippst, und erhält dann nur den fertigen Geheimtext. Das Getippte bleibt in der Tastatur, wird nie gespeichert und verschwindet beim Löschen zusammen mit deinen übrigen Daten. Die eigene Einstellung „Feldtaste auf der Tastatur“ legt eine Taste neben das Schloss, damit du das Feld ohne Umweg über die Einstellungen einschalten kannst.</string>
     <string name="about_website">Website</string>
+    <string name="engine_title">Signal-Engine</string>
+    <string name="engine_ok">Die Chats laufen mit der offiziellen libsignal.</string>
+    <string name="profiles_intro">Ein Profil ist ein eigenes Schlüsselpaar mit eigenen Kontakten. Lege mehrere an, um Dinge getrennt zu halten. Deine „Sicherheitsnummer“ ist öffentlich (du kannst sie weitergeben, sie dient nur zum Überprüfen eines Kontakts); dein privater Schlüssel verlässt dieses Gerät nie.</string>
+    <string name="current_profile">AKTUELLES PROFIL</string>
+    <string name="safety_number_label">SICHERHEITSNUMMER</string>
 </resources>

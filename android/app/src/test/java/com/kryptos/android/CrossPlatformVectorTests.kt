@@ -8,6 +8,10 @@ import com.kryptos.android.core.Padding
 import com.kryptos.android.core.PasswordCipher
 import com.kryptos.android.core.SmartTextStego
 import com.kryptos.android.core.StegoLanguage
+import com.kryptos.android.core.StegoTokenizer
+import com.kryptos.android.core.StegoSafety
+import com.kryptos.android.core.Wordlists
+import com.kryptos.android.core.SmartStegoData
 import com.kryptos.android.core.StegoWire
 import com.kryptos.android.core.TextStego
 import com.kryptos.android.core.WireFormat
@@ -114,11 +118,11 @@ class CrossPlatformVectorTests {
             for (ciphertext in sameBucket) {
                 val payload = stegoPayload(ciphertext, padded = true)
                 assertEquals(2 + Padding.target(4 + ciphertext), payload.size)
-                val words = TextStego.encode(payload, language)
-                wordCounts.add(words.split(' ', '\n').count { it.isNotEmpty() })
-                letterLengths.add(LetterStego.encode(payload, language).length)
-                val smart = SmartTextStego.encode(payload, language)
-                smartWordCounts.add(smart.split(' ', '\n').count { it.isNotEmpty() })
+                val words = requireNotNull(TextStego.encode(payload, language))
+                wordCounts.add(StegoTokenizer.split(words).size)
+                letterLengths.add(requireNotNull(LetterStego.encode(payload, language)).length)
+                val smart = requireNotNull(SmartTextStego.encode(payload, language))
+                smartWordCounts.add(StegoTokenizer.split(smart).size)
                 assertArrayEquals(unwrapStegoPayload(payload), unwrapStegoPayload(TextStego.decode(words)!!))
             }
             assertEquals("$language word count leaks the ciphertext size", 1, wordCounts.size)
@@ -130,11 +134,12 @@ class CrossPlatformVectorTests {
     @Test
     fun opensIosPaddedStegoPayload() {
         val expected = hex("001f3e5d7c9bbad9f81736557493b2d1f00f2e4d6c8baac9e80726456483a2c1e0ff1e3d5c7b9ab9")
-        val words = "Уайт повод, дверь окон, гусь мэру рота слух? Тно, ведет филип обои вудс едва " +
-            "сбить? Фонд, данн стол немо тон. Собак, штаны мамой луны нашем армии вера нелл моих? " +
-            "Этой любое уэйд, майки съел вашем лис? Удачи май танцы, раса вини. Воин, рут бар штуки шериф чью."
-        val letters = "гхфшълпгьвэфдгофмафбйэдшвгъаифжирсвнсиздърамреефггипййжрэвтоицварткжбквфосмнбэ" +
-            "вгугэяпщоанзыгщдрнмыьчлвфэгищцарьш"
+        val words = "Чжи, бьёт коул лежи мост? Курю сол пойму, вэл бар узнаю вудс. " +
+            "Сан брюс людях, видим езжу комы одной, жди айк. Долю, этажа сорок, замке шли. " +
+            "Сыра, леви рой, трёх муки заказ дениз. Хочу хах чушь, глен бон пил тима алек кусок. " +
+            "Туфли, тоже крем хор араб."
+        val letters = "вжъывфкчмсзтнмишщтввбьдмцуьгргафъгадшсгшубцкйрересъпсюемъуижбыгдпбмашсеаобжгйю" +
+            "авяьфвибгнджвръньалунцчсауаэрцгтси"
         for (cover in listOf(TextStego.decode(words), LetterStego.decode(letters))) {
             val payload = assertNotNull(cover).let { cover!! }
             assertEquals(0x03, payload[0].toInt() and 0xFF)
@@ -161,8 +166,8 @@ class CrossPlatformVectorTests {
         val short = stegoPayload(5, padded = false)
         val long = stegoPayload(55, padded = false)
         assertNotEquals(
-            LetterStego.encode(short, StegoLanguage.RUSSIAN).length,
-            LetterStego.encode(long, StegoLanguage.RUSSIAN).length,
+            requireNotNull(LetterStego.encode(short, StegoLanguage.RUSSIAN)).length,
+            requireNotNull(LetterStego.encode(long, StegoLanguage.RUSSIAN)).length,
         )
     }
 
@@ -171,8 +176,8 @@ class CrossPlatformVectorTests {
         assertEquals(64, Padding.target(4 + 55))
         assertEquals(128, Padding.target(4 + 70))
         assertTrue(
-            LetterStego.encode(stegoPayload(55, padded = true), StegoLanguage.RUSSIAN).length <
-                LetterStego.encode(stegoPayload(70, padded = true), StegoLanguage.RUSSIAN).length,
+            requireNotNull(LetterStego.encode(stegoPayload(55, padded = true), StegoLanguage.RUSSIAN)).length <
+                requireNotNull(LetterStego.encode(stegoPayload(70, padded = true), StegoLanguage.RUSSIAN)).length,
         )
     }
 
@@ -302,13 +307,13 @@ class CrossPlatformVectorTests {
     fun stegoSurvivesScreenChrome() {
         val payload = ByteArray(64) { (it * 3).toByte() }
         for (lang in StegoLanguage.entries) {
-            val words = TextStego.encode(payload, lang)
+            val words = requireNotNull(TextStego.encode(payload, lang))
             val screen = "Алексей: $words изменено 2:14 PM ✓✓"
             assertArrayEquals(payload, TextStego.decode(screen))
             assertTrue(TextStego.mightBeStego(screen))
             assertTrue(ScreenDecryptor.quickCheck(screen))
 
-            val smart = SmartTextStego.encode(payload, lang)
+            val smart = requireNotNull(SmartTextStego.encode(payload, lang))
             val smartScreen = "Michael: $smart edited изменено 14:52"
             assertArrayEquals(payload, SmartTextStego.decode(smartScreen))
             assertTrue(SmartTextStego.mightBeStego(smartScreen))
@@ -330,7 +335,7 @@ class CrossPlatformVectorTests {
     fun textStegoRoundTripBothLanguages() {
         val payload = ByteArray(200) { (it * 7).toByte() }
         for (lang in StegoLanguage.entries) {
-            val words = TextStego.encode(payload, lang)
+            val words = requireNotNull(TextStego.encode(payload, lang))
             assertArrayEquals(payload, TextStego.decode(words))
         }
         assertNull(TextStego.decode("just some ordinary words that mean nothing"))
@@ -339,10 +344,10 @@ class CrossPlatformVectorTests {
     @Test
     fun matchesIosStegoVectors() {
         val expected = ByteArray(0x21) { it.toByte() }
-        val en = "Gang max lyla jen, tons vet? Light rap tum jinx con ira atm. " +
-            "Kev, dina rap bead bong feet zoo. Loco, dev code, kev fdr?"
-        val ru = "Книги велел трупы тигр ним. Рейс линг ген, света шанса, сцену багаж, уход эрика. " +
-            "Лок, тан сдай игре полы несу танк пулю скоро? Эйр крут!"
+        val en = "Pete rid paso inn, palm hoo? Piece hon sie clam ash mam ere. " +
+            "Abi, manu hon dara otis kiss ram. Jace, bea crew, abi jus?"
+        val ru = "Штука дилан нашло крыс ним. Гнев мини арт, кости самим, видим велик, змей мешок. " +
+            "Мёд, ямы очень кафе окне буря момо тема денег? Маи марс!"
         assertEquals(en, TextStego.encode(expected, StegoLanguage.ENGLISH, seed = 0x5C))
         assertEquals(ru, TextStego.encode(expected, StegoLanguage.RUSSIAN, seed = 0xB3))
         assertArrayEquals(expected, TextStego.decode(en))
@@ -394,7 +399,7 @@ class CrossPlatformVectorTests {
             assertEquals(4096, lang.words.size)
             assertEquals(4096, lang.words.toSet().size)
         }
-        assertNotNull(TextStego.decode(TextStego.encode(byteArrayOf(1, 2, 3), StegoLanguage.RUSSIAN)))
+        assertNotNull(TextStego.decode(requireNotNull(TextStego.encode(byteArrayOf(1, 2, 3), StegoLanguage.RUSSIAN))))
     }
 
     @Test
@@ -445,7 +450,7 @@ class CrossPlatformVectorTests {
         for (language in StegoLanguage.entries) {
             for (n in intArrayOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 13, 31, 64, 120, 400, 1900)) {
                 val payload = ByteArray(n).also { rng.nextBytes(it) }
-                val text = LetterStego.encode(payload, language)
+                val text = requireNotNull(LetterStego.encode(payload, language))
                 assertArrayEquals("$language n=$n", payload, LetterStego.decode(text))
             }
         }
@@ -458,20 +463,23 @@ class CrossPlatformVectorTests {
         body[0] = 0x03
         body[1] = 0x02
         for (language in StegoLanguage.entries) {
-            val letters = LetterStego.encode(body, language).length
-            assertTrue(letters < TextStego.encode(body, language).length)
-            assertTrue(letters < SmartTextStego.encode(body, language).length)
+            val letters = requireNotNull(LetterStego.encode(body, language)).length
+            assertTrue(letters < requireNotNull(SmartTextStego.encode(body, language)).length)
+            if (language.isHan) continue
+            assertTrue(letters < requireNotNull(TextStego.encode(body, language)).length)
         }
     }
 
     @Test
     fun letterStegoIsDisjointFromTheOtherModes() {
         for (language in StegoLanguage.entries) {
-            val letters = LetterStego.encode(letterProbe, language)
-            assertNull(TextStego.decode(letters))
-            assertNull(SmartTextStego.decode(letters))
-            assertNull(LetterStego.decode(TextStego.encode(letterProbe, language)))
-            assertNull(LetterStego.decode(SmartTextStego.encode(letterProbe, language)))
+            for (seed in intArrayOf(0x00, 0x5C, 0xB3, 0xFF)) {
+                val letters = LetterStego.encode(letterProbe, language, seed)
+                assertNull(TextStego.decode(letters))
+                assertNull(SmartTextStego.decode(letters))
+                assertNull(LetterStego.decode(TextStego.encode(letterProbe, language, seed)))
+                assertNull(LetterStego.decode(SmartTextStego.encode(letterProbe, language, seed)))
+            }
         }
     }
 
@@ -479,7 +487,7 @@ class CrossPlatformVectorTests {
     fun letterStegoSurvivesScreenChrome() {
         val payload = ByteArray(120) { (it * 7 and 0xFF).toByte() }
         for (language in StegoLanguage.entries) {
-            val text = LetterStego.encode(payload, language)
+            val text = requireNotNull(LetterStego.encode(payload, language))
             assertArrayEquals(payload, LetterStego.decode("Иван  14:52  $text  изменено"))
             assertArrayEquals(payload, LetterStego.decode("$text\nDelivered"))
             assertArrayEquals(payload, LetterStego.decode(text.uppercase()))
@@ -505,7 +513,7 @@ class CrossPlatformVectorTests {
     fun letterStegoPrefilterFindsTheRunAfterChrome() {
         val payload = ByteArray(120) { (it * 5 and 0xFF).toByte() }
         for (language in StegoLanguage.entries) {
-            val text = LetterStego.encode(payload, language)
+            val text = requireNotNull(LetterStego.encode(payload, language))
             assertTrue(LetterStego.mightBeStego(text))
             assertTrue(LetterStego.mightBeStego("Иван  14:52  $text"))
             assertTrue(LetterStego.mightBeStego(text.uppercase()))
@@ -533,11 +541,11 @@ class CrossPlatformVectorTests {
         val payload = ByteArray(120) { (it * 11 and 0xFF).toByte() }
         val other = ByteArray(120) { (it * 13 and 0xFF).toByte() }
         for (language in StegoLanguage.entries) {
-            val a = LetterStego.encode(payload, language)
-            val b = LetterStego.encode(payload, language)
+            val a = requireNotNull(LetterStego.encode(payload, language))
+            val b = requireNotNull(LetterStego.encode(payload, language))
             assertTrue(a != b)
             assertEquals(DecryptCacheKey.of(a), DecryptCacheKey.of(b))
-            assertTrue(DecryptCacheKey.of(a) != DecryptCacheKey.of(LetterStego.encode(other, language)))
+            assertTrue(DecryptCacheKey.of(a) != DecryptCacheKey.of(requireNotNull(LetterStego.encode(other, language))))
         }
     }
 
@@ -603,8 +611,8 @@ class CrossPlatformVectorTests {
     fun germanStegoMatchesIosVectors() {
         val payload = ByteArray(0x21) { it.toByte() }
         assertEquals(
-            "Lauter marke betrag regen festes fahre gegen. Hassen news fleck nichte seins. " +
-                "Hartes fehlt hebe graue umhang gatte surren strafe mitte. Herum wow seiten, bandit.",
+            "Meilen zelt abflug flucht umsatz schade junge. Enden mumm lohnt angeln selig. " +
+                "Sinnen lauf umwelt bewege freud japp trupp zahl harte. Wozu stelle fliegt, zeile.",
             TextStego.encode(payload, StegoLanguage.GERMAN, seed = 0x41),
         )
         val probe = byteArrayOf(
@@ -625,9 +633,12 @@ class CrossPlatformVectorTests {
         val rnd = java.util.Random(9)
         for (n in intArrayOf(1, 7, 32, 120)) {
             val data = ByteArray(n).also { rnd.nextBytes(it) }
-            assertArrayEquals(data, TextStego.decode(TextStego.encode(data, StegoLanguage.GERMAN)))
-            assertArrayEquals(data, SmartTextStego.decode(SmartTextStego.encode(data, StegoLanguage.GERMAN)))
-            assertArrayEquals(data, LetterStego.decode(LetterStego.encode(data, StegoLanguage.GERMAN)))
+            assertArrayEquals(data, TextStego.decode(requireNotNull(TextStego.encode(data, StegoLanguage.GERMAN))))
+            assertArrayEquals(
+                data,
+                SmartTextStego.decode(requireNotNull(SmartTextStego.encode(data, StegoLanguage.GERMAN))),
+            )
+            assertArrayEquals(data, LetterStego.decode(requireNotNull(LetterStego.encode(data, StegoLanguage.GERMAN))))
         }
     }
 
@@ -639,17 +650,166 @@ class CrossPlatformVectorTests {
             "Richter: %s Gelesen", "Ritter: %s 08:04", "Koch: %s Heute", "Bauer: %s Wolf 12:00",
         )
         for (frame in chrome) {
-            val words = frame.format(TextStego.encode(payload, StegoLanguage.GERMAN))
+            val words = frame.format(requireNotNull(TextStego.encode(payload, StegoLanguage.GERMAN)))
             assertArrayEquals("words in <$frame>", payload, TextStego.decode(words))
             assertTrue(ScreenDecryptor.quickCheck(words))
 
-            val smart = frame.format(SmartTextStego.encode(payload, StegoLanguage.GERMAN))
+            val smart = frame.format(requireNotNull(SmartTextStego.encode(payload, StegoLanguage.GERMAN)))
             assertArrayEquals("smart in <$frame>", payload, SmartTextStego.decode(smart))
             assertTrue(ScreenDecryptor.quickCheck(smart))
 
-            val letters = frame.format(LetterStego.encode(payload, StegoLanguage.GERMAN))
+            val letters = frame.format(requireNotNull(LetterStego.encode(payload, StegoLanguage.GERMAN)))
             assertArrayEquals("letters in <$frame>", payload, LetterStego.decode(letters))
             assertTrue(ScreenDecryptor.quickCheck(letters))
+        }
+    }
+
+    @Test
+    fun chineseStegoMatchesIosVectors() {
+        val payload = ByteArray(0x21) { it.toByte() }
+        assertEquals(
+            "掷行睛难，浮班萦吻朱袁特唉骂毛晨吻。疲墩暮戴锉洞瓜，毛腰。",
+            TextStego.encode(payload, StegoLanguage.CHINESE, seed = 0x5C),
+        )
+        assertEquals(
+            "我的兄弟准备多数手表，然后全部演员更换那些雨伞。据说，多数老人展示他的椅子。" +
+                "他的邻居已经核对不少地图。前天，大量村民购买这些书本，而且这些学生购买这些书本。",
+            SmartTextStego.encode(letterProbe, StegoLanguage.CHINESE, seed = 0x5C),
+        )
+        assertEquals(
+            "它讲带玩新把睡问无糟另水呀却带我",
+            LetterStego.encode(letterProbe, StegoLanguage.CHINESE, seed = 0x5C),
+        )
+        assertArrayEquals(payload, TextStego.decode("掷行睛难，浮班萦吻朱袁特唉骂毛晨吻。疲墩暮戴锉洞瓜，毛腰。"))
+        assertArrayEquals(letterProbe, LetterStego.decode("它讲带玩新把睡问无糟另水呀却带我"))
+    }
+
+    @Test
+    fun chineseStegoRoundTrips() {
+        val rnd = java.util.Random(11)
+        for (n in intArrayOf(1, 3, 16, 64, 127, 200, 512, 1500)) {
+            val data = ByteArray(n).also { rnd.nextBytes(it) }
+            val words = requireNotNull(TextStego.encode(data, StegoLanguage.CHINESE))
+            assertArrayEquals("words n=$n", data, TextStego.decode(words))
+            val smart = requireNotNull(SmartTextStego.encode(data, StegoLanguage.CHINESE))
+            assertArrayEquals("smart n=$n", data, SmartTextStego.decode(smart))
+            val letters = requireNotNull(LetterStego.encode(data, StegoLanguage.CHINESE))
+            assertEquals("letters n=$n", n + 4, letters.length)
+            assertArrayEquals("letters n=$n", data, LetterStego.decode(letters))
+        }
+    }
+
+    @Test
+    fun chineseStegoSurvivesChineseScreenChrome() {
+        val payload = ByteArray(96) { (it * 5).toByte() }
+        val chrome = listOf("李明: %s 14:52", "Anna: %s edited", "%s\n已读", "王芳  昨天  %s  ✓✓")
+        for (frame in chrome) {
+            val words = frame.format(requireNotNull(TextStego.encode(payload, StegoLanguage.CHINESE)))
+            assertArrayEquals("words in <$frame>", payload, TextStego.decode(words))
+            assertTrue(ScreenDecryptor.quickCheck(words))
+
+            val smart = frame.format(requireNotNull(SmartTextStego.encode(payload, StegoLanguage.CHINESE)))
+            assertArrayEquals("smart in <$frame>", payload, SmartTextStego.decode(smart))
+            assertTrue(ScreenDecryptor.quickCheck(smart))
+
+            val letters = frame.format(requireNotNull(LetterStego.encode(payload, StegoLanguage.CHINESE)))
+            assertArrayEquals("letters in <$frame>", payload, LetterStego.decode(letters))
+            assertTrue(ScreenDecryptor.quickCheck(letters))
+        }
+    }
+
+    @Test
+    fun chineseSmartRecoversFromOddLeadingJunk() {
+        val payload = ByteArray(64) { (it * 3).toByte() }
+        val smart = requireNotNull(SmartTextStego.encode(payload, StegoLanguage.CHINESE))
+        for (junk in listOf("我", "我的兄", "他", "学生老")) {
+            assertArrayEquals("junk=$junk", payload, SmartTextStego.decode(junk + smart))
+        }
+    }
+
+    @Test
+    fun chineseCoversCarryOnlyHanAndFullWidthPunctuation() {
+        val payload = ByteArray(240) { (it * 7).toByte() }
+        val words = requireNotNull(TextStego.encode(payload, StegoLanguage.CHINESE))
+        for (c in words) assertTrue("words: $c", StegoTokenizer.isHan(c.code) || c in "，。？！")
+        val smart = requireNotNull(SmartTextStego.encode(payload, StegoLanguage.CHINESE))
+        for (c in smart) assertTrue("smart: $c", StegoTokenizer.isHan(c.code) || c in "，。！\n")
+        val letters = requireNotNull(LetterStego.encode(payload, StegoLanguage.CHINESE))
+        for (c in letters) assertTrue("letters: $c", StegoTokenizer.isHan(c.code))
+    }
+
+    @Test
+    fun chineseDataSetsCarryNothingBlocked() {
+        for (word in Wordlists.chinese) {
+            assertEquals(1, word.length)
+            assertFalse(word, StegoSafety.blocks(word))
+        }
+        val tokens = SmartStegoData.chinese.openers + SmartStegoData.chinese.slots.flatten()
+        for (token in tokens) {
+            assertEquals(2, token.length)
+            assertFalse(token, StegoSafety.containsBlocked(token))
+        }
+        val alphabet = LetterStego.alphabetCharacters(StegoLanguage.CHINESE).toSet()
+        assertEquals(256, alphabet.size)
+        for (stem in StegoSafety.hanStems) {
+            if (stem.length < 2) continue
+            assertFalse("alphabet can spell $stem", stem.all { it in alphabet })
+        }
+    }
+
+    @Test
+    fun hanTokenizerSplitsCharactersButKeepsLatinRuns() {
+        assertEquals(listOf("你", "好", "world"), StegoTokenizer.split("你好world"))
+        assertEquals(listOf("привет", "你", "好"), StegoTokenizer.split("привет 你 好"))
+        assertEquals(listOf("hello", "world"), StegoTokenizer.split("hello world"))
+        assertEquals(listOf("你好world"), StegoTokenizer.runs("你好world"))
+    }
+
+    @Test
+    fun chineseBlocklistCoversProfanityAndDangerousTerms() {
+        for (character in listOf(
+            "屎", "尿", "屁", "贱", "操", "屌", "杀", "枪", "炸", "毒", "尸", "奸", "妓",
+        )) {
+            assertTrue("single not blocked: $character", StegoSafety.blocks(character))
+            assertFalse("still in wordlist: $character", character in Wordlists.chinese)
+        }
+        for (term in listOf(
+            "鸡巴", "龟头", "精液", "拉屎", "撒尿", "狗屎", "你妈", "尼玛", "草泥马", "卧槽", "干你", "混账", "杂种", "野种", "贱货",
+            "荡妇", "窑子", "援交", "包养", "二奶", "小三", "三级片", "毛片", "性感", "猥琐", "同志", "蕾丝", "人妖", "男同", "女同",
+            "娘炮", "杀死", "砍死", "打死", "弄死", "害死", "灭口", "割喉", "断头", "斩首", "肢解", "去死", "找死", "该死", "自尽", "寻死",
+            "跳河", "卧轨", "自残", "割脉", "烧炭", "安眠药", "遗言", "绝笔", "枪支", "弹匣", "炸药", "火药", "雷管", "引爆", "爆破",
+            "射杀", "白粉", "溜冰", "吸食", "摇头丸", "黑社会", "混混", "打手", "保护费", "绑票", "撕票", "抢夺", "行窃", "扒手", "小偷",
+            "传销", "黑钱", "赃款", "上访", "维权", "联署", "串联", "声援", "围堵", "封路", "打倒", "变天", "暴徒", "乱党", "极权", "专政",
+            "万岁", "白纸", "台独", "藏独", "疆独", "港独", "小日本", "鬼佬", "白皮", "洋垃圾", "法轮", "邪教", "洗脑",
+        )) {
+            assertTrue("term not blocked: $term", StegoSafety.containsBlocked(term))
+        }
+    }
+
+    @Test
+    fun innocentChineseWordsAreNotBlocked() {
+        for (word in listOf(
+            "鸡蛋", "龟壳", "干净", "死机", "上课", "万一", "白天", "小学", "专心", "同学", "变化", "装修", "男孩", "女孩", "打开", "打算",
+            "火车", "火柴", "联系", "声音", "围巾", "封面", "保护", "抢先", "行动", "传统", "洗手", "极限",
+        )) {
+            assertFalse("false positive: $word", StegoSafety.blocks(word))
+            assertFalse("false positive: $word", StegoSafety.containsBlocked(word))
+        }
+    }
+
+    @Test
+    fun noBlockedTermCanBeSpelledByTheChineseDataSets() {
+        val pool = Wordlists.chinese.toSet()
+        val grammar = (SmartStegoData.chinese.openers + SmartStegoData.chinese.slots.flatten()).toSet()
+        val alphabet = LetterStego.alphabetCharacters(StegoLanguage.CHINESE).toSet()
+        for (stem in StegoSafety.hanStems) {
+            if (stem.length == 1) {
+                assertFalse("wordlist can emit $stem", stem in pool)
+                assertFalse("alphabet can emit $stem", stem[0] in alphabet)
+                continue
+            }
+            assertFalse("alphabet can spell $stem", stem.all { it in alphabet })
+            for (word in grammar) assertFalse("grammar word $word contains $stem", stem in word)
         }
     }
 }

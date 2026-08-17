@@ -27,10 +27,11 @@ public enum Padding {
     }
 
     public static func unframe(_ framed: Data) -> Data? {
-        let f = Data(framed)
-        guard f.count >= 4 else { return nil }
-        let n = (Int(f[0]) << 24) | (Int(f[1]) << 16) | (Int(f[2]) << 8) | Int(f[3])
-        guard n >= 0, n <= f.count - 4 else { return nil }
-        return f.subdata(in: (f.startIndex + 4) ..< (f.startIndex + 4 + n))
+        guard framed.count >= 4 else { return nil }
+        let base = framed.startIndex
+        let n = (Int(framed[base]) << 24) | (Int(framed[base + 1]) << 16)
+            | (Int(framed[base + 2]) << 8) | Int(framed[base + 3])
+        guard n >= 0, n <= framed.count - 4 else { return nil }
+        return Data(framed[(base + 4) ..< (base + 4 + n)])
     }
 }

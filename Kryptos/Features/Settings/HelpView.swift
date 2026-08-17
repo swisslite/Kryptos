@@ -210,7 +210,7 @@ private let faqItems: [HowToStep] = [
     HowToStep(title: "I forgot the password to my key backup",
               text: "There is no way to recover it. The file is encrypted with that password and Kryptos keeps no copy of it anywhere. Make a fresh backup with a password you will not forget."),
     HowToStep(title: "What are profiles for?",
-              text: "A profile is a separate identity with its own key and its own contacts. You can keep several and switch between them — to keep work and private life apart, for example."),
+              text: "A profile is a separate keypair with its own contacts. You can keep several and switch between them — to keep work and private life apart, for example."),
     HowToStep(title: "How strong is the encryption?",
               text: "Chats use Signal's own libsignal library — the same protocol as Signal itself, post-quantum handshake included. Password mode and photos use Argon2id and AES-256-GCM. Kryptos contains no home-made cryptography."),
 ]

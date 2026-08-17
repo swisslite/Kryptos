@@ -39,7 +39,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -64,9 +63,11 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
@@ -74,6 +75,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -144,6 +146,8 @@ fun SessionsScreen(
     var showAdd by remember { mutableStateOf(false) }
     var showProfiles by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf<Contact?>(null) }
+    var renameContact by remember { mutableStateOf<Contact?>(null) }
+    var profileError by remember { mutableStateOf<String?>(null) }
 
     val selected = openContact
     BackHandler(enabled = selected != null) { openContact = null }
@@ -185,7 +189,10 @@ fun SessionsScreen(
                 contacts = contacts,
                 profiles = profiles,
                 currentID = currentID,
+                profileError = profileError,
+                onProfileError = { profileError = it },
                 onOpen = { openContact = it },
+                onRename = { renameContact = it },
                 onDelete = { confirmDelete = it },
                 onMyKey = { showMyKey = true },
                 onAdd = { showAdd = true },
@@ -211,6 +218,20 @@ fun SessionsScreen(
             onDismiss = { confirmDelete = null },
         )
     }
+    renameContact?.let { contact ->
+        PromptDialog(
+            title = stringResource(R.string.rename_contact),
+            initial = contact.displayName,
+            placeholder = stringResource(R.string.contact_name),
+            confirmLabel = stringResource(R.string.save),
+            onConfirm = { name ->
+                bgScope.launch(Dispatchers.Default + NonCancellable) {
+                    SignalService.renameContact(contact, name)
+                }
+            },
+            onDismiss = { renameContact = null },
+        )
+    }
 }
 
 @Composable
@@ -218,7 +239,10 @@ private fun SessionsList(
     contacts: List<Contact>,
     profiles: List<com.kryptos.android.signal.Profile>,
     currentID: String,
+    profileError: String?,
+    onProfileError: (String?) -> Unit,
     onOpen: (Contact) -> Unit,
+    onRename: (Contact) -> Unit,
     onDelete: (Contact) -> Unit,
     onMyKey: () -> Unit,
     onAdd: () -> Unit,
@@ -226,6 +250,7 @@ private fun SessionsList(
 ) {
     val scope = rememberCoroutineScope()
     val autoDeleteMap by SignalService.autoDelete.collectAsState()
+    val unavailable by SignalService.unavailableProfiles.collectAsState()
     Column(
         Modifier
             .fillMaxSize()
@@ -262,8 +287,12 @@ private fun SessionsList(
                             text = { Text(p.name, color = K.textPrimary) },
                             onClick = {
                                 menu = false
-                                scope.launch(Dispatchers.Default + NonCancellable) {
-                                    SignalService.switchTo(p.id)
+                                onProfileError(null)
+                                scope.launch {
+                                    val ok = withContext(Dispatchers.Default + NonCancellable) {
+                                        runCatching { SignalService.switchTo(p.id) }.getOrDefault(false)
+                                    }
+                                    if (!ok) onProfileError(p.name)
                                 }
                             },
                         )
@@ -280,7 +309,15 @@ private fun SessionsList(
             GlassIconButton(Icons.Default.Add, stringResource(R.string.add_contact), onClick = onAdd)
         }
 
+        val brokenNames = (
+            listOfNotNull(profileError) + profiles.filter { it.id in unavailable }.map { it.name }
+            ).distinct()
+        brokenNames.forEach { name ->
+            Banner(stringResource(R.string.profile_unavailable, name), BannerKind.Error)
+        }
+
         if (contacts.isEmpty()) {
+            EngineCard()
             GlassCard {
                 Icon(Icons.AutoMirrored.Filled.Chat, null, Modifier.size(26.dp), tint = K.accent)
                 Text(
@@ -298,6 +335,7 @@ private fun SessionsList(
                     contact,
                     autoDelete = autoDeleteMap[contact.fingerprint]?.let { it > 0 } == true,
                     onOpen = { onOpen(contact) },
+                    onRename = { onRename(contact) },
                     onDelete = { onDelete(contact) },
                 )
             }
@@ -306,9 +344,35 @@ private fun SessionsList(
     }
 }
 
+@Composable
+private fun EngineCard() {
+    GlassCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.CheckCircle, null, Modifier.size(22.dp), tint = K.success)
+            Spacer(Modifier.width(12.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    stringResource(R.string.engine_title),
+                    fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = K.textPrimary,
+                )
+                Text(
+                    stringResource(R.string.engine_ok),
+                    fontSize = 14.sp, lineHeight = 20.sp, color = K.textSecondary,
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ContactCard(contact: Contact, autoDelete: Boolean, onOpen: () -> Unit, onDelete: () -> Unit) {
+private fun ContactCard(
+    contact: Contact,
+    autoDelete: Boolean,
+    onOpen: () -> Unit,
+    onRename: () -> Unit,
+    onDelete: () -> Unit,
+) {
     val shape = RoundedCornerShape(KShape.corner)
     var menu by remember { mutableStateOf(false) }
     val interaction = remember { MutableInteractionSource() }
@@ -352,6 +416,11 @@ private fun ContactCard(contact: Contact, autoDelete: Boolean, onOpen: () -> Uni
         }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
             DropdownMenuItem(
+                leadingIcon = { Icon(Icons.Default.Edit, null, Modifier.size(18.dp), tint = K.accent) },
+                text = { Text(stringResource(R.string.rename), color = K.textPrimary) },
+                onClick = { menu = false; onRename() },
+            )
+            DropdownMenuItem(
                 leadingIcon = { Icon(Icons.Default.Delete, null, Modifier.size(18.dp), tint = K.danger) },
                 text = { Text(stringResource(R.string.delete_contact), color = K.danger) },
                 onClick = { menu = false; onDelete() },
@@ -364,16 +433,19 @@ private fun ContactCard(contact: Contact, autoDelete: Boolean, onOpen: () -> Uni
 private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: () -> Unit) {
     val context = LocalContext.current
     val messages by SignalService.messages.collectAsState()
-    var lastCipher by remember { mutableStateOf<String?>(null) }
+    var lastCipher by remember { mutableStateOf<SentCipher?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var menuOpen by remember { mutableStateOf(false) }
     var autoDeleteOpen by remember { mutableStateOf(false) }
     var confirmClear by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var renaming by remember { mutableStateOf(false) }
     var decrypting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
+    val allContacts by SignalService.contacts.collectAsState()
+    val live = allContacts.firstOrNull { it.fingerprint == contact.fingerprint } ?: contact
     val msgs = messages[contact.fingerprint] ?: emptyList()
     val autoDeleteMap by SignalService.autoDelete.collectAsState()
     val autoDeleteSecs = autoDeleteMap[contact.fingerprint]?.takeIf { it > 0 }
@@ -406,11 +478,11 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    contact.displayName,
+                    live.displayName,
                     fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = K.textPrimary, maxLines = 1,
                 )
                 Text(
-                    contact.safetyNumber,
+                    live.safetyNumber,
                     fontSize = 10.sp, fontFamily = FontFamily.Monospace,
                     color = K.textSecondary, maxLines = 1,
                 )
@@ -423,6 +495,11 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
                         leadingIcon = { Icon(Icons.Default.Timer, null, Modifier.size(18.dp), tint = K.accent) },
                         text = { Text(stringResource(R.string.auto_delete), color = K.textPrimary) },
                         onClick = { menuOpen = false; autoDeleteOpen = true },
+                    )
+                    DropdownMenuItem(
+                        leadingIcon = { Icon(Icons.Default.Edit, null, Modifier.size(18.dp), tint = K.accent) },
+                        text = { Text(stringResource(R.string.rename_contact), color = K.textPrimary) },
+                        onClick = { menuOpen = false; renaming = true },
                     )
                     DropdownMenuItem(
                         leadingIcon = { Icon(Icons.Default.Delete, null, Modifier.size(18.dp), tint = K.danger) },
@@ -447,7 +524,15 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(msgs.asReversed(), key = { it.id }) { msg ->
-                Bubble(msg.text, msg.mine, Modifier.animateItem())
+                Bubble(
+                    msg.text, msg.mine, Modifier.animateItem(),
+                    onCopy = { copySensitive(context, msg.text, context.getString(R.string.copied)) },
+                    onDelete = {
+                        scope.launch(Dispatchers.Default + NonCancellable) {
+                            SignalService.deleteMessage(contact, msg.id)
+                        }
+                    },
+                )
             }
             if (autoDeleteSecs != null) {
                 item {
@@ -495,18 +580,23 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
             )
         }
 
-        val shownCipher = remember { mutableStateOf("") }
-        LaunchedEffect(lastCipher) { lastCipher?.let { shownCipher.value = it } }
+        val shownCipher = remember { mutableStateOf(SentCipher("", false)) }
+        LaunchedEffect(lastCipher) {
+            val sent = lastCipher
+            if (sent != null) {
+                shownCipher.value = sent
+            } else {
+                kotlinx.coroutines.delay(400)
+                shownCipher.value = SentCipher("", false)
+            }
+        }
         AnimatedVisibility(
             visible = lastCipher != null,
             enter = expandVertically(spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
             exit = shrinkVertically() + fadeOut(),
         ) {
-            val cipher = shownCipher.value
-            val hidden = remember(cipher) {
-                TextStego.looksLikeStego(cipher) || SmartTextStego.looksLikeStego(cipher) ||
-                    LetterStego.looksLikeStego(cipher)
-            }
+            val cipher = shownCipher.value.text
+            val hidden = shownCipher.value.hidden
             Row(
                 Modifier
                     .padding(horizontal = 12.dp)
@@ -591,12 +681,18 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
                 error = null
                 val outcome = withContext(Dispatchers.Default + NonCancellable) {
                     runCatching {
-                        SignalService.encrypt(text, contact).also { copyCipher(context, it, null) }
+                        val armored = SignalService.encrypt(text, contact)
+                        copyCipher(context, armored, null)
+                        SentCipher(
+                            armored,
+                            TextStego.looksLikeStego(armored) || SmartTextStego.looksLikeStego(armored) ||
+                                LetterStego.looksLikeStego(armored),
+                        )
                     }
                 }
                 outcome.fold(
-                    onSuccess = { armored ->
-                        lastCipher = armored
+                    onSuccess = { sent ->
+                        lastCipher = sent
                         true
                     },
                     onFailure = { e ->
@@ -614,6 +710,20 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
         }
     }
 
+    if (renaming) {
+        PromptDialog(
+            title = stringResource(R.string.rename_contact),
+            initial = live.displayName,
+            placeholder = stringResource(R.string.contact_name),
+            confirmLabel = stringResource(R.string.save),
+            onConfirm = { name ->
+                scope.launch(Dispatchers.Default + NonCancellable) {
+                    SignalService.renameContact(contact, name)
+                }
+            },
+            onDismiss = { renaming = false },
+        )
+    }
     if (confirmClear) {
         ConfirmDialog(
             title = stringResource(R.string.confirm_clear_chat_title),
@@ -675,8 +785,15 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun Bubble(text: String, mine: Boolean, modifier: Modifier = Modifier) {
+private fun Bubble(
+    text: String,
+    mine: Boolean,
+    modifier: Modifier = Modifier,
+    onCopy: () -> Unit,
+    onDelete: () -> Unit,
+) {
     val shape = RoundedCornerShape(18.dp)
     val bright = K.accentBright
     val accent = K.accent
@@ -684,24 +801,47 @@ private fun Bubble(text: String, mine: Boolean, modifier: Modifier = Modifier) {
     val fill = remember(mine, bright, accent, incoming) {
         if (mine) Brush.verticalGradient(listOf(bright, accent)) else SolidColor(incoming)
     }
+    var menu by remember { mutableStateOf(false) }
     Box(
         modifier.fillMaxWidth(),
         contentAlignment = if (mine) Alignment.CenterEnd else Alignment.CenterStart,
     ) {
-        Text(
-            text,
-            fontSize = 16.sp,
-            lineHeight = 21.sp,
-            color = if (mine) Color.White else K.textPrimary,
-            modifier = Modifier
-                .widthIn(max = 300.dp)
-                .clip(shape)
-                .background(fill)
-                .then(if (mine) Modifier else Modifier.border(1.dp, K.hairline, shape))
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-        )
+        Box {
+            Text(
+                text,
+                fontSize = 16.sp,
+                lineHeight = 21.sp,
+                color = if (mine) Color.White else K.textPrimary,
+                modifier = Modifier
+                    .widthIn(max = 300.dp)
+                    .clip(shape)
+                    .background(fill)
+                    .then(if (mine) Modifier else Modifier.border(1.dp, K.hairline, shape))
+                    .combinedClickable(
+                        interactionSource = null,
+                        indication = null,
+                        onClick = {},
+                        onLongClick = { menu = true },
+                    )
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+            )
+            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                DropdownMenuItem(
+                    leadingIcon = { Icon(Icons.Outlined.FileCopy, null, Modifier.size(18.dp), tint = K.accent) },
+                    text = { Text(stringResource(R.string.copy), color = K.textPrimary) },
+                    onClick = { menu = false; onCopy() },
+                )
+                DropdownMenuItem(
+                    leadingIcon = { Icon(Icons.Default.Delete, null, Modifier.size(18.dp), tint = K.danger) },
+                    text = { Text(stringResource(R.string.delete_message), color = K.danger) },
+                    onClick = { menu = false; onDelete() },
+                )
+            }
+        }
     }
 }
+
+private class SentCipher(val text: String, val hidden: Boolean)
 
 @Composable
 private fun autoDeleteLabel(secs: Double): String = when (secs) {
@@ -713,23 +853,6 @@ private fun autoDeleteLabel(secs: Double): String = when (secs) {
     7 * 24 * 3600.0 -> stringResource(R.string.w1)
     else -> "${secs.toInt()} s"
 }
-
-private fun qrBitmap(payload: ByteArray, availablePx: Int): Bitmap? = runCatching {
-    val matrix = KeyQr.matrix(payload)
-    val modules = matrix.width
-    val scale = KeyQr.scaleFor(modules, availablePx)
-    val size = modules * scale
-    val pixels = IntArray(size * size)
-    for (y in 0 until size) {
-        val my = y / scale
-        val row = y * size
-        for (x in 0 until size) {
-            pixels[row + x] =
-                if (matrix[x / scale, my]) android.graphics.Color.BLACK else android.graphics.Color.WHITE
-        }
-    }
-    Bitmap.createBitmap(pixels, size, size, Bitmap.Config.RGB_565)
-}.getOrNull()
 
 private val QR_PLATE_PADDING = 6.dp
 
@@ -745,7 +868,7 @@ private fun hostWindow(view: View): Window? {
 }
 
 @Composable
-private fun KeepScreenBright() {
+fun KeepScreenBright() {
     val view = LocalView.current
     val window = remember(view) { hostWindow(view) }
     DisposableEffect(window) {
@@ -799,7 +922,7 @@ private fun MyKeySheet(onDismiss: () -> Unit) {
                     val availablePx = with(density) { (maxWidth - QR_PLATE_PADDING * 2).roundToPx() }
                     val rendered by produceState<QrRender?>(null, share, availablePx) {
                         val payload = share?.payload ?: return@produceState
-                        value = QrRender(withContext(Dispatchers.Default) { qrBitmap(payload, availablePx) })
+                        value = QrRender(withContext(Dispatchers.Default) { KeyQr.bitmap(payload, availablePx) })
                     }
                     val qr = rendered?.bitmap
                     if (qr != null) {
@@ -1010,43 +1133,73 @@ private fun ProfilesSheet(onDismiss: () -> Unit) {
     val currentID by SignalService.currentID.collectAsState()
     var newName by remember { mutableStateOf("") }
     var confirmRegenerate by remember { mutableStateOf(false) }
+    var actionError by remember { mutableStateOf<String?>(null) }
+    val current = profiles.firstOrNull { it.id == currentID }
     var confirmDeleteProfile by remember { mutableStateOf<com.kryptos.android.signal.Profile?>(null) }
+    var renameProfile by remember { mutableStateOf<com.kryptos.android.signal.Profile?>(null) }
+    val safety by SignalService.mySafetyNumber.collectAsState()
 
     KSheet(stringResource(R.string.profiles), onDismiss) {
+        GlassCard {
+            Text(
+                stringResource(R.string.profiles_intro),
+                fontSize = 14.sp, lineHeight = 20.sp, color = K.textSecondary,
+            )
+        }
+
         GlassCard(spacing = 0.dp) {
-            profiles.forEachIndexed { i, p ->
+            FieldLabel(stringResource(R.string.profiles).uppercase())
+            Spacer(Modifier.height(10.dp))
+            profiles.forEach { p ->
                 Row(
                     Modifier
                         .fillMaxWidth()
                         .quietClickable {
-                            scope.launch(Dispatchers.Default + NonCancellable) { SignalService.switchTo(p.id) }
+                            actionError = null
+                            scope.launch {
+                                val ok = withContext(Dispatchers.Default + NonCancellable) {
+                                    runCatching { SignalService.switchTo(p.id) }.getOrDefault(false)
+                                }
+                                if (!ok) actionError = p.name
+                            }
                         }
-                        .padding(vertical = 12.dp),
+                        .padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        if (p.id == currentID) Icons.Default.Check else Icons.Default.Person,
-                        null, Modifier.size(18.dp),
+                        if (p.id == currentID) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                        null, Modifier.size(20.dp),
                         tint = if (p.id == currentID) K.accent else K.textSecondary,
                     )
-                    Spacer(Modifier.width(10.dp))
-                    Text(p.name, fontSize = 15.sp, color = K.textPrimary, maxLines = 1, modifier = Modifier.weight(1f))
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        p.name,
+                        fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = K.textPrimary,
+                        maxLines = 1, modifier = Modifier.weight(1f),
+                    )
+                    Box(
+                        Modifier
+                            .size(36.dp)
+                            .quietClickable { renameProfile = p },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Default.Edit, stringResource(R.string.rename), Modifier.size(18.dp), tint = K.accent)
+                    }
                     if (profiles.size > 1) {
-                        Icon(
-                            Icons.Default.Close, stringResource(R.string.delete),
+                        Box(
                             Modifier
-                                .size(18.dp)
+                                .size(36.dp)
                                 .quietClickable { confirmDeleteProfile = p },
-                            tint = K.danger,
-                        )
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Default.Delete, stringResource(R.string.delete), Modifier.size(18.dp), tint = K.danger)
+                        }
                     }
                 }
-                if (i < profiles.lastIndex) CardDivider()
             }
-        }
-
-        GlassCard {
-            FieldLabel(stringResource(R.string.new_profile))
+            Spacer(Modifier.height(10.dp))
+            CardDivider()
+            Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 KTextField(
                     newName, { newName = it },
@@ -1054,17 +1207,38 @@ private fun ProfilesSheet(onDismiss: () -> Unit) {
                     placeholder = stringResource(R.string.profile_name),
                     maxLines = 1,
                 )
-                Spacer(Modifier.width(12.dp))
-                PrimaryButton(
-                    stringResource(R.string.add),
-                    icon = Icons.Default.Add,
-                    enabled = newName.isNotBlank(),
+                Spacer(Modifier.width(10.dp))
+                GlassIconButton(
+                    Icons.Default.Add,
+                    stringResource(R.string.new_profile),
+                    filled = true,
                 ) {
                     val name = newName
                     newName = ""
-                    scope.launch(Dispatchers.Default + NonCancellable) { SignalService.createProfile(name) }
+                    actionError = null
+                    scope.launch {
+                        val created = withContext(Dispatchers.Default + NonCancellable) {
+                            runCatching { SignalService.createProfile(name) }.getOrNull()
+                        }
+                        if (created == null) actionError = name
+                    }
                 }
             }
+        }
+
+        renameProfile?.let { p ->
+            PromptDialog(
+                title = stringResource(R.string.rename_profile),
+                initial = p.name,
+                placeholder = stringResource(R.string.profile_name),
+                confirmLabel = stringResource(R.string.save),
+                onConfirm = { name ->
+                    scope.launch(Dispatchers.Default + NonCancellable) {
+                        SignalService.renameProfile(p.id, name)
+                    }
+                },
+                onDismiss = { renameProfile = null },
+            )
         }
 
         confirmDeleteProfile?.let { p ->
@@ -1073,33 +1247,62 @@ private fun ProfilesSheet(onDismiss: () -> Unit) {
                 text = stringResource(R.string.confirm_delete_profile_text),
                 confirmLabel = stringResource(R.string.delete),
                 onConfirm = {
-                    scope.launch(Dispatchers.Default + NonCancellable) { SignalService.deleteProfile(p.id) }
+                    actionError = null
+                    scope.launch {
+                        val ok = withContext(Dispatchers.Default + NonCancellable) {
+                            runCatching { SignalService.deleteProfile(p.id) }.getOrDefault(false)
+                        }
+                        if (!ok) actionError = p.name
+                    }
                 },
                 onDismiss = { confirmDeleteProfile = null },
             )
         }
 
-        if (confirmRegenerate) {
-            Banner(stringResource(R.string.regenerate_warning), BannerKind.Warning)
-            Row {
-                SecondaryButton(stringResource(R.string.cancel), Modifier.weight(1f)) { confirmRegenerate = false }
-                Spacer(Modifier.width(12.dp))
+        actionError?.let { name ->
+            Banner(stringResource(R.string.profile_unavailable, name), BannerKind.Error)
+        }
+
+        GlassCard {
+            FieldLabel(stringResource(R.string.current_profile))
+            Text(
+                current?.name.orEmpty(),
+                fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = K.textPrimary, maxLines = 1,
+            )
+            FieldLabel(stringResource(R.string.safety_number_label))
+            Text(
+                safety,
+                fontSize = 14.sp,
+                fontFamily = FontFamily.Monospace,
+                color = K.accent,
+            )
+            if (confirmRegenerate) {
+                Banner(stringResource(R.string.regenerate_warning), BannerKind.Warning)
+                Row {
+                    SecondaryButton(stringResource(R.string.cancel), Modifier.weight(1f)) { confirmRegenerate = false }
+                    Spacer(Modifier.width(12.dp))
+                    SecondaryButton(
+                        stringResource(R.string.regenerate_key),
+                        Modifier.weight(1f),
+                        danger = true,
+                    ) {
+                        confirmRegenerate = false
+                        actionError = null
+                        val name = current?.name.orEmpty()
+                        scope.launch {
+                            val ok = withContext(Dispatchers.Default + NonCancellable) {
+                                runCatching { SignalService.regenerateCurrentIdentity() }.getOrDefault(false)
+                            }
+                            if (!ok) actionError = name
+                        }
+                    }
+                }
+            } else {
                 SecondaryButton(
                     stringResource(R.string.regenerate_key),
-                    Modifier.weight(1f),
-                    danger = true,
-                ) {
-                    scope.launch(Dispatchers.Default + NonCancellable) {
-                        SignalService.regenerateCurrentIdentity()
-                    }
-                    confirmRegenerate = false
-                }
+                    Modifier.fillMaxWidth(),
+                ) { confirmRegenerate = true }
             }
-        } else {
-            SecondaryButton(
-                stringResource(R.string.regenerate_key),
-                Modifier.fillMaxWidth(),
-            ) { confirmRegenerate = true }
         }
     }
 }

@@ -113,6 +113,23 @@ final class SteganographyTests: XCTestCase {
         XCTAssertFalse(found)
     }
 
+    func testHideIntoMatchesHideAndMutatesInPlace() throws {
+        let cover = photo()
+        let message = Data("на месте".utf8)
+        var pixels = cover
+        try ImageStego.hideInto(&pixels, message: message, password: "pw", width: width, height: height)
+        XCTAssertNotEqual(pixels, cover)
+        XCTAssertEqual(pixels.count, cover.count)
+        XCTAssertEqual(try ImageStego.reveal(rgba: pixels, width: width, height: height, password: "pw"), message)
+        let plain = try ImageStego.candidates(rgba: cover, width: width, height: height)
+        let carried = try ImageStego.candidates(rgba: pixels, width: width, height: height)
+        XCTAssertEqual(plain, carried)
+        for i in stride(from: 0, to: cover.count, by: 4) {
+            XCTAssertEqual(pixels[i], cover[i])
+            XCTAssertEqual(pixels[i + 1], cover[i + 1])
+        }
+    }
+
     func testTwoRunsProduceDifferentCarriers() throws {
         let cover = photo()
         let message = Data("одно и то же".utf8)

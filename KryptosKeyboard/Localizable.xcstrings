@@ -3,48 +3,66 @@
   "strings": {
     "Choose a contact first": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle zuerst einen Kontakt"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Сначала выберите контакт"
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wähle zuerst einen Kontakt"
+            "value": "请先选择联系人"
           }
         }
       }
     },
     "Clear": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leeren"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Очистить"
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Leeren"
+            "value": "清空"
           }
         }
       }
     },
     "Clipboard is empty.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Zwischenablage ist leer."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Буфер обмена пуст."
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Die Zwischenablage ist leer."
+            "value": "剪贴板为空。"
           }
         }
       }
@@ -52,128 +70,176 @@
     "Compose field": {
       "extractionState": "manual",
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eingabefeld"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Поле ввода"
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eingabefeld"
+            "value": "输入框"
           }
         }
       }
     },
     "Contact": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontakt"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Контакт"
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kontakt"
+            "value": "联系人"
           }
         }
       }
     },
     "Could not decrypt — check the profile and contact": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entschlüsseln fehlgeschlagen — prüfe Profil und Kontakt"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Не удалось расшифровать — проверьте профиль и контакт"
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Entschlüsseln fehlgeschlagen — prüfe Profil und Kontakt"
+            "value": "解密失败——请检查个人资料和联系人"
           }
         }
       }
     },
     "Could not decrypt — different profile/contact, or the message is damaged": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entschlüsseln fehlgeschlagen — anderes Profil bzw. anderer Kontakt, oder die Nachricht ist beschädigt"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Не удалось расшифровать — другой профиль/контакт или сообщение повреждено"
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Entschlüsseln fehlgeschlagen — anderes Profil bzw. anderer Kontakt, oder die Nachricht ist beschädigt"
+            "value": "解密失败——个人资料或联系人不对，或消息已损坏"
           }
         }
       }
     },
     "Could not encrypt": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verschlüsseln fehlgeschlagen"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Не удалось зашифровать"
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verschlüsseln fehlgeschlagen"
+            "value": "加密失败"
           }
         }
       }
     },
     "Decrypted · %@": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entschlüsselt · %@"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Расшифровано · %@"
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Entschlüsselt · %@"
+            "value": "已解密 · %@"
           }
         }
       }
     },
     "Encrypted for %@": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verschlüsselt für %@"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Зашифровано для %@"
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verschlüsselt für %@"
+            "value": "已为 %@ 加密"
           }
         }
       }
     },
     "Enter some text.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib einen Text ein."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Введите текст."
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gib einen Text ein."
+            "value": "请输入文本。"
           }
         }
       }
@@ -181,128 +247,199 @@
     "Locked — unlock to use encryption": {
       "extractionState": "manual",
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesperrt — entsperre die App, um zu verschlüsseln"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Заблокировано — разблокируйте, чтобы пользоваться шифрованием"
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gesperrt — entsperre die App, um zu verschlüsseln"
+            "value": "已锁定——解锁后才能加密"
           }
         }
       }
     },
     "No contacts in this profile": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Kontakte in diesem Profil"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "В профиле нет контактов"
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keine Kontakte in diesem Profil"
+            "value": "此个人资料中没有联系人"
           }
         }
       }
     },
     "No message — paste it into the field or copy it": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Nachricht — füge sie in das Feld ein oder kopiere sie"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Нет сообщения — вставьте его в поле или скопируйте"
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keine Nachricht — füge sie in das Feld ein oder kopiere sie"
+            "value": "没有消息——请粘贴到输入框或复制它"
           }
         }
       }
     },
     "No recent emoji yet — pick a category below": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine zuletzt verwendeten Emoji — wähle unten eine Kategorie"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Недавних эмодзи пока нет — выберите категорию ниже"
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noch keine zuletzt verwendeten Emoji — wähle unten eine Kategorie"
+            "value": "还没有最近使用的表情——请在下方选择分类"
           }
         }
       }
     },
     "Open the Kryptos app and add a contact.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffne die Kryptos-App und füge einen Kontakt hinzu."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Откройте приложение Kryptos и добавьте контакт."
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Öffne die Kryptos-App und füge einen Kontakt hinzu."
+            "value": "请打开 Kryptos 应用并添加联系人。"
           }
         }
       }
     },
     "Paste": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einfügen"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Вставить"
           }
         },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴"
+          }
+        }
+      }
+    },
+    "This app will not let the keyboard clear the field — encrypt in the Kryptos app instead.": {
+      "extractionState": "manual",
+      "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Einfügen"
+            "value": "Diese App lässt die Tastatur das Feld nicht leeren - verschlüssle stattdessen in der Kryptos-App."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Это приложение не даёт клавиатуре очистить поле — зашифруйте в приложении Kryptos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此应用不允许键盘清空输入框——请改在 Kryptos 应用中加密。"
           }
         }
       }
     },
     "To encrypt, enable “Full Access” in the keyboard settings.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktiviere für die Verschlüsselung „Vollen Zugriff“ in den Tastatureinstellungen."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Для шифрования включите «Полный доступ» в настройках клавиатуры."
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aktiviere für die Verschlüsselung „Vollen Zugriff“ in den Tastatureinstellungen."
+            "value": "要加密，请在键盘设置中开启“完全访问”。"
           }
         }
       }
     },
     "Type or paste text — the messenger won't see it until it's encrypted": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe oder füge Text ein — der Messenger sieht ihn erst, wenn er verschlüsselt ist"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Печатайте или вставьте текст — мессенджер не увидит его до шифрования"
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tippe oder füge Text ein — der Messenger sieht ihn erst, wenn er verschlüsselt ist"
+            "value": "输入或粘贴文本——加密之前通讯软件看不到它"
           }
         }
       }
@@ -310,16 +447,22 @@
     "Unlock Kryptos": {
       "extractionState": "manual",
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kryptos entsperren"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Разблокируйте Kryptos"
           }
         },
-        "de": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kryptos entsperren"
+            "value": "解锁 Kryptos"
           }
         }
       }

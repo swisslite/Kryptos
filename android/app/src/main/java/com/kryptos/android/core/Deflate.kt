@@ -41,8 +41,8 @@ object Deflate {
                     if (inflater.finished()) break
                     return null
                 }
+                if (out.size().toLong() + n > limit.toLong()) return null
                 out.write(buf, 0, n)
-                if (out.size() > limit) return null
             }
             out.toByteArray()
         } catch (e: Exception) {

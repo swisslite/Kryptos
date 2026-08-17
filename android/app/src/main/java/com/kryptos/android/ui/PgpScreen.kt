@@ -80,6 +80,7 @@ fun PgpScreen(modifier: Modifier = Modifier) {
     var signer by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var autoCopied by remember { mutableStateOf(false) }
+    var working by remember { mutableStateOf(false) }
     var showKeys by remember { mutableStateOf(false) }
     var showShare by remember { mutableStateOf(false) }
     var showRecipients by remember { mutableStateOf(false) }
@@ -156,12 +157,15 @@ fun PgpScreen(modifier: Modifier = Modifier) {
                     stringResource(if (encrypting) R.string.encrypt else R.string.decrypt),
                     Modifier.weight(1f),
                     icon = if (encrypting) Icons.Default.Lock else Icons.Default.LockOpen,
-                    enabled = text.isNotBlank() && !busy && (!encrypting || selectedRecipient != null),
+                    enabled = text.isNotBlank() && !busy && !working &&
+                        (!encrypting || selectedRecipient != null),
+                    busy = working,
                 ) {
                     error = null; verification = null; signer = null; autoCopied = false
                     val enc = encrypting
                     val body = text
                     val target = recipients.firstOrNull { it.id == selectedRecipient }
+                    working = true
                     scope.launch {
                         val outcome = withContext(Dispatchers.Default + NonCancellable) {
                             runCatching {
@@ -175,6 +179,7 @@ fun PgpScreen(modifier: Modifier = Modifier) {
                                 }
                             }
                         }
+                        working = false
                         outcome.onSuccess { value ->
                             if (value is PgpDecryption) {
                                 result = value.text
@@ -342,7 +347,7 @@ private fun PgpKeysSheet(onDismiss: () -> Unit) {
             ) {
                 val n = name.trim(); val e = email.trim()
                 name = ""; email = ""
-                scope.launch(Dispatchers.Default) { PgpService.generateBlocking(n, e, algo) }
+                scope.launch(Dispatchers.Default) { runCatching { PgpService.generateBlocking(n, e, algo) } }
             }
         }
 
@@ -361,7 +366,9 @@ private fun PgpKeysSheet(onDismiss: () -> Unit) {
                     }
                     if (ident.id != currentID) {
                         SecondaryButton(stringResource(R.string.pgp_use)) {
-                            scope.launch(Dispatchers.Default + NonCancellable) { PgpService.switchTo(ident.id) }
+                            scope.launch(Dispatchers.Default + NonCancellable) {
+                                runCatching { PgpService.switchTo(ident.id) }
+                            }
                         }
                     }
                 }
@@ -391,7 +398,9 @@ private fun PgpKeysSheet(onDismiss: () -> Unit) {
                 title = stringResource(R.string.confirm_delete_pgp_title),
                 text = stringResource(R.string.confirm_delete_pgp_text),
                 confirmLabel = stringResource(R.string.delete),
-                onConfirm = { scope.launch(Dispatchers.Default) { PgpService.deleteIdentity(id) } },
+                onConfirm = {
+                    scope.launch(Dispatchers.Default) { runCatching { PgpService.deleteIdentity(id) } }
+                },
                 onDismiss = { confirmDeleteId = null },
             )
         }
@@ -456,7 +465,11 @@ private fun PgpRecipientsSheet(onDismiss: () -> Unit) {
             title = stringResource(R.string.confirm_remove_recipient_title),
             text = stringResource(R.string.confirm_remove_recipient_text),
             confirmLabel = stringResource(R.string.remove),
-            onConfirm = { scope.launch(Dispatchers.Default + NonCancellable) { PgpService.removeRecipient(target) } },
+            onConfirm = {
+                scope.launch(Dispatchers.Default + NonCancellable) {
+                    runCatching { PgpService.removeRecipient(target) }
+                }
+            },
             onDismiss = { confirmRemove = null },
         )
     }
@@ -484,11 +497,11 @@ private fun PgpRecipientsSheet(onDismiss: () -> Unit) {
                     error = null
                     val n = name.trim()
                     val k = keyText.trim()
-                    scope.launch(Dispatchers.Default + NonCancellable) {
-                        try {
-                            PgpService.addRecipient(n, k)
-                            name = ""; keyText = ""
-                        } catch (e: Exception) {
+                    scope.launch {
+                        val outcome = withContext(Dispatchers.Default + NonCancellable) {
+                            runCatching { PgpService.addRecipient(n, k) }
+                        }
+                        outcome.onSuccess { name = ""; keyText = "" }.onFailure { e ->
                             error = context.getString((e as? PgpException)?.res ?: R.string.pgp_invalid_key)
                         }
                     }

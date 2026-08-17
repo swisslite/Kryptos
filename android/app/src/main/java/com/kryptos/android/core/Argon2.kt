@@ -15,6 +15,15 @@ object Argon2id {
         return hash(password, salt, MEMORY_KIB, ITERATIONS, LANES, length)
     }
 
+    fun derive(password: String, salt: ByteArray, length: Int): ByteArray {
+        val bytes = password.toByteArray(Charsets.UTF_8)
+        try {
+            return derive(bytes, salt, length)
+        } finally {
+            bytes.fill(0)
+        }
+    }
+
     fun hash(
         password: ByteArray,
         salt: ByteArray,

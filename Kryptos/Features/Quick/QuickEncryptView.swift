@@ -14,6 +14,7 @@ struct QuickEncryptView: View {
         var icon: String { self == .encrypt ? "lock.fill" : "lock.open.fill" }
     }
 
+    @EnvironmentObject private var lock: LockGate
     @State private var mode: Mode = .encrypt
     @State private var passphrase = ""
     @State private var input = ""
@@ -39,6 +40,15 @@ struct QuickEncryptView: View {
             if !output.isEmpty { outputCard }
         }
         .onChange(of: input) { _, newValue in autoDetect(newValue) }
+        .onChange(of: lock.isLocked) { _, locked in
+            guard locked else { return }
+            input = ""
+            output = ""
+            passphrase = ""
+            errorText = nil
+            copied = false
+            autoCopied = false
+        }
         .animation(.easeInOut(duration: 0.25), value: output)
         .animation(.easeInOut(duration: 0.25), value: errorText)
     }
@@ -190,8 +200,4 @@ struct QuickEncryptView: View {
         default: return String(localized: "Could not process the message.")
         }
     }
-}
-
-#Preview {
-    QuickEncryptView()
 }

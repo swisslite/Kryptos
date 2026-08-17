@@ -55,7 +55,9 @@ object ImageStego {
     const val MEASURE_CAP = 255
 
     fun candidates(rgba: ByteArray, width: Int, height: Int): IntArray {
-        if (width <= 2 || height <= 2 || rgba.size != width * height * 4) {
+        if (width <= 2 || height <= 2 ||
+            rgba.size.toLong() != width.toLong() * height.toLong() * 4L
+        ) {
             throw CipherException(CipherException.Kind.INVALID_INPUT)
         }
         val count = width * height
@@ -173,6 +175,14 @@ object ImageStego {
         rgba: ByteArray,
         width: Int,
         height: Int,
+    ): ByteArray = hideInto(message, password, rgba.copyOf(), width, height)
+
+    fun hideInto(
+        message: ByteArray,
+        password: String,
+        rgba: ByteArray,
+        width: Int,
+        height: Int,
     ): ByteArray {
         val list = candidates(rgba, width, height)
         val total = list.size
@@ -180,7 +190,7 @@ object ImageStego {
 
         val salt = randomBytes(PasswordCipher.SALT_LEN)
         val km = Argon2id.derive(
-            password.toByteArray(Charsets.UTF_8), salt,
+            password, salt,
             PasswordCipher.DERIVED_LEN + PLACEMENT_KEY_LEN,
         )
         val key = km.copyOfRange(0, PasswordCipher.KEY_LEN)
@@ -209,7 +219,7 @@ object ImageStego {
             val mask = KeyStream(placementKey, "kryptos/stego/v2/mask")
             val maskedLength = (sealed.size.toLong() and 0xFFFFFFFFL) xor mask.uint32()
 
-            val out = rgba.copyOf()
+            val out = rgba
             val publicFlip = publicStream(width, height, total, "flip")
             val flip = KeyStream(placementKey, "kryptos/stego/v2/flip")
 
@@ -245,7 +255,7 @@ object ImageStego {
         }
 
         val km = Argon2id.derive(
-            password.toByteArray(Charsets.UTF_8), salt,
+            password, salt,
             PasswordCipher.DERIVED_LEN + PLACEMENT_KEY_LEN,
         )
         val key = km.copyOfRange(0, PasswordCipher.KEY_LEN)

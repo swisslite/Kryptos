@@ -11,11 +11,18 @@ enum Clipboard {
     }
 
     static func copy(_ text: String) {
+        write(text, expiry: PrivacyConfig.clipboardOptions().expiry)
+    }
+
+    static func copyPlain(_ text: String) {
+        write(text, expiry: 0)
+    }
+
+    private static func write(_ text: String, expiry: Double) {
         lastWritten = text
         var options: [UIPasteboard.OptionsKey: Any] = [:]
-        let policy = PrivacyConfig.clipboardOptions()
-        if policy.localOnly { options[.localOnly] = true }
-        if policy.expiry > 0 { options[.expirationDate] = Date().addingTimeInterval(policy.expiry) }
+        if PrivacyConfig.clipboardLocalOnly { options[.localOnly] = true }
+        if expiry > 0 { options[.expirationDate] = Date().addingTimeInterval(expiry) }
         UIPasteboard.general.setItems([[UTType.utf8PlainText.identifier: text]], options: options)
     }
 

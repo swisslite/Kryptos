@@ -16,6 +16,7 @@ struct InterfaceView: View {
                     Text("English").tag("en")
                     Text("Russian").tag("ru")
                     Text("German").tag("de")
+                    Text("Chinese").tag("zh-Hans")
                 }
             } header: {
                 Text("Appearance")
@@ -47,6 +48,14 @@ struct InterfaceView: View {
                 Text("Tab bar")
             } footer: {
                 Text("Tabs you switch off disappear from the bottom bar.")
+            }
+
+            Section {
+                Toggle("Kryptos mark on the keyboard", isOn: $settings.keyboardShield)
+            } header: {
+                Text("Keyboard")
+            } footer: {
+                Text("Shows the mark in the bar above the keys.")
             }
         }
         .navigationTitle("Interface")

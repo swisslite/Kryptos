@@ -3,6 +3,7 @@ package com.kryptos.android.signal
 import com.kryptos.android.core.ArchivedContact
 import com.kryptos.android.core.ArchivedProfile
 import com.kryptos.android.core.ArchivedRetired
+import com.kryptos.android.AppLanguage
 import com.kryptos.android.R
 import com.kryptos.android.core.BinaryReader
 import com.kryptos.android.core.BinaryWriter
@@ -51,6 +52,7 @@ object SignalService {
     val autoDelete = MutableStateFlow<Map<String, Double>>(emptyMap())
     val myFingerprint = MutableStateFlow("")
     val mySafetyNumber = MutableStateFlow("")
+    val unavailableProfiles = MutableStateFlow<Set<String>>(emptySet())
 
     private lateinit var identity: IdentityKeyPair
     private lateinit var store: KryptosSignalStore
@@ -79,17 +81,39 @@ object SignalService {
             }
             val localized = index.profiles.map(::relocalizedDefaultName)
             profiles.value = localized
-            currentID.value = if (localized.any { it.id == index.currentID }) index.currentID else localized[0].id
-            load(currentID.value)
-            if (localized != index.profiles) persistIndex()
-            initialized = true
+            val preferred = if (localized.any { it.id == index.currentID }) index.currentID else localized[0].id
+            val order = listOf(preferred) + localized.map { it.id }.filter { it != preferred }
+            var failure: Throwable? = null
+            for (id in order) {
+                val loaded = try {
+                    readProfile(id)
+                } catch (t: Throwable) {
+                    failure = t
+                    markUnavailable(id)
+                    continue
+                }
+                adopt(id, loaded)
+                clearUnavailable(id)
+                if (localized != index.profiles && id == preferred) persistIndex()
+                initialized = true
+                return
+            }
+            throw IllegalStateException("no Kryptos profile could be opened", failure)
         }
     }
 
-    private fun defaultProfileName(n: Int): String =
-        SecureStore.appContext().getString(R.string.profile_n, n)
+    private fun markUnavailable(id: String) {
+        unavailableProfiles.value = unavailableProfiles.value + id
+    }
 
-    private val autoNamePrefixes = listOf("Profile ", "Профиль ", "Profil ")
+    private fun clearUnavailable(id: String) {
+        if (id in unavailableProfiles.value) unavailableProfiles.value = unavailableProfiles.value - id
+    }
+
+    private fun defaultProfileName(n: Int): String =
+        AppLanguage.wrap(SecureStore.appContext()).getString(R.string.profile_n, n)
+
+    private val autoNamePrefixes = listOf("Profile ", "Профиль ", "Profil ", "个人资料 ")
 
     private fun relocalizedDefaultName(profile: Profile): Profile {
         for (prefix in autoNamePrefixes) {
@@ -116,43 +140,99 @@ object SignalService {
 
     private fun persistIndex() = saveIndex(ProfilesIndex(profiles.value, currentID.value))
 
-    fun switchTo(id: String) = synchronized(lock) {
-        if (profiles.value.none { it.id == id }) return
+    fun switchTo(id: String): Boolean = synchronized(lock) {
+        if (profiles.value.none { it.id == id }) return false
+        if (initialized && currentID.value == id) return true
+        val loaded = try {
+            readProfile(id)
+        } catch (t: Throwable) {
+            markUnavailable(id)
+            return false
+        }
         CachePurge.purgeAll()
-        currentID.value = id
+        adopt(id, loaded)
+        clearUnavailable(id)
         persistIndex()
-        load(id)
+        true
     }
 
-    fun createProfile(name: String): Profile = synchronized(lock) {
+    fun createProfile(name: String): Profile? = synchronized(lock) {
         val trimmed = name.trim()
         val profile = Profile(name = trimmed.ifEmpty { defaultProfileName(profiles.value.size + 1) })
+        val loaded = try {
+            readProfile(profile.id)
+        } catch (t: Throwable) {
+            runCatching { wipeStorage(profile.id) }
+            return null
+        }
+        CachePurge.purgeAll()
         profiles.value = profiles.value + profile
-        currentID.value = profile.id
+        adopt(profile.id, loaded)
         persistIndex()
-        load(profile.id)
         profile
     }
 
-    fun deleteProfile(id: String) = synchronized(lock) {
-        CachePurge.purgeAll()
-        wipeStorage(id)
-        var list = profiles.value.filter { it.id != id }
-        if (list.isEmpty()) {
-            list = listOf(Profile(name = defaultProfileName(1)))
-            currentID.value = list[0].id
-        } else if (currentID.value == id) {
-            currentID.value = list[0].id
-        }
-        profiles.value = list
+    fun renameProfile(id: String, name: String) = synchronized(lock) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        val list = profiles.value
+        val idx = list.indexOfFirst { it.id == id }
+        if (idx < 0 || list[idx].name == trimmed) return
+        profiles.value = list.mapIndexed { i, p -> if (i == idx) p.copy(name = trimmed) else p }
         persistIndex()
-        load(currentID.value)
     }
 
-    fun regenerateCurrentIdentity() = synchronized(lock) {
+    fun renameContact(contact: Contact, name: String) = synchronized(lock) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty() || !initialized) return
+        val list = contacts.value
+        val idx = list.indexOfFirst { it.fingerprint == contact.fingerprint }
+        if (idx < 0 || list[idx].displayName == trimmed) return
+        contacts.value = list.mapIndexed { i, c -> if (i == idx) c.copy(displayName = trimmed) else c }
+        saveMeta()
+        CachePurge.purgeDecrypted()
+    }
+
+    fun deleteProfile(id: String): Boolean = synchronized(lock) {
         CachePurge.purgeAll()
-        wipeStorage(currentID.value)
-        load(currentID.value)
+        wipeStorage(id)
+        clearUnavailable(id)
+        var list = profiles.value.filter { it.id != id }
+        if (list.isEmpty()) list = listOf(Profile(name = defaultProfileName(1)))
+        profiles.value = list
+        val target = if (list.any { it.id == currentID.value } && currentID.value != id) currentID.value else list[0].id
+        val order = listOf(target) + list.map { it.id }.filter { it != target }
+        for (next in order) {
+            val loaded = try {
+                readProfile(next)
+            } catch (t: Throwable) {
+                markUnavailable(next)
+                continue
+            }
+            adopt(next, loaded)
+            clearUnavailable(next)
+            persistIndex()
+            return true
+        }
+        initialized = false
+        persistIndex()
+        false
+    }
+
+    fun regenerateCurrentIdentity(): Boolean = synchronized(lock) {
+        val id = currentID.value
+        CachePurge.purgeAll()
+        wipeStorage(id)
+        val loaded = try {
+            readProfile(id)
+        } catch (t: Throwable) {
+            markUnavailable(id)
+            initialized = false
+            return false
+        }
+        adopt(id, loaded)
+        clearUnavailable(id)
+        true
     }
 
     private fun wipeStorage(id: String) {
@@ -162,8 +242,16 @@ object SignalService {
         AppSettingsStore.clearKeyboardContact(id)
     }
 
-    private fun load(id: String) {
-        lastMetaDigest = null
+    private class Loaded(
+        val identity: IdentityKeyPair,
+        val fingerprint: String,
+        val safetyNumber: String,
+        val store: KryptosSignalStore,
+        val meta: Meta,
+        val digest: ByteArray?,
+    )
+
+    private fun readProfile(id: String): Loaded {
         val identityBytes = SecureStore.readStrict(StoreKey.identity(id))
         val identity_ = if (identityBytes != null) {
             try {
@@ -174,11 +262,9 @@ object SignalService {
         } else {
             IdentityKeyPair.generate().also { SecureStore.write(StoreKey.identity(id), it.serialize()) }
         }
-        identity = identity_
-        myFingerprint.value = SignalFormat.hex(identity_.publicKey.serialize())
-        mySafetyNumber.value = SignalFormat.safetyNumber(myFingerprint.value)
 
-        val loadedMeta = SecureStore.readStrict(StoreKey.meta(id))?.let {
+        val metaBytes = SecureStore.readStrict(StoreKey.meta(id))
+        val loadedMeta = metaBytes?.let {
             try {
                 json.decodeFromString<Meta>(String(it, Charsets.UTF_8))
             } catch (e: Exception) {
@@ -186,21 +272,40 @@ object SignalService {
             }
         }
         val regId = loadedMeta?.registrationId ?: (1L + rng.nextInt(0x3FFF))
-        store = KryptosSignalStore(identity_, regId.toInt(), StoreKey.store(id))
-
-        store.batch {
-            meta = loadedMeta ?: provisionInitial(regId)
-            maintainPreKeys()
+        val store_ = KryptosSignalStore(identity_, regId.toInt(), StoreKey.store(id))
+        val meta_ = store_.batch {
+            val m = loadedMeta ?: provisionInitial(regId, identity_, store_)
+            maintainPreKeys(m, identity_, store_)
+            m
         }
-        autoDelete.value = meta.autoDelete
-        contacts.value = meta.contacts
-        messages.value = meta.messages
+        val fingerprint = SignalFormat.hex(identity_.publicKey.serialize())
+        return Loaded(
+            identity = identity_,
+            fingerprint = fingerprint,
+            safetyNumber = SignalFormat.safetyNumber(fingerprint),
+            store = store_,
+            meta = meta_,
+            digest = metaBytes?.let { java.security.MessageDigest.getInstance("SHA-256").digest(it) },
+        )
+    }
+
+    private fun adopt(id: String, loaded: Loaded) {
+        identity = loaded.identity
+        store = loaded.store
+        meta = loaded.meta
+        lastMetaDigest = loaded.digest
+        currentID.value = id
+        myFingerprint.value = loaded.fingerprint
+        mySafetyNumber.value = loaded.safetyNumber
+        autoDelete.value = loaded.meta.autoDelete
+        contacts.value = loaded.meta.contacts
+        messages.value = loaded.meta.messages
         saveMeta()
         purgeExpiredMessages()
     }
 
-    private fun provisionInitial(regId: Long): Meta {
-        val gen = generateSignedAndKyber(signedId = 1, kyberId = 2)
+    private fun provisionInitial(regId: Long, identity: IdentityKeyPair, store: KryptosSignalStore): Meta {
+        val gen = generateSignedAndKyber(signedId = 1, kyberId = 2, identity = identity, store = store)
         return Meta(
             registrationId = regId,
             signedPreKeyId = gen.signedId, signedPreKeyPub = gen.signedPub, signedPreKeySig = gen.signedSig,
@@ -210,11 +315,13 @@ object SignalService {
         )
     }
 
-    private fun maintainPreKeys() {
+    private fun maintainPreKeys(meta: Meta, identity: IdentityKeyPair, store: KryptosSignalStore) {
         if (meta.prekeyCreatedAt == null) meta.prekeyCreatedAt = System.currentTimeMillis()
 
         meta.prekeyCreatedAt?.let { created ->
-            if (System.currentTimeMillis() - created > ROTATION_INTERVAL_MS) rotateSignedAndKyber()
+            if (System.currentTimeMillis() - created > ROTATION_INTERVAL_MS) {
+                rotateSignedAndKyber(meta, identity, store)
+            }
         }
 
         val cutoff = System.currentTimeMillis() - RETENTION_MS
@@ -230,13 +337,13 @@ object SignalService {
         meta.retiredPreKeyGens = kept
     }
 
-    private fun rotateSignedAndKyber() {
+    private fun rotateSignedAndKyber(meta: Meta, identity: IdentityKeyPair, store: KryptosSignalStore) {
         meta.retiredPreKeyGens = meta.retiredPreKeyGens +
             RetiredPreKeyGen(meta.signedPreKeyId, meta.kyberPreKeyId, System.currentTimeMillis())
 
         val signedId = meta.nextSignedPreKeyId
         val kyberId = meta.nextKyberPreKeyId
-        val gen = generateSignedAndKyber(signedId, kyberId)
+        val gen = generateSignedAndKyber(signedId, kyberId, identity, store)
         meta.signedPreKeyId = gen.signedId; meta.signedPreKeyPub = gen.signedPub; meta.signedPreKeySig = gen.signedSig
         meta.kyberPreKeyId = gen.kyberId; meta.kyberPreKeyPub = gen.kyberPub; meta.kyberPreKeySig = gen.kyberSig
         meta.prekeyCreatedAt = System.currentTimeMillis()
@@ -249,7 +356,12 @@ object SignalService {
         val kyberId: Long, val kyberPub: ByteArray, val kyberSig: ByteArray,
     )
 
-    private fun generateSignedAndKyber(signedId: Long, kyberId: Long): GenKeys {
+    private fun generateSignedAndKyber(
+        signedId: Long,
+        kyberId: Long,
+        identity: IdentityKeyPair,
+        store: KryptosSignalStore,
+    ): GenKeys {
         val now = System.currentTimeMillis()
         val signed = ECKeyPair.generate()
         val signedSig = identity.privateKey.calculateSignature(signed.publicKey.serialize())
@@ -414,6 +526,7 @@ object SignalService {
     }
 
     fun removeContact(contact: Contact) = synchronized(lock) {
+        if (!initialized) return@synchronized
         CachePurge.purgeAll()
         store.removeSessionAndIdentity(contact.fingerprint)
         contacts.value = contacts.value.filter { it.fingerprint != contact.fingerprint }
@@ -489,6 +602,7 @@ object SignalService {
     }
 
     fun setAutoDelete(seconds: Double?, contact: Contact) = synchronized(lock) {
+        if (!initialized) return@synchronized
         meta.autoDelete = if (seconds != null && seconds > 0) {
             meta.autoDelete + (contact.fingerprint to seconds)
         } else {
@@ -530,7 +644,20 @@ object SignalService {
         changed
     }
 
+    fun deleteMessage(contact: Contact, messageId: String) = synchronized(lock) {
+        if (!initialized) return
+        val map = messages.value
+        val list = map[contact.fingerprint] ?: return
+        val target = list.firstOrNull { it.id == messageId } ?: return
+        val next = list.filterNot { it.id == messageId }
+        messages.value = if (next.isEmpty()) map - contact.fingerprint else map + (contact.fingerprint to next)
+        meta.purgeDecrypted(contact.fingerprint, target.text)
+        saveMeta()
+        CachePurge.purgeDecrypted()
+    }
+
     fun clearChat(contact: Contact) = synchronized(lock) {
+        if (!initialized) return@synchronized
         CachePurge.purgeAll()
         messages.value = messages.value - contact.fingerprint
         meta.purgeDecryptCache(contact.fingerprint)
@@ -538,6 +665,7 @@ object SignalService {
     }
 
     fun wipeAllChats() = synchronized(lock) {
+        if (!initialized) return@synchronized
         CachePurge.purgeAll()
         messages.value = emptyMap()
         meta.purgeDecryptCache()
@@ -545,6 +673,7 @@ object SignalService {
     }
 
     fun wipeContactsAndChats() = synchronized(lock) {
+        if (!initialized) return@synchronized
         CachePurge.purgeAll()
         store.removeAllSessionsAndPeerIdentities()
         contacts.value = emptyList()
@@ -652,16 +781,29 @@ object SignalService {
                     ),
                 )
             }.isSuccess
-            if (ok) restored.add(relocalizedDefaultName(Profile(id = entry.id, name = entry.name)))
+            if (ok) {
+                restored.add(relocalizedDefaultName(Profile(id = entry.id, name = entry.name)))
+            } else {
+                runCatching { wipeStorage(entry.id) }
+            }
         }
 
         if (restored.isEmpty()) return@synchronized false
         val keep = restored.map { it.id }.toSet()
         for (old in previous) if (old !in keep) wipeStorage(old)
+        unavailableProfiles.value = emptySet()
         profiles.value = restored
-        currentID.value = restored[0].id
+        val loaded = try {
+            readProfile(restored[0].id)
+        } catch (t: Throwable) {
+            currentID.value = restored[0].id
+            markUnavailable(restored[0].id)
+            persistIndex()
+            initialized = false
+            return@synchronized false
+        }
+        adopt(restored[0].id, loaded)
         persistIndex()
-        load(currentID.value)
         initialized = true
         true
     }
@@ -670,6 +812,7 @@ object SignalService {
         CachePurge.purgeAll()
         initialized = false
         lastMetaDigest = null
+        unavailableProfiles.value = emptySet()
         SecureStore.deleteAll()
         SecureStore.prefs().edit().clear().commit()
         AppSettingsStore.invalidateCaches()

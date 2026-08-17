@@ -55,7 +55,7 @@ public enum PasswordCipher {
     public static func encrypt(_ plaintext: Data, password: String, pad: Bool = false) throws -> Data {
         let salt = randomBytes(saltLength)
         let version = Argon2id.profileVersion
-        var derived = try Argon2id.derive(password: Data(password.utf8), salt: salt, length: derivedLength)
+        var derived = try Argon2id.derive(password: password, salt: salt, length: derivedLength)
         defer { Argon2id.zero(&derived) }
         let (key, nonce) = try split(derived)
         var out = salt
@@ -70,7 +70,7 @@ public enum PasswordCipher {
         let version = data[data.startIndex + saltLength]
         guard version == Argon2id.profileVersion else { throw CipherError.malformed }
         let sealed = Data(data.suffix(from: data.startIndex + saltLength + 1))
-        var derived = try Argon2id.derive(password: Data(password.utf8), salt: salt, length: derivedLength)
+        var derived = try Argon2id.derive(password: password, salt: salt, length: derivedLength)
         defer { Argon2id.zero(&derived) }
         let (key, nonce) = try split(derived)
         return try openBody(sealed, key: key, nonce: nonce, version: version)

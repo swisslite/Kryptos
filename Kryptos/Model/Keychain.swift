@@ -3,7 +3,7 @@ import Security
 
 enum Keychain {
     private static let service = "com.kryptos.app"
-    private static let accessGroup = AppGroup.identifier
+    private static var accessGroup: String { AppGroup.identifier }
 
     @discardableResult
     static func save(_ data: Data, account: String) -> Bool {

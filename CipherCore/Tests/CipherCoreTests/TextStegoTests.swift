@@ -5,7 +5,7 @@ final class TextStegoTests: XCTestCase {
     func testRoundTripEnglish() throws {
         for n in [0, 1, 2, 3, 16, 33, 200, 1500] {
             let payload = randomBytes(n)
-            let text = TextStego.encode(payload, language: .english)
+            let text = try XCTUnwrap(TextStego.encode(payload, language: .english))
             let back = try XCTUnwrap(TextStego.decode(text), "decode failed for n=\(n)")
             XCTAssertEqual(back, payload, "mismatch for n=\(n)")
         }
@@ -14,7 +14,7 @@ final class TextStegoTests: XCTestCase {
     func testRoundTripRussian() throws {
         for n in [1, 5, 64, 777] {
             let payload = randomBytes(n)
-            let text = TextStego.encode(payload, language: .russian)
+            let text = try XCTUnwrap(TextStego.encode(payload, language: .russian))
             XCTAssertTrue(text.contains(" "))
             let back = try XCTUnwrap(TextStego.decode(text))
             XCTAssertEqual(back, payload)
@@ -23,7 +23,7 @@ final class TextStegoTests: XCTestCase {
 
     func testDecodeIsWhitespaceAndCaseTolerant() throws {
         let payload = randomBytes(40)
-        let text = TextStego.encode(payload, language: .english)
+        let text = try XCTUnwrap(TextStego.encode(payload, language: .english))
         let mangled = "  " + text.uppercased().replacingOccurrences(of: " ", with: "\n  ") + "  "
         XCTAssertEqual(TextStego.decode(mangled), payload)
     }
@@ -34,8 +34,8 @@ final class TextStegoTests: XCTestCase {
         XCTAssertNil(TextStego.decode(""))
     }
 
-    func testOutputLooksLikeWords() {
-        let text = TextStego.encode(randomBytes(30), language: .english)
+    func testOutputLooksLikeWords() throws {
+        let text = try XCTUnwrap(TextStego.encode(randomBytes(30), language: .english))
         XCTAssertTrue(text.hasSuffix(".") || text.hasSuffix("?") || text.hasSuffix("!"))
         XCTAssertEqual(text.first, text.first?.uppercased().first)
     }
@@ -58,9 +58,9 @@ final class TextStegoTests: XCTestCase {
     func testDecodeSurvivesScreenChrome() throws {
         let payload = Data((0 ..< 64).map { UInt8(($0 * 3) & 0xFF) })
         for lang in [StegoLanguage.english, .russian] {
-            let words = TextStego.encode(payload, language: lang)
+            let words = try XCTUnwrap(TextStego.encode(payload, language: lang))
             XCTAssertEqual(TextStego.decode("Алексей: \(words) изменено 2:14 PM ✓✓"), payload)
-            let smart = SmartTextStego.encode(payload, language: lang)
+            let smart = try XCTUnwrap(SmartTextStego.encode(payload, language: lang))
             XCTAssertEqual(SmartTextStego.decode("Michael: \(smart) edited изменено 14:52"), payload)
         }
     }
@@ -75,9 +75,9 @@ final class TextStegoTests: XCTestCase {
         XCTAssertGreaterThan(firstWords.count, 32)
     }
 
-    func testEncodedTextIsCompact() {
+    func testEncodedTextIsCompact() throws {
         let payload = randomBytes(96)
-        let text = TextStego.encode(payload, language: .english)
+        let text = try XCTUnwrap(TextStego.encode(payload, language: .english))
         XCTAssertLessThan(text.count, 380)
     }
 }

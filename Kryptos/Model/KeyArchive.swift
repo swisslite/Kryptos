@@ -112,10 +112,14 @@ extension KeyArchive {
 
     static func opened(_ text: String, password: String) throws -> KeyArchive {
         guard let raw = WireFormat.tokenBytes(text.trimmingCharacters(in: .whitespacesAndNewlines)),
-              let plain = try? PasswordCipher.decrypt(raw, password: password),
-              let archive = try? JSONDecoder().decode(KeyArchive.self, from: plain),
-              archive.kryptos == magic, archive.v == version else { throw KeyArchiveError.unreadable }
-        guard !archive.isEmpty else { throw KeyArchiveError.unreadable }
+              var plain = try? PasswordCipher.decrypt(raw, password: password) else {
+            throw KeyArchiveError.unreadable
+        }
+        defer { plain.resetBytes(in: plain.startIndex ..< plain.endIndex) }
+        guard let archive = try? JSONDecoder().decode(KeyArchive.self, from: plain),
+              archive.kryptos == magic, archive.v == version, !archive.isEmpty else {
+            throw KeyArchiveError.unreadable
+        }
         return archive
     }
 }

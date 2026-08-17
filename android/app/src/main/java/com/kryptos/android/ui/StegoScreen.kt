@@ -80,7 +80,10 @@ fun StegoScreen(modifier: Modifier = Modifier) {
         val bytes = pngToSave
         if (uri == null) {
             pngToSave = null
-        } else if (bytes != null) {
+        } else if (bytes == null) {
+            status = context.getString(R.string.save_failed)
+            isError = true
+        } else {
             val ok = runCatching {
                 context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) } != null
             }.getOrDefault(false)
@@ -192,7 +195,7 @@ fun StegoScreen(modifier: Modifier = Modifier) {
                             val pixels = readPixels(context, uri, degrees, shrink)
                                 ?: throw CipherException(CipherException.Kind.INVALID_INPUT)
                             if (isHiding) {
-                                val stego = ImageStego.hide(
+                                val stego = ImageStego.hideInto(
                                     body.toByteArray(Charsets.UTF_8), secret,
                                     pixels.rgba, pixels.width, pixels.height,
                                 )
@@ -274,6 +277,7 @@ private fun readPixels(context: Context, uri: Uri, degrees: Float, shrinkTo: Lon
             val options = BitmapFactory.Options().apply {
                 inPreferredConfig = Bitmap.Config.ARGB_8888
                 inSampleSize = sample
+                if (degrees == 0f) inPremultiplied = false
             }
             val decoded = BitmapFactory.decodeStream(stream, null, options) ?: return@use null
             val rotated = try {

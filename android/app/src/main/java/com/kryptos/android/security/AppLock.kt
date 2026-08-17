@@ -25,12 +25,24 @@ object AppLock {
                 BiometricManager.Authenticators.DEVICE_CREDENTIAL
         }
 
+    @Volatile private var lockAvailable: Boolean? = null
+
+    fun refreshLockAvailability() {
+        lockAvailable = null
+    }
+
     fun canUseLock(context: android.content.Context): Boolean {
+        lockAvailable?.let { return it }
         val bm = BiometricManager.from(context)
-        if (bm.canAuthenticate(authenticators()) == BiometricManager.BIOMETRIC_SUCCESS) return true
-        val fallback = BiometricManager.Authenticators.BIOMETRIC_WEAK or
-            BiometricManager.Authenticators.DEVICE_CREDENTIAL
-        return bm.canAuthenticate(fallback) == BiometricManager.BIOMETRIC_SUCCESS
+        val value = if (bm.canAuthenticate(authenticators()) == BiometricManager.BIOMETRIC_SUCCESS) {
+            true
+        } else {
+            val fallback = BiometricManager.Authenticators.BIOMETRIC_WEAK or
+                BiometricManager.Authenticators.DEVICE_CREDENTIAL
+            bm.canAuthenticate(fallback) == BiometricManager.BIOMETRIC_SUCCESS
+        }
+        lockAvailable = value
+        return value
     }
 
     @Volatile var hasLaunched = false
@@ -38,6 +50,7 @@ object AppLock {
 
     fun onLaunch(context: android.content.Context) {
         hasLaunched = true
+        refreshLockAvailability()
         val armed = AppSettingsStore.appLock && canUseLock(context)
         locked.value = armed
         if (!armed) sessionValidated = true
@@ -56,6 +69,7 @@ object AppLock {
 
     fun onForeground(context: android.content.Context) {
         shielded.value = false
+        refreshLockAvailability()
         if (!AppSettingsStore.appLock || !canUseLock(context)) return
         if (authInFlight || locked.value) return
         val grace = AppSettingsStore.autoLockGraceSeconds * 1000L

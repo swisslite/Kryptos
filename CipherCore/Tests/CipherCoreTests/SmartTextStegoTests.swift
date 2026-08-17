@@ -9,7 +9,7 @@ final class SmartTextStegoTests: XCTestCase {
     }
 
     func testGrammarDataInvariants() {
-        for grammar in [SmartStegoData.english, SmartStegoData.russian] {
+        for grammar in [SmartStegoData.english, SmartStegoData.russian, SmartStegoData.chinese] {
             XCTAssertTrue(isPowerOfTwo(grammar.openers.count))
             XCTAssertEqual(Set(grammar.openers).count, grammar.openers.count)
             for w in grammar.openers { XCTAssertTrue(lettersOnly(w) && w == w.lowercased()) }
@@ -52,7 +52,7 @@ final class SmartTextStegoTests: XCTestCase {
             for _ in 0..<200 {
                 let n = Int.random(in: 0...400)
                 let payload = randomBytes(n)
-                let text = SmartTextStego.encode(payload, language: language)
+                let text = try XCTUnwrap(SmartTextStego.encode(payload, language: language))
                 XCTAssertEqual(SmartTextStego.decode(text), payload, "n=\(n) lang=\(language)")
             }
         }
@@ -82,10 +82,12 @@ final class SmartTextStegoTests: XCTestCase {
         XCTAssertEqual(SmartTextStego.decode(mangled), payload)
     }
 
-    func testOutputLooksLikeSentences() {
+    func testOutputLooksLikeSentences() throws {
         for language in StegoLanguage.allCases {
-            let text = SmartTextStego.encode(randomBytes(40), language: language)
-            XCTAssertTrue(text.hasSuffix(".") || text.hasSuffix("!"))
+            let text = try XCTUnwrap(SmartTextStego.encode(randomBytes(40), language: language))
+            let stop = language.isHan ? "\u{3002}" : "."
+            let bang = language.isHan ? "\u{FF01}" : "!"
+            XCTAssertTrue(text.hasSuffix(stop) || text.hasSuffix(bang), "lang=\(language)")
             XCTAssertEqual(text.first, text.first?.uppercased().first)
         }
     }
@@ -114,11 +116,11 @@ final class SmartTextStegoTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(firstWords.count, 40, "got \(firstWords.count)")
     }
 
-    func testCompactness() {
+    func testCompactness() throws {
         let payload = randomBytes(96)
-        let limit: [StegoLanguage: Int] = [.english: 1100, .russian: 1100, .german: 1400]
+        let limit: [StegoLanguage: Int] = [.english: 1100, .russian: 1100, .german: 1400, .chinese: 700]
         for language in StegoLanguage.allCases {
-            let text = SmartTextStego.encode(payload, language: language)
+            let text = try XCTUnwrap(SmartTextStego.encode(payload, language: language))
             XCTAssertLessThan(text.count, limit[language]!, "lang=\(language) count=\(text.count)")
         }
     }
@@ -138,16 +140,19 @@ final class SmartTextStegoTests: XCTestCase {
         XCTAssertEqual(SmartTextStego.decode(ru), probe)
     }
 
-    func testGermanSurvivesSenderNameInNodeText() {
+    func testGermanSurvivesSenderNameInNodeText() throws {
         let payload = randomBytes(64)
         let frames = ["Weber: %@ 09:31", "Richter: %@ Gelesen", "Ritter: %@ Bearbeitet 14:52",
                       "Koch: %@ Zugestellt", "Anna: %@ Heute 08:04"]
         for frame in frames {
-            let smart = String(format: frame, SmartTextStego.encode(payload, language: .german))
+            let smart = String(format: frame,
+                               try XCTUnwrap(SmartTextStego.encode(payload, language: .german)))
             XCTAssertEqual(SmartTextStego.decode(smart), payload, "smart in \(frame)")
-            let words = String(format: frame, TextStego.encode(payload, language: .german))
+            let words = String(format: frame,
+                               try XCTUnwrap(TextStego.encode(payload, language: .german)))
             XCTAssertEqual(TextStego.decode(words), payload, "words in \(frame)")
-            let letters = String(format: frame, LetterStego.encode(payload, language: .german))
+            let letters = String(format: frame,
+                                 try XCTUnwrap(LetterStego.encode(payload, language: .german)))
             XCTAssertEqual(LetterStego.decode(letters), payload, "letters in \(frame)")
         }
     }

@@ -30,6 +30,12 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    NavigationLink { DonateView() } label: {
+                        SettingsLabel("Support the project", icon: "heart.fill", color: Color(.systemPink))
+                    }
+                }
+
+                Section {
                     NavigationLink { HowToView() } label: {
                         SettingsLabel("How to use", icon: "book.fill", color: Color(.systemGray))
                     }
@@ -48,7 +54,7 @@ struct SettingsView: View {
                     Button(role: .destructive) { confirmReset = true } label: {
                         SettingsLabel("Erase everything", icon: "trash.fill", color: .red, textColor: .red)
                     }
-                    .confirmationDialog("Erase ALL data? Your identities and private keys, contacts' keys, every conversation, PGP keys and all settings will be destroyed and the app will close. This cannot be undone.",
+                    .confirmationDialog("Erase ALL data? Your profiles and private keys, contacts' keys, every conversation, PGP keys and all settings will be destroyed and the app will close. This cannot be undone.",
                                         isPresented: $confirmReset, titleVisibility: .visible) {
                         Button("Erase everything", role: .destructive) { AppReset.eraseEverythingAndQuit() }
                     }
@@ -350,16 +356,18 @@ private struct StegoSettingsView: View {
         case .smart:
             return "Real sentences instead of a word salad, at the cost of a longer text."
         case .letters:
-            return "The shortest mode — about half the length of Simple words."
+            return settings.effectiveLanguage == .chinese
+                ? "A single unbroken run with no punctuation."
+                : "The shortest mode — about half the length of Simple words."
         }
     }
 
     nonisolated private static func sampleStego(language: StegoLanguage, mode: StegoMode) -> String {
         let sample = Data([0x03, 0x02, 0x41, 0x9c, 0x2a, 0xf7, 0x10, 0x88, 0x3d, 0x6b, 0xe0, 0x54])
         switch mode {
-        case .words: return TextStego.encode(sample, language: language)
-        case .smart: return SmartTextStego.encode(sample, language: language)
-        case .letters: return LetterStego.encode(sample, language: language)
+        case .words: return TextStego.encode(sample, language: language) ?? ""
+        case .smart: return SmartTextStego.encode(sample, language: language) ?? ""
+        case .letters: return LetterStego.encode(sample, language: language) ?? ""
         }
     }
 }
@@ -419,6 +427,12 @@ private struct KeyboardSettingsView: View {
             Section {
                 Toggle("Message field in the keyboard", isOn: $settings.keyboardCompose)
                 Toggle("Field button on the keyboard", isOn: $settings.keyboardComposeToggle)
+                Picker("Field size", selection: $settings.keyboardFieldSize) {
+                    ForEach(KeyboardConfig.FieldSize.allCases, id: \.self) { size in
+                        Text(size.title).tag(size)
+                    }
+                }
+                .pickerStyle(.menu)
             } footer: {
                 Text("The field lets you type outside the messenger, so it cannot keep a draft. The button toggles that field from the keyboard.")
             }
@@ -438,7 +452,8 @@ private struct KeyboardSettingsView: View {
 private let keyboardLanguageCatalog: [(code: String, title: String.LocalizationValue)] = [
     ("en", "English"),
     ("ru", "Russian"),
-    ("de", "German")
+    ("de", "German"),
+    ("zh", "Chinese")
 ]
 
 private struct KeyboardLanguagesView: View {
@@ -597,7 +612,7 @@ private struct KeyBackupView: View {
     }
 
     private func summary(for archive: KeyArchive) -> String {
-        String(localized: "\(archive.profiles.count) identities, \(archive.contactCount) contacts, \(archive.pgpIdentities.count) PGP keys")
+        String(localized: "\(archive.profiles.count) profiles, \(archive.contactCount) contacts, \(archive.pgpIdentities.count) PGP keys")
     }
 
     private func export() {
@@ -676,8 +691,7 @@ private struct KeyBackupView: View {
         Task { @MainActor in
             await Task.yield()
             let signalOK = archive.profiles.isEmpty || signal.restoreProfiles(archive.profiles)
-            let pgpRestored = pgp.restore(identities: archive.pgpIdentities, recipients: archive.pgpRecipients)
-            let pgpOK = archive.pgpIdentities.isEmpty || pgpRestored
+            let pgpOK = pgp.restore(identities: archive.pgpIdentities, recipients: archive.pgpRecipients)
             pending = nil
             importText = nil
             importPassword = ""
@@ -838,6 +852,12 @@ private struct DeveloperView: View {
                 }
             } footer: {
                 Text("Questions, ideas or a bug? I'd be glad to hear from you.")
+            }
+
+            Section {
+                NavigationLink { DonateView() } label: {
+                    SettingsLabel("Support the project", icon: "heart.fill", color: Color(.systemPink))
+                }
             }
         }
         .navigationTitle("Developer")

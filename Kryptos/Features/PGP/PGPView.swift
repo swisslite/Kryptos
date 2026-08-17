@@ -32,7 +32,7 @@ struct PGPView: View {
                 }
                 .pickerStyle(.segmented)
                 workCard
-                if let errorText { banner(errorText) }
+                if let errorText { banner(errorText) } else if let failure = pgp.failure { banner(failure) }
                 if mode == .decrypt, let verification, !output.isEmpty { verificationBanner(verification) }
                 if autoCopied { CopiedBanner() }
                 if !output.isEmpty { outputCard }
@@ -46,6 +46,12 @@ struct PGPView: View {
             showMyKey = false
             showRecipients = false
             showKeys = false
+            input = ""
+            output = ""
+            verification = nil
+            errorText = nil
+            copied = false
+            autoCopied = false
         }
     }
 
@@ -306,7 +312,7 @@ private struct PGPKeysView: View {
             TextField("Email (optional)", text: $email).textInputAutocapitalization(.never).autocorrectionDisabled()
                 .padding(12).background(FieldBackground())
             Picker("Algorithm", selection: $algo) {
-                ForEach(PGPAlgo.allCases) { Text($0.label).tag($0) }
+                ForEach(PGPAlgo.allCases) { Text($0.title).tag($0) }
             }
             .pickerStyle(.menu).tint(KTheme.accent)
             Button {
@@ -328,7 +334,11 @@ private struct PGPKeysView: View {
                     .foregroundStyle(ident.id == pgp.currentID ? KTheme.accent : KTheme.textSecondary)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(ident.name).font(.kHeadline()).foregroundStyle(KTheme.textPrimary)
-                    Text(ident.algo).font(.kLabel()).foregroundStyle(KTheme.textSecondary)
+                    if let known = PGPAlgo.matching(label: ident.algo) {
+                        Text(known.title).font(.kLabel()).foregroundStyle(KTheme.textSecondary)
+                    } else {
+                        Text(verbatim: ident.algo).font(.kLabel()).foregroundStyle(KTheme.textSecondary)
+                    }
                 }
                 Spacer(minLength: 0)
                 if ident.id != pgp.currentID {

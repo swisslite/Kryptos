@@ -2,6 +2,7 @@ package com.kryptos.android.ui
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
@@ -19,6 +20,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -41,13 +43,16 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Image
@@ -59,6 +64,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.VerifiedUser
@@ -82,12 +88,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -97,6 +108,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.kryptos.android.R
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
+import com.kryptos.android.core.KeyQr
 import com.kryptos.android.core.LetterStego
 import com.kryptos.android.core.SmartTextStego
 import com.kryptos.android.core.StegoLanguage
@@ -104,19 +117,30 @@ import com.kryptos.android.core.StegoMode
 import com.kryptos.android.core.TextStego
 import com.kryptos.android.pgp.PgpService
 import com.kryptos.android.screen.ScreenDecryptService
+import com.kryptos.android.security.ClipboardGuard
 import com.kryptos.android.signal.AppSettingsStore
 import com.kryptos.android.signal.SignalService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private enum class SettingsPage {
-    Interface, Root, Privacy, AppCode, Panic, Stego, Keyboard, KeyboardLangs, KeyBackup, HowTo,
-    HowToKeys, HowToSetup, Faq, About, Developer, Danger }
+    Interface, Root, Privacy, AppCode, Panic, Stego, Keyboard, KeyboardLangs, KeyBackup, Donate,
+    HowTo, HowToKeys, HowToSetup, Faq, About, Developer, Danger }
 
 private val kbLanguageCatalog =
-    listOf("en" to R.string.lang_en, "ru" to R.string.lang_ru, "de" to R.string.lang_de)
+    listOf(
+        "en" to R.string.lang_en, "ru" to R.string.lang_ru,
+        "de" to R.string.lang_de, "zh" to R.string.lang_zh,
+    )
+
+private val fieldSizeOptions = listOf(
+    AppSettingsStore.FieldSize.SMALL to R.string.field_size_small,
+    AppSettingsStore.FieldSize.MEDIUM to R.string.field_size_medium,
+    AppSettingsStore.FieldSize.LARGE to R.string.field_size_large,
+)
 
 private fun pageDepth(page: SettingsPage): Int = when (page) {
     SettingsPage.Root -> 0
@@ -135,6 +159,9 @@ private fun parentPage(page: SettingsPage): SettingsPage = when (page) {
 @Composable
 fun SettingsScreen(modifier: Modifier = Modifier, homeSignal: Int = 0, onShieldChanged: () -> Unit) {
     var page by rememberSaveable { mutableStateOf(SettingsPage.Root) }
+    LaunchedEffect(Unit) {
+        if (page == SettingsPage.Panic || page == SettingsPage.AppCode) page = SettingsPage.Privacy
+    }
     var seenHomeSignal by remember { mutableIntStateOf(homeSignal) }
     LaunchedEffect(homeSignal) {
         if (homeSignal != seenHomeSignal) {
@@ -144,6 +171,7 @@ fun SettingsScreen(modifier: Modifier = Modifier, homeSignal: Int = 0, onShieldC
     }
     var panicSet by remember { mutableStateOf(false) }
     var appCodeSet by remember { mutableStateOf(false) }
+    var donateFromDev by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         val codes = withContext(Dispatchers.Default) {
             AppSettingsStore.hasPanicPassword to AppSettingsStore.hasAppCode
@@ -151,12 +179,17 @@ fun SettingsScreen(modifier: Modifier = Modifier, homeSignal: Int = 0, onShieldC
         panicSet = codes.first
         appCodeSet = codes.second
     }
-    BackHandler(enabled = page != SettingsPage.Root) { page = parentPage(page) }
+    BackHandler(enabled = page != SettingsPage.Root) {
+        page = if (page == SettingsPage.Donate && donateFromDev) SettingsPage.Developer else parentPage(page)
+    }
 
     AnimatedContent(
         targetState = page,
         transitionSpec = {
-            if (pageDepth(targetState) > pageDepth(initialState)) {
+            val depth = { p: SettingsPage ->
+                if (p == SettingsPage.Donate && donateFromDev) 2 else pageDepth(p)
+            }
+            if (depth(targetState) > depth(initialState)) {
                 (slideInHorizontally { it } + fadeIn()) togetherWith
                     (slideOutHorizontally { -it / 3 } + fadeOut())
             } else {
@@ -168,7 +201,10 @@ fun SettingsScreen(modifier: Modifier = Modifier, homeSignal: Int = 0, onShieldC
     ) { current ->
         val back = { page = SettingsPage.Root }
         when (current) {
-            SettingsPage.Root -> RootSettings(modifier) { page = it }
+            SettingsPage.Root -> RootSettings(modifier) {
+                if (it == SettingsPage.Donate) donateFromDev = false
+                page = it
+            }
             SettingsPage.Interface -> InterfaceSettings(modifier, back)
             SettingsPage.Privacy -> PrivacySettings(
                 modifier, onShieldChanged, back,
@@ -217,6 +253,11 @@ fun SettingsScreen(modifier: Modifier = Modifier, homeSignal: Int = 0, onShieldC
             SettingsPage.Keyboard -> KeyboardSettings(modifier, back, openLanguages = { page = SettingsPage.KeyboardLangs })
             SettingsPage.KeyboardLangs -> KeyboardLanguagesSettings(modifier, onBack = { page = SettingsPage.Keyboard })
             SettingsPage.KeyBackup -> KeyBackupSettings(modifier, back)
+            SettingsPage.Donate -> DonateSettings(
+                modifier,
+                backLabel = stringResource(if (donateFromDev) R.string.about_dev else R.string.tab_settings),
+                onBack = { page = if (donateFromDev) SettingsPage.Developer else SettingsPage.Root },
+            )
             SettingsPage.HowTo -> HowToSettings(
                 modifier, back,
                 openKeys = { page = SettingsPage.HowToKeys },
@@ -226,7 +267,10 @@ fun SettingsScreen(modifier: Modifier = Modifier, homeSignal: Int = 0, onShieldC
             SettingsPage.HowToSetup -> HowToSetupSettings(modifier) { page = SettingsPage.HowTo }
             SettingsPage.Faq -> FaqSettings(modifier, back)
             SettingsPage.About -> AboutSettings(modifier, back)
-            SettingsPage.Developer -> DeveloperSettings(modifier, back)
+            SettingsPage.Developer -> DeveloperSettings(modifier, back) {
+                donateFromDev = true
+                page = SettingsPage.Donate
+            }
             SettingsPage.Danger -> DangerSettings(modifier, back)
         }
     }
@@ -255,6 +299,13 @@ private fun RootSettings(modifier: Modifier, open: (SettingsPage) -> Unit) {
             SettingsTile(stringResource(R.string.backup_title), Icons.Default.SwapVert) {
                 open(SettingsPage.KeyBackup)
             }
+        }
+
+        GlassCard(padding = 14.dp, spacing = 2.dp) {
+            SettingsTile(
+                stringResource(R.string.donate_title), Icons.Default.Favorite,
+                tile = DONATE_TILE,
+            ) { open(SettingsPage.Donate) }
         }
 
         GlassCard(padding = 14.dp, spacing = 2.dp) {
@@ -294,6 +345,7 @@ private fun RootSettings(modifier: Modifier, open: (SettingsPage) -> Unit) {
 private fun InterfaceSettings(modifier: Modifier, onBack: () -> Unit) {
     val ui by AppSettingsStore.ui.collectAsState()
     val context = LocalContext.current
+    var kbShield by remember { mutableStateOf(AppSettingsStore.keyboardShield) }
 
     KScreen(
         stringResource(R.string.settings_interface), modifier,
@@ -314,6 +366,7 @@ private fun InterfaceSettings(modifier: Modifier, onBack: () -> Unit) {
             val langs = listOf(
                 "auto" to R.string.ui_auto, "en" to R.string.lang_en,
                 "ru" to R.string.lang_ru, "de" to R.string.lang_de,
+                "zh" to R.string.lang_zh,
             )
             MenuRow(
                 stringResource(R.string.ui_language),
@@ -345,6 +398,14 @@ private fun InterfaceSettings(modifier: Modifier, onBack: () -> Unit) {
             }
         }
         FooterText(stringResource(R.string.ui_tabs_footer))
+
+        SectionHeader(stringResource(R.string.settings_keyboard))
+        GlassCard(spacing = 4.dp) {
+            ToggleRow(stringResource(R.string.settings_kb_shield), kbShield, onChange = {
+                kbShield = it; AppSettingsStore.keyboardShield = it
+            })
+        }
+        FooterText(stringResource(R.string.ui_keyboard_footer))
         Spacer(Modifier.height(8.dp))
     }
 }
@@ -462,7 +523,9 @@ private fun PrivacySettings(
     openPanic: () -> Unit,
 ) {
     val context = LocalContext.current
-    val canLock = remember { com.kryptos.android.security.AppLock.canUseLock(context) }
+    val canLock by produceState(true) {
+        value = withContext(Dispatchers.Default) { com.kryptos.android.security.AppLock.canUseLock(context) }
+    }
 
     var appLock by remember { mutableStateOf(AppSettingsStore.appLock) }
     var autoLock by remember { mutableStateOf(AppSettingsStore.autoLockGraceSeconds) }
@@ -610,7 +673,9 @@ private fun CodeSettings(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val canLock = remember { com.kryptos.android.security.AppLock.canUseLock(context) }
+    val canLock by produceState(true) {
+        value = withContext(Dispatchers.Default) { com.kryptos.android.security.AppLock.canUseLock(context) }
+    }
 
     var appLock by remember { mutableStateOf(AppSettingsStore.appLock) }
     var code by remember { mutableStateOf("") }
@@ -685,7 +750,7 @@ private fun CodeSettings(
                     busy = true
                     message = null
                     scope.launch {
-                        val result = withContext(Dispatchers.Default) { onSave(entered) }
+                        val result = withContext(Dispatchers.Default + NonCancellable) { onSave(entered) }
                         busy = false
                         failed = result != AppSettingsStore.CodeResult.OK
                         message = when (result) {
@@ -763,15 +828,22 @@ private fun KeyBackupSettings(modifier: Modifier, onBack: () -> Unit) {
         val text = pendingFile
         pendingFile = null
         if (uri == null || text == null) return@rememberLauncherForActivityResult
-        val ok = runCatching {
-            context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) } != null
-        }.getOrDefault(false)
-        if (ok) {
-            exportPassword = ""; exportRepeat = ""
-            exportFailed = false
-            exportMessage = context.getString(R.string.backup_created)
-        } else {
-            failExport(context.getString(R.string.backup_write_failed))
+        busy = true
+        scope.launch {
+            val ok = withContext(Dispatchers.IO + NonCancellable) {
+                runCatching {
+                    context.contentResolver.openOutputStream(uri)
+                        ?.use { it.write(text.toByteArray(Charsets.UTF_8)) } != null
+                }.getOrDefault(false)
+            }
+            busy = false
+            if (ok) {
+                exportPassword = ""; exportRepeat = ""
+                exportFailed = false
+                exportMessage = context.getString(R.string.backup_created)
+            } else {
+                failExport(context.getString(R.string.backup_write_failed))
+            }
         }
     }
 
@@ -781,13 +853,19 @@ private fun KeyBackupSettings(modifier: Modifier, onBack: () -> Unit) {
         importPassword = ""
         importText = null
         if (uri == null) return@rememberLauncherForActivityResult
-        val text = runCatching {
-            context.contentResolver.openInputStream(uri)?.use { stream ->
-                readBounded(stream, com.kryptos.android.core.KeyArchive.MAX_FILE_BYTES)
-                    ?.let { String(it, Charsets.UTF_8) }
+        busy = true
+        scope.launch {
+            val text = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openInputStream(uri)?.use { stream ->
+                        readBounded(stream, com.kryptos.android.core.KeyArchive.MAX_FILE_BYTES)
+                            ?.let { String(it, Charsets.UTF_8) }
+                    }
+                }.getOrNull()
             }
-        }.getOrNull()
-        if (text == null) failImport(context.getString(R.string.backup_read_failed)) else importText = text
+            busy = false
+            if (text == null) failImport(context.getString(R.string.backup_read_failed)) else importText = text
+        }
     }
 
     KScreen(
@@ -959,7 +1037,11 @@ private fun ScreenDecryptSection() {
     val lifecycleOwner = LocalLifecycleOwner.current
     var enabled by remember { mutableStateOf(AppSettingsStore.screenDecrypt) }
     var blockShots by remember { mutableStateOf(AppSettingsStore.screenDecryptSecure) }
-    var serviceOn by remember { mutableStateOf(ScreenDecryptService.isSystemEnabled(context)) }
+    var serviceOn by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        serviceOn = withContext(Dispatchers.Default) { ScreenDecryptService.isSystemEnabled(context) }
+    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -1040,6 +1122,7 @@ private fun StegoSettings(modifier: Modifier, onBack: () -> Unit) {
                 val langs = listOf(
                     "auto" to R.string.lang_auto, "english" to R.string.lang_en,
                     "russian" to R.string.lang_ru, "german" to R.string.lang_de,
+                    "chinese" to R.string.lang_zh,
                 )
                 MenuRow(
                     stringResource(R.string.settings_stego_lang),
@@ -1081,7 +1164,9 @@ private fun StegoSettings(modifier: Modifier, onBack: () -> Unit) {
                     when (stegoMode) {
                         StegoMode.WORDS -> R.string.stego_example_footer
                         StegoMode.SMART -> R.string.stego_smart_footer
-                        StegoMode.LETTERS -> R.string.stego_letters_footer
+                        StegoMode.LETTERS ->
+                            if (stegoLanguageOf(stegoLang).isHan) R.string.stego_letters_footer_han
+                            else R.string.stego_letters_footer
                     },
                 ),
             )
@@ -1090,34 +1175,53 @@ private fun StegoSettings(modifier: Modifier, onBack: () -> Unit) {
     }
 }
 
+private fun stegoLanguageOf(langKey: String): StegoLanguage = when (langKey) {
+    "english" -> StegoLanguage.ENGLISH
+    "russian" -> StegoLanguage.RUSSIAN
+    "german" -> StegoLanguage.GERMAN
+    "chinese" -> StegoLanguage.CHINESE
+    else -> StegoLanguage.forSystem()
+}
+
 private fun stegoSample(langKey: String, mode: StegoMode): String {
     val bytes = byteArrayOf(
         0x03, 0x02, 0x41, 0x9C.toByte(), 0x2A, 0xF7.toByte(),
         0x10, 0x88.toByte(), 0x3D, 0x6B, 0xE0.toByte(), 0x54,
     )
-    val language = when (langKey) {
-        "english" -> StegoLanguage.ENGLISH
-        "russian" -> StegoLanguage.RUSSIAN
-        "german" -> StegoLanguage.GERMAN
-        else -> StegoLanguage.forSystem()
-    }
+    val language = stegoLanguageOf(langKey)
     return when (mode) {
-        StegoMode.WORDS -> TextStego.encode(bytes, language)
-        StegoMode.SMART -> SmartTextStego.encode(bytes, language)
-        StegoMode.LETTERS -> LetterStego.encode(bytes, language)
+        StegoMode.WORDS -> TextStego.encode(bytes, language).orEmpty()
+        StegoMode.SMART -> SmartTextStego.encode(bytes, language).orEmpty()
+        StegoMode.LETTERS -> LetterStego.encode(bytes, language).orEmpty()
     }
 }
 
 @Composable
 private fun KeyboardSettings(modifier: Modifier, onBack: () -> Unit, openLanguages: () -> Unit) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val forgetScope = rememberCoroutineScope()
+    var serviceOn by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        serviceOn = withContext(Dispatchers.Default) { ScreenDecryptService.isSystemEnabled(context) }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) serviceOn = ScreenDecryptService.isSystemEnabled(context)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     var kbAutoDecrypt by remember { mutableStateOf(AppSettingsStore.keyboardAutoDecrypt) }
     var kbSendAfter by remember { mutableStateOf(AppSettingsStore.keyboardSendAfterEncrypt) }
     var kbHaptics by remember { mutableStateOf(AppSettingsStore.keyboardHaptics) }
     var kbSounds by remember { mutableStateOf(AppSettingsStore.keyboardSounds) }
     var kbCompose by remember { mutableStateOf(AppSettingsStore.keyboardCompose) }
     var kbComposeToggle by remember { mutableStateOf(AppSettingsStore.keyboardComposeToggle) }
+    var kbFieldSize by remember { mutableStateOf(AppSettingsStore.keyboardFieldSize) }
     var secureKb by remember { mutableStateOf(AppSettingsStore.secureKeyboard) }
     var kbSuggestions by remember { mutableStateOf(AppSettingsStore.keyboardSuggestions) }
     var kbAutocorrect by remember { mutableStateOf(AppSettingsStore.keyboardAutocorrect) }
@@ -1152,12 +1256,28 @@ private fun KeyboardSettings(modifier: Modifier, onBack: () -> Unit, openLanguag
         }
         FooterText(stringResource(R.string.kb_autodecrypt_footer))
 
+        val sendNeedsService = kbSendAfter && !serviceOn
         GlassCard(spacing = 4.dp) {
             ToggleRow(stringResource(R.string.settings_kb_sendafter), kbSendAfter, onChange = {
-                kbSendAfter = it; AppSettingsStore.keyboardSendAfterEncrypt = it
+                kbSendAfter = it
+                AppSettingsStore.keyboardSendAfterEncrypt = it
+                if (it && !serviceOn) openAccessibilitySettings(context)
             })
+            if (sendNeedsService) {
+                CardDivider()
+                NavRow(
+                    stringResource(R.string.screen_decrypt_enable_service),
+                    icon = Icons.Default.Accessibility,
+                    onClick = { openAccessibilitySettings(context) },
+                )
+            }
         }
-        FooterText(stringResource(R.string.settings_kb_sendafter_desc))
+        FooterText(
+            stringResource(
+                if (sendNeedsService) R.string.settings_kb_sendafter_service
+                else R.string.settings_kb_sendafter_desc
+            )
+        )
 
         SectionHeader(stringResource(R.string.kb_typing))
         GlassCard(spacing = 4.dp) {
@@ -1213,6 +1333,16 @@ private fun KeyboardSettings(modifier: Modifier, onBack: () -> Unit, openLanguag
             ToggleRow(stringResource(R.string.settings_kb_compose_toggle), kbComposeToggle, onChange = {
                 kbComposeToggle = it; AppSettingsStore.keyboardComposeToggle = it
             })
+            CardDivider()
+            MenuRow(
+                stringResource(R.string.settings_kb_fieldsize),
+                fieldSizeOptions.map { stringResource(it.second) },
+                fieldSizeOptions.indexOfFirst { it.first == kbFieldSize }.coerceAtLeast(0),
+                onPick = { i ->
+                    kbFieldSize = fieldSizeOptions[i].first
+                    AppSettingsStore.keyboardFieldSize = kbFieldSize
+                },
+            )
             CardDivider()
             ToggleRow(stringResource(R.string.sec_secure_keyboard), secureKb, onChange = {
                 secureKb = it; AppSettingsStore.secureKeyboard = it
@@ -1462,6 +1592,146 @@ private fun FaqSettings(modifier: Modifier, onBack: () -> Unit) {
     }
 }
 
+private val DONATE_TILE = Color(0xFFE23D6D)
+
+private val DONATE_QR_PADDING = 6.dp
+
+private val DONATE_QR_MAX = 260.dp
+
+private val DONATE_BADGE = 26.dp
+
+private class DonateQrRender(val bitmap: Bitmap?)
+
+@Composable
+private fun CoinBadge(coin: DonationCoin) {
+    val asset = when (coin.id) {
+        "xmr" -> R.drawable.ic_coin_xmr
+        "ton" -> R.drawable.ic_coin_ton
+        else -> R.drawable.ic_coin_btc
+    }
+    Image(painterResource(asset), null, Modifier.size(DONATE_BADGE))
+}
+
+@Composable
+private fun DonateSettings(modifier: Modifier, backLabel: String, onBack: () -> Unit) {
+    val context = LocalContext.current
+    var expanded by rememberSaveable { mutableStateOf<String?>(null) }
+    var copied by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(copied) {
+        if (copied == null) return@LaunchedEffect
+        delay(1500)
+        copied = null
+    }
+
+    KScreen(
+        stringResource(R.string.donate_title), modifier,
+        backLabel = backLabel, onBack = onBack,
+    ) {
+        GlassCard {
+            Text(
+                stringResource(R.string.donate_intro),
+                fontSize = 14.sp, lineHeight = 20.sp, color = K.textPrimary,
+            )
+        }
+        FooterText(stringResource(R.string.donate_verify))
+
+        Donations.coins.forEach { coin ->
+            GlassCard(spacing = 12.dp) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CoinBadge(coin)
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        coin.name,
+                        fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
+                        color = K.textPrimary, modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        coin.ticker,
+                        fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = K.textSecondary,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(7.dp))
+                            .background(K.fieldFill)
+                            .padding(horizontal = 7.dp, vertical = 3.dp),
+                    )
+                }
+                CardDivider()
+                Text(
+                    coin.grouped,
+                    fontSize = 13.sp, lineHeight = 19.sp,
+                    fontFamily = FontFamily.Monospace, color = K.textPrimary,
+                    modifier = Modifier.semantics { contentDescription = coin.address },
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val done = copied == coin.id
+                    SecondaryButton(
+                        stringResource(if (done) R.string.copied else R.string.donate_copy),
+                        Modifier.weight(1f),
+                        icon = if (done) Icons.Default.Check else Icons.Default.ContentCopy,
+                        accent = true,
+                    ) {
+                        ClipboardGuard.copyPlain(context, coin.address)
+                        copied = coin.id
+                    }
+                    val open = expanded == coin.id
+                    GlassIconButton(
+                        Icons.Default.QrCode2,
+                        stringResource(if (open) R.string.hide_qr else R.string.show_qr),
+                        size = 50.dp,
+                        filled = open,
+                    ) {
+                        expanded = if (open) null else coin.id
+                    }
+                }
+                if (expanded == coin.id) DonateQr(coin.address)
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun DonateQr(address: String) {
+    KeepScreenBright()
+    val density = LocalDensity.current
+    BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+        val availablePx = with(density) { (minOf(maxWidth, DONATE_QR_MAX) - DONATE_QR_PADDING * 2).roundToPx() }
+        val rendered by produceState<DonateQrRender?>(null, address, availablePx) {
+            value = DonateQrRender(
+                withContext(Dispatchers.Default) {
+                    KeyQr.bitmap(
+                        address.toByteArray(Charsets.ISO_8859_1),
+                        availablePx,
+                        ErrorCorrectionLevel.M,
+                    )
+                },
+            )
+        }
+        val qr = rendered?.bitmap
+        if (qr != null) {
+            Box(
+                Modifier
+                    .shadow(10.dp, RoundedCornerShape(KShape.cornerSmall))
+                    .clip(RoundedCornerShape(KShape.cornerSmall))
+                    .background(Color.White)
+                    .padding(DONATE_QR_PADDING),
+            ) {
+                Image(
+                    qr.asImageBitmap(),
+                    null,
+                    Modifier.size(with(density) { qr.width.toDp() }),
+                    filterQuality = FilterQuality.None,
+                )
+            }
+        } else if (rendered != null) {
+            Banner(stringResource(R.string.donate_qr_unavailable), BannerKind.Warning)
+        }
+    }
+}
+
 @Composable
 private fun AboutSettings(modifier: Modifier, onBack: () -> Unit) {
     val context = LocalContext.current
@@ -1537,7 +1807,7 @@ private fun AboutSettings(modifier: Modifier, onBack: () -> Unit) {
 }
 
 @Composable
-private fun DeveloperSettings(modifier: Modifier, onBack: () -> Unit) {
+private fun DeveloperSettings(modifier: Modifier, onBack: () -> Unit, openDonate: () -> Unit) {
     val context = LocalContext.current
 
     KScreen(
@@ -1566,6 +1836,13 @@ private fun DeveloperSettings(modifier: Modifier, onBack: () -> Unit) {
             }
         }
         FooterText(stringResource(R.string.about_dev_footer))
+
+        GlassCard(padding = 14.dp, spacing = 2.dp) {
+            SettingsTile(
+                stringResource(R.string.donate_title), Icons.Default.Favorite,
+                tile = DONATE_TILE,
+            ) { openDonate() }
+        }
         Spacer(Modifier.height(8.dp))
     }
 }

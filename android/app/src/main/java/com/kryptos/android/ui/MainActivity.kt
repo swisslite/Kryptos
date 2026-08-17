@@ -1,5 +1,6 @@
 package com.kryptos.android.ui
 
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
@@ -81,6 +82,7 @@ import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
 import com.kryptos.android.R
 import com.kryptos.android.AppLanguage
+import com.kryptos.android.KryptosApp
 import com.kryptos.android.core.CachePurge
 import com.kryptos.android.pgp.PgpService
 import com.kryptos.android.security.AppLock
@@ -89,12 +91,12 @@ import com.kryptos.android.core.LetterStego
 import com.kryptos.android.core.SmartTextStego
 import com.kryptos.android.core.TextStego
 import com.kryptos.android.core.WireFormat
+import com.kryptos.android.core.sha256Hex
 import com.kryptos.android.signal.AppSettingsStore
 import com.kryptos.android.signal.OwnCipherMarker
 import com.kryptos.android.signal.SignalService
 import com.kryptos.android.store.SecureStore
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -139,16 +141,14 @@ class MainActivity : FragmentActivity() {
         if (savedInstanceState == null || !AppLock.hasLaunched) AppLock.onLaunch(this)
         val boot = mutableStateOf(if (SignalService.isReady) BootState.Ready else BootState.Loading)
         if (boot.value != BootState.Ready) {
-            @Suppress("OPT_IN_USAGE")
-            GlobalScope.launch(Dispatchers.Default) {
+            KryptosApp.scope.launch {
                 val ok = runCatching { SignalService.ensureInitialized() }.isSuccess
                 withContext(Dispatchers.Main) {
                     boot.value = if (ok) BootState.Ready else BootState.Broken
                 }
             }
         }
-        @Suppress("OPT_IN_USAGE")
-        GlobalScope.launch(Dispatchers.Default) { runCatching { PgpService.ensureInitialized() } }
+        KryptosApp.scope.launch { runCatching { PgpService.ensureInitialized() } }
 
         setContent {
             KryptosTheme {
@@ -222,8 +222,7 @@ class MainActivity : FragmentActivity() {
             return
         }
         AppLock.onForeground(this)
-        @Suppress("OPT_IN_USAGE")
-        GlobalScope.launch(Dispatchers.Default) { runCatching { SignalService.purgeExpiredMessages() } }
+        KryptosApp.scope.launch { runCatching { SignalService.purgeExpiredMessages() } }
     }
 
     override fun onPause() {
@@ -238,8 +237,7 @@ class MainActivity : FragmentActivity() {
         val clip = clipboardText(this)
         if (clip.isBlank() || !ClipScanMemory.markSeen(clip)) return
         val appContext = applicationContext
-        @Suppress("OPT_IN_USAGE")
-        GlobalScope.launch(Dispatchers.Default) {
+        KryptosApp.scope.launch {
             val stegoSized = clip.length in 40..64_000
             if (!WireFormat.isToken(clip) &&
                 !(stegoSized && (TextStego.looksLikeStego(clip) || SmartTextStego.looksLikeStego(clip) ||
@@ -301,8 +299,9 @@ object ClipScanMemory {
     }
 
     fun markSeen(clip: String): Boolean {
-        if (clip == lastSeen) return false
-        lastSeen = clip
+        val key = sha256Hex(clip.toByteArray(Charsets.UTF_8))
+        if (key == lastSeen) return false
+        lastSeen = key
         return true
     }
 }
@@ -503,7 +502,13 @@ private fun BootScreen() {
 
 fun clipboardText(context: Context): String {
     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    return cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(context)?.toString() ?: ""
+    val clip = cm.primaryClip?.takeIf { it.itemCount > 0 } ?: return ""
+    if (clip.description?.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) != true &&
+        clip.description?.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML) != true
+    ) {
+        return ""
+    }
+    return clip.getItemAt(0)?.text?.toString() ?: ""
 }
 
 fun shareText(context: Context, text: String) {

@@ -24,14 +24,25 @@ final class VectorGenTests: XCTestCase {
         print("VECTOR-DEFLATE-BEGIN\n\(deflated.map { String(format: "%02x", $0) }.joined())\nVECTOR-DEFLATE-END")
 
         let payload = Data((0...0x20).map { UInt8($0) })
-        print("VECTOR-STEGO-EN-BEGIN\n\(TextStego.encode(payload, language: .english))\nVECTOR-STEGO-EN-END")
-        print("VECTOR-STEGO-RU-BEGIN\n\(TextStego.encode(payload, language: .russian))\nVECTOR-STEGO-RU-END")
+        print("VECTOR-STEGO-EN-BEGIN\n\(TextStego.encode(payload, language: .english, seed: 0x5C))\nVECTOR-STEGO-EN-END")
+        print("VECTOR-STEGO-RU-BEGIN\n\(TextStego.encode(payload, language: .russian, seed: 0xB3))\nVECTOR-STEGO-RU-END")
         print("VECTOR-STEGO-DE-BEGIN\n\(TextStego.encode(payload, language: .german, seed: 0x41))\nVECTOR-STEGO-DE-END")
+        print("VECTOR-STEGO-ZH-BEGIN\n\(TextStego.encode(payload, language: .chinese, seed: 0x5C))\nVECTOR-STEGO-ZH-END")
 
         let letterProbe = Data([0x03, 0x02, 0xAB, 0xCD, 0xEF, 0x10, 0x22, 0x77, 0x91, 0x04, 0x5C, 0xBE])
         print("VECTOR-LETTERS-EN-BEGIN\n\(LetterStego.encode(letterProbe, language: .english, seed: 0x5C))\nVECTOR-LETTERS-EN-END")
         print("VECTOR-LETTERS-RU-BEGIN\n\(LetterStego.encode(letterProbe, language: .russian, seed: 0xB3))\nVECTOR-LETTERS-RU-END")
         print("VECTOR-SMART-DE-BEGIN\n\(SmartTextStego.encode(letterProbe, language: .german, seed: 0x41))\nVECTOR-SMART-DE-END")
+        print("VECTOR-SMART-EN-BEGIN\n\(SmartTextStego.encode(letterProbe, language: .english, seed: 0x5C))\nVECTOR-SMART-EN-END")
+        print("VECTOR-SMART-RU-BEGIN\n\(SmartTextStego.encode(letterProbe, language: .russian, seed: 0xB3))\nVECTOR-SMART-RU-END")
+        print("VECTOR-SMART-ZH-BEGIN\n\(SmartTextStego.encode(letterProbe, language: .chinese, seed: 0x5C))\nVECTOR-SMART-ZH-END")
+        print("VECTOR-LETTERS-ZH-BEGIN\n\(LetterStego.encode(letterProbe, language: .chinese, seed: 0x5C))\nVECTOR-LETTERS-ZH-END")
+
+        let paddedCipher = Data((0 ..< 40).map { UInt8(($0 * 31) & 0xFF) })
+        let paddedPayload = StegoWire.frame(paddedCipher, type: 2, deflate: false, padded: true)
+        print("VECTOR-STEGO-PADDED-RU-BEGIN\n\(TextStego.encode(paddedPayload, language: .russian, seed: 0x11))\nVECTOR-STEGO-PADDED-RU-END")
+        print("VECTOR-LETTERS-PADDED-RU-BEGIN\n\(LetterStego.encode(paddedPayload, language: .russian, seed: 0x11))\nVECTOR-LETTERS-PADDED-RU-END")
+        print("VECTOR-STEGO-PADDED-CT-BEGIN\n\(paddedCipher.map { String(format: "%02x", $0) }.joined())\nVECTOR-STEGO-PADDED-CT-END")
 
         var state: UInt64 = 7
         func next() -> UInt8 {

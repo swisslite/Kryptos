@@ -42,6 +42,7 @@ object AppSettingsStore {
             "english" -> StegoLanguage.ENGLISH
             "russian" -> StegoLanguage.RUSSIAN
             "german" -> StegoLanguage.GERMAN
+            "chinese" -> StegoLanguage.CHINESE
             else -> StegoLanguage.forSystem()
         }
     }
@@ -63,6 +64,24 @@ object AppSettingsStore {
     var keyboardComposeToggle: Boolean
         get() = prefs.getBoolean("kb.composetoggle", true)
         set(v) { prefs.edit().putBoolean("kb.composetoggle", v).apply() }
+
+    var keyboardShield: Boolean
+        get() = prefs.getBoolean("kb.shield", true)
+        set(v) { prefs.edit().putBoolean("kb.shield", v).apply() }
+
+    enum class FieldSize(val key: String, val heightDp: Float) {
+        SMALL("small", 50f),
+        MEDIUM("medium", 86f),
+        LARGE("large", 122f);
+
+        companion object {
+            fun resolve(raw: String?): FieldSize = entries.firstOrNull { it.key == raw } ?: SMALL
+        }
+    }
+
+    var keyboardFieldSize: FieldSize
+        get() = FieldSize.resolve(prefs.getString("kb.fieldsize", null))
+        set(v) { prefs.edit().putString("kb.fieldsize", v.key).apply() }
 
     var keyboardAutoDecrypt: Boolean
         get() = prefs.getBoolean("kb.autodecrypt", true)
@@ -89,13 +108,10 @@ object AppSettingsStore {
     val systemKeyboardLang: String
         get() {
             val tag = java.util.Locale.getDefault().language
-            return if (tag == "ru" || tag == "de") tag else "en"
+            return if (tag == "ru" || tag == "de" || tag == "zh") tag else "en"
         }
 
-    val systemRussian: Boolean
-        get() = java.util.Locale.getDefault().language.lowercase().startsWith("ru")
-
-    private val nonLatinLanguages = setOf("ru")
+    private val nonLatinLanguages = setOf("ru", "zh")
 
     fun keyboardLangEnabled(code: String): Boolean {
         val sys = systemKeyboardLang
@@ -254,7 +270,7 @@ object AppSettingsStore {
     }
 
     private fun codeHash(salt: ByteArray, code: String): ByteArray =
-        Argon2id.derive(code.toByteArray(Charsets.UTF_8), salt, DURESS_HASH_LENGTH)
+        Argon2id.derive(code, salt, DURESS_HASH_LENGTH)
 
     private fun codeStored(name: String): Boolean =
         runCatching { SecureStore.read(name)?.size == BLOB_LENGTH }.getOrDefault(false)

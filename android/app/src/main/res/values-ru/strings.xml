@@ -35,6 +35,7 @@
     <string name="auto_delete">Исчезающие сообщения</string>
     <string name="clear_chat">Очистить чат</string>
     <string name="delete_contact">Удалить контакт</string>
+    <string name="delete_message">Удалить сообщение</string>
     <string name="off">Выкл</string>
     <string name="s30">30 секунд</string>
     <string name="m5">5 минут</string>
@@ -45,8 +46,13 @@
 
     <string name="new_profile">Новый профиль</string>
     <string name="profile_name">Имя профиля</string>
+    <string name="rename">Переименовать</string>
+    <string name="rename_profile">Переименовать профиль</string>
+    <string name="rename_contact">Переименовать контакт</string>
+    <string name="save">Сохранить</string>
     <string name="regenerate_key">Пересоздать ключ</string>
-    <string name="regenerate_warning">Будет создана новая личность; все сессии этого профиля станут недействительны.</string>
+    <string name="regenerate_warning">Будет создана новая пара ключей; все сессии этого профиля станут недействительны.</string>
+    <string name="profile_unavailable">Не удалось открыть профиль «%1$s» — его шифрованное хранилище не читается. Попробуйте позже.</string>
 
     <string name="password">Пароль</string>
     <string name="encrypt">Зашифровать</string>
@@ -61,7 +67,7 @@
     <string name="capacity_exceeded">Сообщение не помещается в это фото.</string>
     <string name="low_memory">Недостаточно памяти устройства, чтобы выполнить операцию.</string>
     <string name="storage_broken_title">Зашифрованное хранилище недоступно</string>
-    <string name="storage_broken_text">Kryptos не может прочитать свои ключи. Обычно это происходит, если с устройства сняли блокировку экрана — Android при этом уничтожает аппаратный ключ, защищающий данные приложения, и восстановить его нельзя даже повторной установкой блокировки.\n\nКлючи и переписка утрачены безвозвратно. Начав заново, вы получите новую личность — ключами с контактами придётся обменяться повторно.</string>
+    <string name="storage_broken_text">Kryptos не может прочитать свои ключи. Обычно это происходит, если с устройства сняли блокировку экрана — Android при этом уничтожает аппаратный ключ, защищающий данные приложения, и восстановить его нельзя даже повторной установкой блокировки.\n\nКлючи и переписка утрачены безвозвратно. Начав заново, вы получите новый профиль — ключами с контактами придётся обменяться повторно.</string>
     <string name="storage_broken_reset">Стереть и начать заново</string>
     <string name="stego_not_found">Сообщение не найдено — неверный пароль либо в этом фото ничего нет.</string>
 
@@ -81,16 +87,20 @@
     <string name="stego_mode_smart">Умные предложения</string>
     <string name="stego_mode_letters">Случайные буквы</string>
     <string name="stego_letters_footer">Самый короткий режим — примерно вдвое короче «Обычных слов».</string>
+    <string name="stego_letters_footer_han">Сплошной ряд без знаков препинания.</string>
     <string name="stego_smart_footer">Настоящие предложения вместо набора слов, но текст длиннее.</string>
     <string name="lang_auto">Автоматически (язык системы)</string>
     <string name="lang_en">Английский</string>
     <string name="lang_ru">Русский</string>
     <string name="lang_de">Немецкий</string>
+    <string name="lang_zh">Китайский</string>
     <string name="settings_keyboard">Клавиатура</string>
     <string name="settings_enable_keyboard">Включить клавиатуру Kryptos</string>
     <string name="settings_kb_autodecrypt">Авторасшифровка буфера в клавиатуре</string>
     <string name="settings_kb_sendafter">Отправлять после шифрования</string>
     <string name="settings_kb_sendafter_desc">Замок шифрует и сразу отправляет. Значок самолётика на замке — режим включён.</string>
+    <string name="settings_kb_sendafter_service">Нужна служба Kryptos — нажмите, чтобы включить.</string>
+    <string name="kb_send_needs_service">Включите службу Kryptos, чтобы отправлять в этом приложении.</string>
     <string name="settings_privacy">Приватность</string>
     <string name="settings_shield">Блокировать скриншоты и снимки в переключателе</string>
     <string name="settings_clip_autodecrypt">Авторасшифровка буфера при открытии</string>
@@ -100,6 +110,11 @@
     <string name="settings_wipe_all">Стереть всё</string>
 
     <string name="settings_about_row">О программе</string>
+    <string name="donate_title">Поддержать проект</string>
+    <string name="donate_intro">Kryptos бесплатен, без рекламы и слежки. Если он вам полезен, вы можете поддержать разработку.</string>
+    <string name="donate_copy">Скопировать адрес</string>
+    <string name="donate_verify">Проверьте адрес перед отправкой.</string>
+    <string name="donate_qr_unavailable">Не удалось построить QR-код — скопируйте адрес.</string>
     <string name="settings_danger_footer">Стирает выбранные данные без возможности восстановления.</string>
     <string name="clip_section">Буфер обмена</string>
     <string name="clip_footer">Автоочистка стирает скопированное Kryptos через выбранное время.</string>
@@ -147,6 +162,7 @@
     <string name="kb_select_contact">Контакт</string>
     <string name="kb_no_contacts">Сначала добавьте контакт в приложении Kryptos</string>
     <string name="kb_encrypted">Зашифровано ✓</string>
+    <string name="kb_field_locked">Это приложение не даёт клавиатуре очистить поле — зашифруйте в приложении Kryptos.</string>
     <string name="kb_nothing_to_encrypt">Нечего шифровать — сначала введите сообщение</string>
     <string name="kb_locked">Сначала разблокируйте приложение Kryptos</string>
 
@@ -237,7 +253,7 @@
     <string name="confirm_clear_chat_title">Очистить этот чат?</string>
     <string name="confirm_clear_chat_text">Переписка будет надёжно стёрта. Отменить нельзя.</string>
     <string name="confirm_delete_profile_title">Удалить профиль?</string>
-    <string name="confirm_delete_profile_text">Эта личность будет удалена навсегда — её ключи, контакты и сообщения. Отменить нельзя.</string>
+    <string name="confirm_delete_profile_text">Этот профиль будет удалён навсегда — его ключи, контакты и сообщения. Отменить нельзя.</string>
     <string name="confirm_wipe_chats_text">История сообщений во всех чатах будет стёрта. Контакты останутся. Отменить нельзя.</string>
     <string name="confirm_wipe_contacts_text">Ключи, сессии и переписки всех контактов будут стёрты с этого устройства; ваш собственный ключ останется. Отменить нельзя.</string>
         <string name="confirm_remove_recipient_title">Удалить получателя?</string>
@@ -251,6 +267,11 @@
     <string name="settings_kb_sounds">Звук клавиш</string>
     <string name="settings_kb_compose">Поле сообщения в клавиатуре</string>
     <string name="settings_kb_compose_toggle">Кнопка поля на клавиатуре</string>
+    <string name="settings_kb_shield">Значок Kryptos на клавиатуре</string>
+    <string name="settings_kb_fieldsize">Размер поля</string>
+    <string name="field_size_small">Маленькое</string>
+    <string name="field_size_medium">Среднее</string>
+    <string name="field_size_large">Большое</string>
     <string name="settings_kb_compose_desc">Поле — набор идёт мимо мессенджера, он не сохранит черновик. Кнопка включает это поле прямо на клавиатуре.</string>
 
     <string name="kb_typing">Набор текста</string>
@@ -389,7 +410,7 @@
     <string name="faq_q10">Я забыл пароль от резервной копии ключей</string>
     <string name="faq_a10">Восстановить его невозможно: файл зашифрован именно этим паролем, а Kryptos нигде его не хранит. Сделайте новую копию с паролем, который точно не забудете.</string>
     <string name="faq_q11">Зачем нужны профили?</string>
-    <string name="faq_a11">Профиль — это отдельная личность со своим ключом и своим списком контактов. Их можно держать несколько и переключаться между ними — например, чтобы разделить рабочее и личное.</string>
+    <string name="faq_a11">Профиль — это отдельная пара ключей со своим списком контактов. Их можно держать несколько и переключаться между ними — например, чтобы разделить рабочее и личное.</string>
     <string name="faq_q12">Насколько надёжно это шифрование?</string>
     <string name="faq_a12">Диалоги используют официальную библиотеку libsignal — тот же протокол, что и в самом Signal, вместе с постквантовым рукопожатием. Режим «Пароль» и фотографии используют Argon2id и AES-256-GCM. Собственной криптографии в Kryptos нет.</string>
     <string name="faq_q13">Собеседнику тоже нужен Kryptos?</string>
@@ -417,6 +438,7 @@
     <string name="ui_appearance_footer">Тема меняется сразу. Смена языка перезапускает приложение.</string>
     <string name="ui_tabs">Нижняя панель</string>
     <string name="ui_tabs_footer">Выключённые разделы исчезают из нижней панели.</string>
+    <string name="ui_keyboard_footer">Показывает значок в панели над клавишами.</string>
     <string name="kb_a11y_space">Пробел</string>
     <string name="kb_a11y_backspace">Удалить</string>
     <string name="kb_a11y_enter">Ввод</string>
@@ -435,4 +457,9 @@
     <string name="faq_q21">Зачем «Поле сообщения в клавиатуре»?</string>
     <string name="faq_a21">Обычно вы печатаете в поле самого мессенджера, и он видит каждую букву ещё до всякого шифрования — а большинство мессенджеров сохраняют набранное как черновик. Если включить это поле, набор идёт внутри клавиатуры Kryptos: мессенджер не получает вообще ничего, пока вы не нажмёте замок, и тогда в него попадает только готовый шифртекст. Набранное живёт лишь внутри клавиатуры, на диск не записывается и исчезает вместе с остальными данными при стирании. Отдельная настройка «Кнопка поля на клавиатуре» добавляет рядом с замком кнопку, чтобы включать поле не заходя в настройки.</string>
     <string name="about_website">Сайт</string>
+    <string name="engine_title">Движок Signal</string>
+    <string name="engine_ok">«Диалоги» работают на официальном libsignal.</string>
+    <string name="profiles_intro">Профиль — это отдельная пара ключей со своими контактами. Создайте несколько, чтобы разделить общение. Ваш «код безопасности» публичный (им можно делиться, он нужен только для сверки контакта); приватный ключ никогда не покидает это устройство.</string>
+    <string name="current_profile">ТЕКУЩИЙ ПРОФИЛЬ</string>
+    <string name="safety_number_label">КОД БЕЗОПАСНОСТИ</string>
 </resources>

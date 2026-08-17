@@ -32,12 +32,12 @@ import com.kryptos.android.R
 import com.kryptos.android.core.CachePurge
 import com.kryptos.android.core.LetterStego
 import com.kryptos.android.core.SmartTextStego
+import com.kryptos.android.core.TaskQueue
 import com.kryptos.android.core.TextStego
 import com.kryptos.android.security.AppLock
 import com.kryptos.android.security.ClipboardGuard
 import com.kryptos.android.signal.AppSettingsStore
 import com.kryptos.android.signal.SignalService
-import java.util.concurrent.Executors
 
 class ScreenDecryptService : AccessibilityService() {
 
@@ -49,7 +49,7 @@ class ScreenDecryptService : AccessibilityService() {
     }
 
     private val handler = Handler(Looper.getMainLooper())
-    private val worker = Executors.newSingleThreadExecutor()
+    private val worker = TaskQueue("kryptos-screen")
     private val scan = Runnable { doScan() }
     private val verify = Runnable { doScan() }
     private var verifyDelay = VERIFY_MIN_MS
@@ -84,7 +84,7 @@ class ScreenDecryptService : AccessibilityService() {
         live = this
         if (!purgeHooked) {
             purgeHooked = true
-            CachePurge.register {
+            val drop: () -> Unit = {
                 live?.let { service ->
                     service.handler.post {
                         service.generation++
@@ -92,12 +92,16 @@ class ScreenDecryptService : AccessibilityService() {
                     }
                 }
             }
+            CachePurge.register(drop)
+            CachePurge.registerDecrypted(drop)
         }
     }
 
     private var lastPackage: String? = null
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        val pkg = event?.packageName?.toString()
+        if (pkg == packageName) return
         syncOverlaySecure()
         syncOverlayLanguage()
         if (!active()) {
@@ -106,8 +110,6 @@ class ScreenDecryptService : AccessibilityService() {
             clearOverlay()
             return
         }
-        val pkg = event?.packageName?.toString()
-        if (pkg == packageName) return
         val switched = event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
             (pkg != null && pkg != lastPackage)
         if (switched) {
@@ -140,6 +142,7 @@ class ScreenDecryptService : AccessibilityService() {
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
+        if (live === this) live = null
         handler.removeCallbacks(scan)
         handler.removeCallbacks(verify)
         removeOverlay()
@@ -230,17 +233,20 @@ class ScreenDecryptService : AccessibilityService() {
         recycle(root)
 
         val content = Rect(screen.left, chrome[0], screen.right, chrome[1])
-        candidates.retainAll { candidate ->
-            if (!candidate.clip.intersect(content)) return@retainAll false
+        val visibleCandidates = ArrayList<Candidate>(candidates.size)
+        for (candidate in candidates) {
+            val clip = Rect(candidate.clip)
+            if (!clip.intersect(content)) continue
             val visible = Rect(candidate.bounds)
-            visible.intersect(candidate.clip) && visible.height() >= dp(MIN_PANEL_DP)
+            if (!visible.intersect(clip) || visible.height() < dp(MIN_PANEL_DP)) continue
+            visibleCandidates.add(Candidate(candidate.bounds, clip, candidate.text))
         }
 
         val myGen = ++generation
         worker.execute {
             purgeExpired()
             val found = ArrayList<OverlayItem>()
-            for (candidate in candidates) {
+            for (candidate in visibleCandidates) {
                 if (generation != myGen) return@execute
                 val r = ScreenDecryptor.decryptIfPresent(candidate.text) ?: continue
                 found.add(OverlayItem(candidate.bounds, candidate.clip, r.name, r.text, r.mine))
@@ -283,6 +289,150 @@ class ScreenDecryptService : AccessibilityService() {
                 }
             }
         }
+    }
+
+    private class SendCandidate(
+        val node: AccessibilityNodeInfo,
+        val score: Int,
+        val bounds: Rect,
+    )
+
+    private fun clickSendButton(expected: String, keyboardTop: Int, host: String): SendOutcome {
+        val root = rootInActiveWindow ?: return SendOutcome.NOT_FOUND
+        val pkg = root.packageName?.toString()
+        if (pkg != host || pkg == packageName) {
+            recycle(root)
+            return SendOutcome.NOT_FOUND
+        }
+        val composer = Rect()
+        val silentComposer = Rect()
+        val strong = ArrayList<SendCandidate>(MAX_STRONG_CANDIDATES)
+        val icons = ArrayList<SendCandidate>(MAX_ICON_CANDIDATES)
+        scanForSend(root, expected.trim(), composer, silentComposer, strong, icons, intArrayOf(MAX_SEND_NODES), 0)
+        val field = when {
+            !composer.isEmpty -> composer
+            plausibleComposer(silentComposer) -> silentComposer
+            else -> Rect()
+        }
+        val clicked = (!field.isEmpty && clickBest(field, strong, icons)) ||
+            clickAboveKeyboard(keyboardTop, strong, icons)
+        for (candidate in strong) recycle(candidate.node)
+        for (candidate in icons) recycle(candidate.node)
+        recycle(root)
+        return when {
+            clicked -> SendOutcome.CLICKED
+            field.isEmpty && keyboardTop <= 0 -> SendOutcome.IDLE
+            else -> SendOutcome.NOT_FOUND
+        }
+    }
+
+    private fun plausibleComposer(field: Rect): Boolean =
+        !field.isEmpty && field.height() <= resources.displayMetrics.heightPixels / 2
+
+    private fun clickAboveKeyboard(
+        keyboardTop: Int,
+        strong: List<SendCandidate>,
+        icons: List<SendCandidate>,
+    ): Boolean {
+        if (keyboardTop <= 0) return false
+        val band = keyboardTop - dp(SEND_BAND_DP)
+        val floor = keyboardTop + dp(SEND_BAND_SLACK_DP)
+        fun inBand(c: SendCandidate) = c.bounds.bottom <= floor && c.bounds.centerY() >= band
+        strong.filter(::inBand).maxByOrNull { it.score }?.let {
+            if (clickSelfOrParent(it.node)) return true
+        }
+        val nearby = icons.filter(::inBand)
+        val innermost = nearby.filter { c -> nearby.none { it !== c && c.bounds.contains(it.bounds) } }
+        return innermost.size == 1 && clickSelfOrParent(innermost[0].node)
+    }
+
+    private fun scanForSend(
+        node: AccessibilityNodeInfo,
+        wanted: String,
+        composer: Rect,
+        silentComposer: Rect,
+        strong: MutableList<SendCandidate>,
+        icons: MutableList<SendCandidate>,
+        budget: IntArray,
+        depth: Int,
+    ) {
+        if (depth > MAX_SEND_DEPTH || budget[0] <= 0) return
+        budget[0]--
+        if (node.isEditable) {
+            val text = node.text?.toString()?.trim()
+            if (!text.isNullOrEmpty()) {
+                if (composer.isEmpty && (text == wanted || text.contains(wanted))) {
+                    node.getBoundsInScreen(composer)
+                }
+            } else if (silentComposer.isEmpty || node.isFocused) {
+                val bounds = Rect()
+                node.getBoundsInScreen(bounds)
+                if (!bounds.isEmpty) silentComposer.set(bounds)
+            }
+        }
+        if (node.isEnabled && node.isVisibleToUser) {
+            val label = node.contentDescription?.toString() ?: node.text?.toString()
+            val id = node.viewIdResourceName
+            val score = SendButton.score(id, label)
+            if (score > 0) {
+                if (strong.size < MAX_STRONG_CANDIDATES) {
+                    val bounds = Rect()
+                    node.getBoundsInScreen(bounds)
+                    if (!bounds.isEmpty) strong.add(SendCandidate(node, score, bounds))
+                }
+            } else if (icons.size < MAX_ICON_CANDIDATES && node.isClickable &&
+                !node.isEditable && SendButton.harmless(id, label)
+            ) {
+                val bounds = Rect()
+                node.getBoundsInScreen(bounds)
+                if (iconSized(bounds)) icons.add(SendCandidate(node, 0, bounds))
+            }
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            scanForSend(child, wanted, composer, silentComposer, strong, icons, budget, depth + 1)
+            if (strong.none { it.node === child } && icons.none { it.node === child }) recycle(child)
+        }
+    }
+
+    private fun clickBest(
+        field: Rect,
+        strong: List<SendCandidate>,
+        icons: List<SendCandidate>,
+    ): Boolean {
+        val slack = field.height() * 3 / 2
+        fun inRow(c: SendCandidate) = kotlin.math.abs(c.bounds.centerY() - field.centerY()) <= slack
+        strong.filter(::inRow).maxByOrNull { it.score }?.let {
+            if (clickSelfOrParent(it.node)) return true
+        }
+        val nearby = icons.filter { inRow(it) && it.bounds.left >= field.right }
+        val innermost = nearby.filter { c -> nearby.none { it !== c && c.bounds.contains(it.bounds) } }
+        return innermost.size == 1 && clickSelfOrParent(innermost[0].node)
+    }
+
+    private fun iconSized(bounds: Rect): Boolean {
+        val w = bounds.width()
+        val h = bounds.height()
+        if (w <= 0 || h <= 0) return false
+        val ratio = w.toFloat() / h
+        return ratio in 0.6f..1.7f && h >= dp(SEND_ICON_MIN_DP) && h <= dp(SEND_ICON_MAX_DP)
+    }
+
+    private fun clickSelfOrParent(node: AccessibilityNodeInfo): Boolean {
+        var current: AccessibilityNodeInfo? = node
+        var hops = 0
+        while (current != null && hops <= SEND_CLICK_HOPS) {
+            if (current.isClickable && current.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                if (current !== node) recycle(current)
+                return true
+            }
+            val parent = current.parent
+            if (current !== node) recycle(current)
+            current = parent
+            hops++
+        }
+        if (current != null && current !== node) recycle(current)
+        return false
     }
 
     private var lastPurge = 0L
@@ -617,10 +767,28 @@ class ScreenDecryptService : AccessibilityService() {
         private const val VERIFY_MIN_MS = 400L
         private const val VERIFY_MAX_MS = 1600L
         private const val EMPTY_RECHECKS = 3
+        private const val MAX_SEND_NODES = 1200
+        private const val MAX_SEND_DEPTH = 60
+        private const val MAX_STRONG_CANDIDATES = 8
+        private const val MAX_ICON_CANDIDATES = 32
+        private const val SEND_ICON_MIN_DP = 24
+        private const val SEND_ICON_MAX_DP = 76
+        private const val SEND_CLICK_HOPS = 2
+        private const val SEND_BAND_DP = 120
+        private const val SEND_BAND_SLACK_DP = 8
 
         @Volatile private var live: ScreenDecryptService? = null
         private var purgeHooked = false
         private const val MATCH = LinearLayout.LayoutParams.MATCH_PARENT
+
+        fun isBound(): Boolean = live != null
+
+        fun sendInFocusedApp(expected: String, keyboardTop: Int, host: CharSequence): SendOutcome =
+            live?.let { service ->
+                if (AppLock.isCryptoSessionLocked(service)) return SendOutcome.IDLE
+                runCatching { service.clickSendButton(expected, keyboardTop, host.toString()) }
+                    .getOrDefault(SendOutcome.NOT_FOUND)
+            } ?: SendOutcome.NO_SERVICE
 
         fun isSystemEnabled(context: Context): Boolean {
             val enabled = Settings.Secure.getString(

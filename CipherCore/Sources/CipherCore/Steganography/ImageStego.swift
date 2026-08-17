@@ -8,7 +8,7 @@ struct KeyStream {
     private var offset = 0
     private var counter: UInt32 = 0
 
-    init(key: Data, label: String) {
+    init(key: [UInt8], label: String) {
         self.key = SymmetricKey(data: key)
         self.label = Data(label.utf8)
     }
@@ -113,7 +113,7 @@ public enum ImageStego {
             seed.append(UInt8((v >> 8) & 0xFF))
             seed.append(UInt8(v & 0xFF))
         }
-        return KeyStream(key: Data(SHA256.hash(data: seed)), label: label)
+        return KeyStream(key: Array(SHA256.hash(data: seed)), label: label)
     }
 
     static func place(count: Int, total: Int, used: inout [Bool], stream: inout KeyStream) throws -> [Int] {
@@ -161,16 +161,24 @@ public enum ImageStego {
 
     public static func hide(_ message: Data, password: String, rgba: [UInt8],
                             width: Int, height: Int) throws -> [UInt8] {
+        var out = rgba
+        try hideInto(&out, message: message, password: password, width: width, height: height)
+        return out
+    }
+
+    public static func hideInto(_ rgba: inout [UInt8], message: Data, password: String,
+                                width: Int, height: Int) throws {
         let list = try candidates(rgba: rgba, width: width, height: height)
         let total = list.count
         guard total > saltBits + lengthBits else { throw CipherError.stegoCapacityExceeded }
 
         let salt = randomBytes(PasswordCipher.saltLength)
-        var derived = try Argon2id.derive(password: Data(password.utf8), salt: salt,
+        var derived = try Argon2id.derive(password: password, salt: salt,
                                           length: PasswordCipher.derivedLength + placementKeyLength)
         defer { Argon2id.zero(&derived) }
         let (key, nonce) = try PasswordCipher.split(derived)
-        let placementKey = Data(derived[PasswordCipher.derivedLength ..< derived.count])
+        var placementKey = [UInt8](derived[PasswordCipher.derivedLength ..< derived.count])
+        defer { Argon2id.zero(&placementKey) }
         let sealed = try PasswordCipher.sealBody(message, key: key, nonce: nonce,
                                                  version: containerVersion, pad: false)
         let payloadBits = sealed.count * 8
@@ -186,23 +194,21 @@ public enum ImageStego {
         var mask = KeyStream(key: placementKey, label: "kryptos/stego/v2/mask")
         let maskedLength = UInt32(sealed.count) ^ mask.uint32()
 
-        var out = rgba
         var publicFlip = publicStream(width: width, height: height, total: total, label: "flip")
         var flip = KeyStream(key: placementKey, label: "kryptos/stego/v2/flip")
 
         for i in 0 ..< saltBits {
             let bit = (salt[salt.startIndex + i / 8] >> (7 - UInt8(i % 8))) & 1
-            apply(&out, index: Int(list[saltSlots[i]]), bit: bit, stream: &publicFlip)
+            apply(&rgba, index: Int(list[saltSlots[i]]), bit: bit, stream: &publicFlip)
         }
         for i in 0 ..< lengthBits {
             let bit = UInt8((maskedLength >> (31 - UInt32(i))) & 1)
-            apply(&out, index: Int(list[lengthSlots[i]]), bit: bit, stream: &flip)
+            apply(&rgba, index: Int(list[lengthSlots[i]]), bit: bit, stream: &flip)
         }
         for i in 0 ..< payloadBits {
             let bit = (sealed[sealed.startIndex + i / 8] >> (7 - UInt8(i % 8))) & 1
-            apply(&out, index: Int(list[payloadSlots[i]]), bit: bit, stream: &flip)
+            apply(&rgba, index: Int(list[payloadSlots[i]]), bit: bit, stream: &flip)
         }
-        return out
     }
 
     public static func reveal(rgba: [UInt8], width: Int, height: Int, password: String) throws -> Data {
@@ -218,11 +224,12 @@ public enum ImageStego {
             salt[i / 8] |= (rgba[Int(list[saltSlots[i]])] & 1) << (7 - UInt8(i % 8))
         }
 
-        var derived = try Argon2id.derive(password: Data(password.utf8), salt: Data(salt),
+        var derived = try Argon2id.derive(password: password, salt: Data(salt),
                                           length: PasswordCipher.derivedLength + placementKeyLength)
         defer { Argon2id.zero(&derived) }
         let (key, nonce) = try PasswordCipher.split(derived)
-        let placementKey = Data(derived[PasswordCipher.derivedLength ..< derived.count])
+        var placementKey = [UInt8](derived[PasswordCipher.derivedLength ..< derived.count])
+        defer { Argon2id.zero(&placementKey) }
 
         var keyed = KeyStream(key: placementKey, label: "kryptos/stego/v2/slots")
         let lengthSlots = try place(count: lengthBits, total: total, used: &used, stream: &keyed)

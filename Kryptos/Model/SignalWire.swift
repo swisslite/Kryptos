@@ -1,5 +1,4 @@
 import Foundation
-import CryptoKit
 import LibSignalClient
 import CipherCore
 
@@ -10,66 +9,90 @@ enum SignalWire {
         Data((a <= b ? a + b : b + a).utf8)
     }
 
+    struct Sealed: Sendable {
+        let ciphertext: Data
+        let type: UInt8
+        let deflate: Bool
+        let pad: Bool
+        let pairKey: Data
+    }
+
+    struct Cover: Sendable {
+        let text: String
+        let hidden: Bool
+    }
+
+    static func seal(_ text: String, toFingerprint fp: String, myFingerprint: String,
+                     store: PersistentSignalStore, pad: Bool) throws -> Sealed {
+        let addr = try ProtocolAddress(name: fp, deviceId: 1)
+        let myAddr = try ProtocolAddress(name: myFingerprint, deviceId: 1)
+        let raw = Data(text.utf8)
+        let compressed = Deflate.compress(raw)
+        let deflate = compressed != nil
+        let ct = try signalEncrypt(message: Array(deflate ? compressed! : raw), for: addr, localAddress: myAddr,
+                                   sessionStore: store, identityStore: store, context: ctx)
+        return Sealed(ciphertext: ct.serialize(), type: ct.messageType.rawValue, deflate: deflate,
+                      pad: pad, pairKey: pairKey(myFingerprint, fp))
+    }
+
+    static func cover(_ sealed: Sealed, stego: StegoLanguage?, mode: StegoMode) throws -> Cover {
+        if let language = stego {
+            let padded = sealed.pad && StegoWire.fits(ciphertext: sealed.ciphertext.count, padded: true)
+            let payload = StegoWire.frame(sealed.ciphertext, type: sealed.type,
+                                          deflate: sealed.deflate, padded: padded)
+            if payload.count <= TextStego.maxPayloadBytes {
+                let cover: String?
+                switch mode {
+                case .words: cover = TextStego.encode(payload, language: language)
+                case .smart: cover = SmartTextStego.encode(payload, language: language)
+                case .letters: cover = LetterStego.encode(payload, language: language)
+                }
+                if let cover { return Cover(text: cover, hidden: true) }
+            }
+        }
+        let token = try WireFormat.wrap(sealed.ciphertext, type: sealed.type, deflate: sealed.deflate,
+                                        padded: sealed.pad, pairKey: sealed.pairKey)
+        return Cover(text: token, hidden: false)
+    }
+
     static func encrypt(_ text: String, toFingerprint fp: String, myFingerprint: String,
                         store: PersistentSignalStore, stego: StegoLanguage? = nil, mode: StegoMode = .words,
                         pad: Bool = false) throws -> String {
-        let addr = try ProtocolAddress(name: fp, deviceId: 1)
-        let myAddr = try ProtocolAddress(name: myFingerprint, deviceId: 1)
-
-        if let language = stego {
-            let raw = Data(text.utf8)
-            let compressed = Deflate.compress(raw)
-            let deflate = compressed != nil
-            let ct = try signalEncrypt(message: Array(deflate ? compressed! : raw), for: addr, localAddress: myAddr,
-                                       sessionStore: store, identityStore: store, context: ctx)
-            let serialized = ct.serialize()
-            let padded = pad && StegoWire.fits(ciphertext: serialized.count, padded: true)
-            let payload = StegoWire.frame(serialized, type: ct.messageType.rawValue,
-                                          deflate: deflate, padded: padded)
-            if payload.count <= TextStego.maxPayloadBytes {
-                switch mode {
-                case .words: return TextStego.encode(payload, language: language)
-                case .smart: return SmartTextStego.encode(payload, language: language)
-                case .letters: return LetterStego.encode(payload, language: language)
-                }
-            }
-            return try WireFormat.wrap(serialized, type: ct.messageType.rawValue, deflate: deflate, padded: pad,
-                                       pairKey: pairKey(myFingerprint, fp))
-        }
-
-        let plaintext = Data(text.utf8)
-        let compressed = Deflate.compress(plaintext)
-        let deflate = compressed != nil
-        let ct = try signalEncrypt(message: Array(deflate ? compressed! : plaintext), for: addr, localAddress: myAddr,
-                                   sessionStore: store, identityStore: store, context: ctx)
-        return try WireFormat.wrap(ct.serialize(), type: ct.messageType.rawValue, deflate: deflate, padded: pad,
-                                   pairKey: pairKey(myFingerprint, fp))
+        let sealed = try seal(text, toFingerprint: fp, myFingerprint: myFingerprint, store: store, pad: pad)
+        return try cover(sealed, stego: stego, mode: mode).text
     }
 
-    static func decrypt(_ armored: String, fromFingerprint fp: String, myFingerprint: String, store: PersistentSignalStore) throws -> String {
+    static func decrypt(_ armored: String, fromFingerprint fp: String, myFingerprint: String,
+                        store: PersistentSignalStore, stego precomputed: Data?? = nil) throws -> String {
         let addr = try ProtocolAddress(name: fp, deviceId: 1)
         let myAddr = try ProtocolAddress(name: myFingerprint, deviceId: 1)
+        let hidden = { precomputed ?? stegoPayload(armored) }
 
         if let (type, deflate, body) = WireFormat.unwrap(armored, pairKey: pairKey(myFingerprint, fp)) {
             do {
                 let plain = try signalDecryptBytes(type: type, body: body, addr: addr, myAddr: myAddr, store: store)
-                let data = deflate ? (Deflate.decompress(plain) ?? Data()) : plain
-                return String(decoding: data, as: UTF8.self)
+                return try inflate(plain, deflate: deflate)
             } catch {
-                guard let payload = stegoPayload(armored) else { throw error }
+                guard let payload = hidden() else { throw error }
                 return try decryptStego(payload, addr: addr, myAddr: myAddr, store: store)
             }
         }
 
-        guard let payload = stegoPayload(armored) else { throw CipherError.notAKryptosMessage }
+        guard let payload = hidden() else { throw CipherError.notAKryptosMessage }
         return try decryptStego(payload, addr: addr, myAddr: myAddr, store: store)
     }
 
-    private static let maxStegoInputChars = 1_000_000
+    static let maxStegoInputChars = 1_000_000
 
-    private static func stegoPayload(_ armored: String) -> Data? {
+    static func stegoPayload(_ armored: String) -> Data? {
         guard armored.utf16.count <= maxStegoInputChars else { return nil }
         return TextStego.decode(armored) ?? SmartTextStego.decode(armored) ?? LetterStego.decode(armored)
+    }
+
+    private static func inflate(_ plain: Data, deflate: Bool) throws -> String {
+        guard deflate else { return String(decoding: plain, as: UTF8.self) }
+        guard let data = Deflate.decompress(plain) else { throw CipherError.decryptionFailed }
+        return String(decoding: data, as: UTF8.self)
     }
 
     private static func decryptStego(_ payload: Data, addr: ProtocolAddress, myAddr: ProtocolAddress,
@@ -79,8 +102,7 @@ enum SignalWire {
         }
         let plain = try signalDecryptBytes(type: framed.type, body: framed.body,
                                            addr: addr, myAddr: myAddr, store: store)
-        let data = framed.deflate ? (Deflate.decompress(plain) ?? Data()) : plain
-        return String(decoding: data, as: UTF8.self)
+        return try inflate(plain, deflate: framed.deflate)
     }
 
     private static func signalDecryptBytes(type: UInt8, body: Data, addr: ProtocolAddress, myAddr: ProtocolAddress,
@@ -93,34 +115,6 @@ enum SignalWire {
         }
         return try signalDecrypt(message: SignalMessage(bytes: body), from: addr, to: myAddr,
                                  sessionStore: store, identityStore: store, context: ctx)
-    }
-
-    static func engineCheckError() -> String? {
-        do {
-            let ctx = NullContext()
-            let now = UInt64(Date().timeIntervalSince1970 * 1000)
-            let bob = InMemorySignalProtocolStore(identity: .generate(), registrationId: UInt32.random(in: 1 ... 16380))
-            let bobId = try bob.identityKeyPair(context: ctx)
-            let bobReg = try bob.localRegistrationId(context: ctx)
-            let spk = PrivateKey.generate()
-            let spkSig = bobId.privateKey.generateSignature(message: spk.publicKey.serialize())
-            try bob.storeSignedPreKey(SignedPreKeyRecord(id: 1, timestamp: now, privateKey: spk, signature: spkSig), id: 1, context: ctx)
-            let ky = KEMKeyPair.generate()
-            let kySig = bobId.privateKey.generateSignature(message: ky.publicKey.serialize())
-            try bob.storeKyberPreKey(KyberPreKeyRecord(id: 1, timestamp: now, keyPair: ky, signature: kySig), id: 1, context: ctx)
-            let bundle = try PreKeyBundle(registrationId: bobReg, deviceId: 1,
-                                          signedPrekeyId: 1, signedPrekey: spk.publicKey, signedPrekeySignature: spkSig,
-                                          identity: bobId.identityKey,
-                                          kyberPrekeyId: 1, kyberPrekey: ky.publicKey, kyberPrekeySignature: kySig)
-            let alice = InMemorySignalProtocolStore(identity: .generate(), registrationId: UInt32.random(in: 1 ... 16380))
-            let bobAddr = try ProtocolAddress(name: "bob", deviceId: 1)
-            let aliceAddr = try ProtocolAddress(name: "alice", deviceId: 1)
-            try processPreKeyBundle(bundle, for: bobAddr, ourAddress: aliceAddr, sessionStore: alice, identityStore: alice, context: ctx)
-            let ct = try signalEncrypt(message: Array("ok".utf8), for: bobAddr, localAddress: aliceAddr, sessionStore: alice, identityStore: alice, context: ctx)
-            guard ct.messageType == .preKey else { return "type" }
-            let dec = try signalDecryptPreKey(message: PreKeySignalMessage(bytes: ct.serialize()), from: aliceAddr, localAddress: bobAddr, sessionStore: bob, identityStore: bob, preKeyStore: bob, signedPreKeyStore: bob, kyberPreKeyStore: bob, context: ctx)
-            return String(decoding: dec, as: UTF8.self) == "ok" ? nil : "mismatch"
-        } catch { return "\(error)" }
     }
 
 }

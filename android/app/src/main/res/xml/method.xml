@@ -16,4 +16,9 @@
         android:imeSubtypeLocale="de_DE"
         android:languageTag="de"
         android:imeSubtypeMode="keyboard" />
+    <subtype
+        android:label="@string/lang_zh"
+        android:imeSubtypeLocale="zh_CN"
+        android:languageTag="zh"
+        android:imeSubtypeMode="keyboard" />
 </input-method>

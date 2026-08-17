@@ -32,6 +32,7 @@ struct KryptosApp: App {
             .task {
                 signal.start()
                 pgp.start()
+                Task.detached(priority: .background) { SharedStore.purgeObsolete() }
                 if scenePhase == .active, !lock.isLocked { scanClipboard() }
             }
             .preferredColorScheme(settings.colorScheme)
@@ -40,6 +41,7 @@ struct KryptosApp: App {
                 lock.scenePhaseChanged(phase)
                 ScreenCover.set(lock.isShielded)
                 if phase == .active {
+                    AppGroup.revalidate()
                     SharedStore.revalidateBackend()
                     if signal.hasBooted { signal.reloadCurrentFromDisk() }
                     if !lock.isLocked { scanClipboard() }

@@ -23,7 +23,15 @@ object SecureStore {
 
     fun appContext(): Context = context
 
-    private fun dir(): File = File(context.filesDir, "kryptos").apply { mkdirs() }
+    @Volatile private var storeDir: File? = null
+
+    private fun dir(): File {
+        storeDir?.let { if (it.isDirectory) return it }
+        val resolved = File(context.filesDir, "kryptos")
+        if (!resolved.isDirectory) resolved.mkdirs()
+        storeDir = resolved
+        return resolved
+    }
 
     private fun file(name: String): File {
         require(name.isNotEmpty() && name != "." && name != ".." && name.none { it == '/' || it == '\\' }) {
@@ -39,9 +47,15 @@ object SecureStore {
         return resolveMasterKey().also { cachedKey = it }
     }
 
+    private fun hasStoredData(): Boolean =
+        dir().listFiles()?.any { it.isFile && !it.name.endsWith(".tmp") } == true
+
     private fun resolveMasterKey(): SecretKey {
         val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (ks.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+        if (hasStoredData()) {
+            throw IllegalStateException("Keystore master key is gone while encrypted data is present")
+        }
         val deviceSecure = runCatching {
             (context.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isDeviceSecure
         }.getOrDefault(false)
@@ -156,6 +170,13 @@ object SecureStore {
     @Synchronized
     fun delete(name: String) {
         file(name).delete()
+    }
+
+    private val OBSOLETE_KEYS = listOf("engine.check")
+
+    @Synchronized
+    fun purgeObsolete() {
+        for (name in OBSOLETE_KEYS) file(name).delete()
     }
 
     @Synchronized

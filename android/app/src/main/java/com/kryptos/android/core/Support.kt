@@ -17,8 +17,51 @@ private val rng = SecureRandom()
 
 fun randomBytes(count: Int): ByteArray = ByteArray(count).also { rng.nextBytes(it) }
 
+private val HEX_DIGITS = "0123456789abcdef".toCharArray()
+
+fun hexOf(bytes: ByteArray): String {
+    val out = CharArray(bytes.size * 2)
+    for (i in bytes.indices) {
+        val v = bytes[i].toInt() and 0xFF
+        out[i * 2] = HEX_DIGITS[v ushr 4]
+        out[i * 2 + 1] = HEX_DIGITS[v and 0x0F]
+    }
+    return String(out)
+}
+
+fun sha256Hex(data: ByteArray): String =
+    hexOf(java.security.MessageDigest.getInstance("SHA-256").digest(data))
+
 internal object StegoTokenizer {
+    fun isHan(cp: Int): Boolean =
+        cp in 0x4E00..0x9FFF || cp in 0x3400..0x4DBF || cp in 0xF900..0xFAFF
+
     fun split(text: String): List<String> {
+        val normalized = java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFC).lowercase()
+        val tokens = ArrayList<String>()
+        val current = StringBuilder()
+        var i = 0
+        while (i < normalized.length) {
+            val cp = normalized.codePointAt(i)
+            if (isHan(cp)) {
+                if (current.isNotEmpty()) {
+                    tokens.add(current.toString())
+                    current.setLength(0)
+                }
+                tokens.add(String(Character.toChars(cp)))
+            } else if (Character.isLetter(cp)) {
+                current.appendCodePoint(cp)
+            } else if (current.isNotEmpty()) {
+                tokens.add(current.toString())
+                current.setLength(0)
+            }
+            i += Character.charCount(cp)
+        }
+        if (current.isNotEmpty()) tokens.add(current.toString())
+        return tokens
+    }
+
+    fun runs(text: String): List<String> {
         val normalized = java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFC).lowercase()
         val tokens = ArrayList<String>()
         val current = StringBuilder()
@@ -40,8 +83,11 @@ internal object StegoTokenizer {
 
 object CachePurge {
     private val hooks = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
+    private val decryptedHooks = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
     fun register(hook: () -> Unit) { hooks += hook }
+    fun registerDecrypted(hook: () -> Unit) { decryptedHooks += hook }
     fun purgeAll() { hooks.forEach { it() } }
+    fun purgeDecrypted() { decryptedHooks.forEach { it() } }
 }
 
 internal class WipingBuffer(initial: Int = 8192) : java.io.OutputStream() {
@@ -117,4 +163,23 @@ class BinaryReader(private val bytes: ByteArray) {
     }
 
     fun readVar(): ByteArray = readRaw(readUInt32().toInt())
+}
+
+class TaskQueue(name: String) {
+    private val pool = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+        Thread(r, name).apply { isDaemon = true }
+    }
+
+    fun execute(block: () -> Unit) {
+        if (pool.isShutdown) return
+        runCatching { pool.execute(block) }
+    }
+
+    fun shutdown() {
+        runCatching { pool.shutdown() }
+    }
+
+    fun shutdownNow() {
+        runCatching { pool.shutdownNow() }
+    }
 }

@@ -409,7 +409,10 @@ object SuggestionEngine {
         CachePurge.register { clearMemory() }
     }
 
+    private var storeGeneration = 0
+
     @Synchronized private fun clearMemory() {
+        storeGeneration++
         userWords.clear()
         userBigrams.clear()
         sessionSkip.clear()
@@ -455,29 +458,41 @@ object SuggestionEngine {
         runCatching { writer.execute { persist() } }
     }
 
-    @Synchronized fun persist() {
-        val words = wordsDirty
-        val bigrams = bigramsDirty
-        if (!words && !bigrams) return
-        wordsDirty = false
-        bigramsDirty = false
-        runCatching {
-            if (words) {
-                SecureStore.write(
-                    STORE_WORDS,
-                    userWords.entries.joinToString("\n") { "${it.key} ${it.value}" }.toByteArray(Charsets.UTF_8),
-                )
-            }
-            if (bigrams) {
-                SecureStore.write(
-                    STORE_BIGRAMS,
-                    userBigrams.entries.joinToString("\n") { "${it.key} ${it.value}" }.toByteArray(Charsets.UTF_8),
-                )
+    fun persist() {
+        flush(STORE_WORDS, userWords, { wordsDirty }, { wordsDirty = it })
+        flush(STORE_BIGRAMS, userBigrams, { bigramsDirty }, { bigramsDirty = it })
+    }
+
+    private fun flush(
+        name: String,
+        counts: HashMap<String, Int>,
+        isDirty: () -> Boolean,
+        setDirty: (Boolean) -> Unit,
+    ) {
+        var generation = 0
+        var payload: ByteArray? = null
+        synchronized(this) {
+            if (!isDirty()) return
+            setDirty(false)
+            generation = storeGeneration
+            payload = serializeCounts(counts)
+        }
+        val data = payload ?: return
+        val ok = runCatching { SecureStore.write(name, data); true }.getOrDefault(false)
+        data.fill(0)
+        synchronized(this) {
+            when {
+                generation != storeGeneration -> runCatching { SecureStore.delete(name) }
+                !ok -> setDirty(true)
             }
         }
     }
 
+    private fun serializeCounts(map: HashMap<String, Int>): ByteArray =
+        map.entries.joinToString("\n") { "${it.key} ${it.value}" }.toByteArray(Charsets.UTF_8)
+
     @Synchronized fun clearPersonal() {
+        storeGeneration++
         userWords.clear()
         userBigrams.clear()
         wordsDirty = false

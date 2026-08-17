@@ -30,6 +30,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.ExtractedTextRequest
+import android.view.inputmethod.InputConnection
 import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
@@ -37,6 +38,7 @@ import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
@@ -45,12 +47,16 @@ import com.kryptos.android.R
 import com.kryptos.android.core.CachePurge
 import com.kryptos.android.core.LetterStego
 import com.kryptos.android.core.SmartTextStego
+import com.kryptos.android.core.TaskQueue
 import com.kryptos.android.core.TextStego
+import com.kryptos.android.core.sha256Hex
 import com.kryptos.android.core.WireFormat
 import com.kryptos.android.signal.AppSettingsStore
 import com.kryptos.android.signal.Contact
 import com.kryptos.android.signal.DecryptCacheKey
 import com.kryptos.android.signal.OwnCipherMarker
+import com.kryptos.android.screen.ScreenDecryptService
+import com.kryptos.android.screen.SendOutcome
 import com.kryptos.android.signal.SignalService
 import com.kryptos.android.ui.clipboardText
 import kotlin.math.abs
@@ -72,11 +78,14 @@ class KryptosImeService : InputMethodService() {
     private var lastSpaceTap = 0L
     private var langCode = "en"
     private var enabledLangs = listOf("en")
-    private val langOrder = listOf("en", "ru", "de")
+    private val langOrder = listOf("en", "ru", "de", "zh")
     private var symbols = false
     private var symPage = 0
 
+    private var pinyin = ""
+    private var candidates: List<PinyinCandidate> = emptyList()
     private var composeOn = false
+    private var fieldSize = AppSettingsStore.FieldSize.SMALL
     private var draft = ""
     private var caret = 0
 
@@ -103,9 +112,7 @@ class KryptosImeService : InputMethodService() {
     private var returnAction: Int? = null
 
     private val handler = Handler(Looper.getMainLooper())
-    private val crypto = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
-        Thread(r, "kryptos-ime-crypto").apply { isDaemon = true }
-    }
+    private val crypto = TaskQueue("kryptos-ime-crypto")
     private var encryptInFlight = false
     private val contacts: List<Contact> get() = SignalService.contacts.value
 
@@ -113,7 +120,9 @@ class KryptosImeService : InputMethodService() {
     private lateinit var status: TextView
     private lateinit var composeRow: LinearLayout
     private var composeToggle: FrameLayout? = null
+    private var shieldMark: ImageView? = null
     private lateinit var draftView: TextView
+    private var clearAction: TextView? = null
     private lateinit var profileChip: LinearLayout
     private lateinit var profileChipText: TextView
     private lateinit var contactChip: LinearLayout
@@ -123,6 +132,9 @@ class KryptosImeService : InputMethodService() {
     private lateinit var keyGrid: KeyGridView
     private lateinit var keyArea: FrameLayout
     private lateinit var suggestionBar: LinearLayout
+    private lateinit var pinyinBar: LinearLayout
+    private lateinit var pinyinPreedit: TextView
+    private lateinit var pinyinRow: LinearLayout
     private val suggestionSlots = arrayOfNulls<TextView>(3)
     private val suggestionDividers = arrayOfNulls<View>(2)
     private var emojiPanel: LinearLayout? = null
@@ -145,7 +157,7 @@ class KryptosImeService : InputMethodService() {
         if (autoDecrypt) autoDecryptClipboard(freshCopy = true)
     }
 
-    private class Palette(dark: Boolean) {
+    private class Palette(val dark: Boolean) {
         val bg = Color.parseColor(if (dark) "#14161C" else "#E8EAF1")
         val key = Color.parseColor(if (dark) "#3B4050" else "#FFFFFF")
         val keyFn = Color.parseColor(if (dark) "#262B37" else "#CBD0DB")
@@ -155,6 +167,7 @@ class KryptosImeService : InputMethodService() {
         val accent = Color.parseColor(if (dark) "#6B85FA" else "#3749C2")
         val accentSoft = Color.parseColor(if (dark) "#336B85FA" else "#243749C2")
         val panel = Color.parseColor(if (dark) "#262B37" else "#FFFFFF")
+        val fieldFill = Color.parseColor(if (dark) "#1AFFFFFF" else "#0F000000")
         val ok = Color.parseColor(if (dark) "#33B873" else "#2BA467")
         val err = Color.parseColor(if (dark) "#FF6B75" else "#C72E38")
         val hairline = Color.parseColor(if (dark) "#1FFFFFFF" else "#14000000")
@@ -164,17 +177,20 @@ class KryptosImeService : InputMethodService() {
     private lateinit var palette: Palette
 
     private fun enabledLanguages(): List<String> =
-        SuggestionEngine.SUPPORTED_LANGUAGES
+        langOrder
             .filter { AppSettingsStore.keyboardLangEnabled(it) }
-            .sortedBy { langOrder.indexOf(it) }
             .ifEmpty { listOf("en") }
 
     private fun warmSuggestions() {
+        val enabled = enabledLanguages()
         SuggestionEngine.warmUp(
             this,
-            languages = enabledLanguages().toSet(),
+            languages = enabled.filter { it in SuggestionEngine.SUPPORTED_LANGUAGES }.toSet(),
             typingAids = AppSettingsStore.keyboardSuggestions || AppSettingsStore.keyboardAutocorrect,
         )
+        if ("zh" in enabled) {
+            PinyinEngine.warmUp(this) { handler.post { if (isChinese) refreshCandidates() } }
+        }
     }
 
     private fun dp(v: Float): Int = (v * resources.displayMetrics.density).toInt()
@@ -193,18 +209,38 @@ class KryptosImeService : InputMethodService() {
     }
 
     private object DecryptCache {
-        private val map = object : LinkedHashMap<String, Pair<String, String>>(16, 0.75f, true) {
-            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Pair<String, String>>) =
-                size > 40
+        private const val LIMIT = 40
+        private const val TTL_MS = 5 * 60 * 1000L
+
+        private class Entry(val name: String, val text: String, val at: Long)
+
+        private val map = object : LinkedHashMap<String, Entry>(16, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Entry>) = size > LIMIT
         }
 
         init {
             CachePurge.register { clear() }
+            CachePurge.registerDecrypted { clear() }
         }
 
-        @Synchronized fun get(cipher: String): Pair<String, String>? = map[cipher]
-        @Synchronized fun put(cipher: String, value: Pair<String, String>) { map[cipher] = value }
-        @Synchronized fun clear() = map.clear()
+        private fun key(cipher: String) = sha256Hex(cipher.toByteArray(Charsets.UTF_8))
+
+        @Synchronized
+        fun get(cipher: String): Pair<String, String>? {
+            val entry = map[key(cipher)] ?: return null
+            if (System.currentTimeMillis() - entry.at >= TTL_MS) return null
+            return entry.name to entry.text
+        }
+
+        @Synchronized
+        fun put(cipher: String, name: String, text: String) {
+            val now = System.currentTimeMillis()
+            map.entries.removeAll { now - it.value.at >= TTL_MS }
+            map[key(cipher)] = Entry(name, text, now)
+        }
+
+        @Synchronized
+        fun clear() = map.clear()
     }
 
     override fun onCreateInputView(): View {
@@ -221,6 +257,7 @@ class KryptosImeService : InputMethodService() {
         if (AppSettingsStore.keyboardEmoji) EmojiData.prefetch()
         val night = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
         palette = Palette(dark = night == Configuration.UI_MODE_NIGHT_YES)
+        applyNavigationBar()
 
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -239,6 +276,7 @@ class KryptosImeService : InputMethodService() {
         column.addView(buildComposeRow())
         column.addView(buildCryptoBar())
         column.addView(buildSuggestionBar())
+        column.addView(buildPinyinBar())
 
         keyGrid = KeyGridView(this)
         keyGrid.keys = buildKeys()
@@ -260,58 +298,83 @@ class KryptosImeService : InputMethodService() {
         return rootFrame
     }
 
+    private fun composeAction(labelRes: Int, iconRes: Int, color: Int, bold: Boolean, onClick: () -> Unit): TextView =
+        TextView(this).apply {
+            text = getString(labelRes)
+            textSize = 12f
+            setTypeface(typeface, if (bold) Typeface.BOLD else Typeface.NORMAL)
+            setTextColor(color)
+            gravity = Gravity.CENTER_VERTICAL
+            minHeight = dp(COMPOSE_ACTION_HEIGHT_DP)
+            setPadding(dp(6f), dp(7f), dp(6f), dp(7f))
+            compoundDrawablePadding = dp(5f)
+            val icon = ContextCompat.getDrawable(this@KryptosImeService, iconRes)?.mutate()?.apply {
+                setTint(color)
+                setBounds(0, 0, dp(15f), dp(15f))
+            }
+            setCompoundDrawables(icon, null, null, null)
+            background = StateListDrawable().apply {
+                addState(intArrayOf(android.R.attr.state_pressed), rounded(palette.accentSoft, 8f))
+                addState(intArrayOf(), rounded(Color.TRANSPARENT, 8f))
+            }
+            isClickable = true
+            setOnClickListener { onClick() }
+        }
+
+    private fun applyFieldSize() {
+        val size = AppSettingsStore.keyboardFieldSize
+        if (size == fieldSize && draftView.layoutParams.height == dp(size.heightDp)) return
+        fieldSize = size
+        draftView.layoutParams = draftView.layoutParams.apply { height = dp(size.heightDp) }
+    }
+
     private fun buildComposeRow(): LinearLayout {
+        fieldSize = AppSettingsStore.keyboardFieldSize
         draftView = TextView(this).apply {
             textSize = 15f
             setTextColor(palette.text)
-            background = keyFace(palette.key)
-            setPadding(dp(10f), dp(8f), dp(10f), dp(8f))
+            setPadding(dp(6f), 0, dp(6f), 0)
             movementMethod = ScrollingMovementMethod()
             isVerticalScrollBarEnabled = true
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
 
-        fun chip(label: String, onClick: () -> Unit) = TextView(this).apply {
-            text = label
-            textSize = 11f
-            setTypeface(typeface, Typeface.BOLD)
-            setTextColor(palette.accent)
-            background = rounded(palette.accentSoft, 8f)
-            gravity = Gravity.CENTER
-            setPadding(dp(8f), 0, dp(8f), 0)
-            setOnClickListener { onClick() }
+        val paste = composeAction(R.string.paste, R.drawable.ic_kb_paste, palette.accent, bold = true) {
+            val clip = clipboardText(this)
+            if (clip.isEmpty()) flash(getString(R.string.clipboard_empty), error = true) else insertDraft(clip)
         }
 
-        val buttons = LinearLayout(this).apply {
+        val clear = composeAction(R.string.kb_clear, R.drawable.ic_kb_clear, palette.textSecondary, bold = false) {
+            draft = ""
+            caret = 0
+            renderDraft()
+            updateAutoShift()
+            refreshKeys()
+            updateSuggestions()
+        }
+        clearAction = clear
+
+        val actions = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(paste)
+            addView(View(this@KryptosImeService), LinearLayout.LayoutParams(0, 1, 1f))
+            addView(clear)
+        }
+
+        val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            addView(
-                chip(getString(R.string.paste)) {
-                    insertDraft(clipboardText(this@KryptosImeService))
-                },
-                LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(23f)),
-            )
-            addView(
-                chip(getString(R.string.kb_clear)) {
-                    draft = ""; caret = 0
-                    renderDraft(); updateAutoShift(); refreshKeys(); updateSuggestions()
-                },
-                LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(23f)).apply {
-                    topMargin = dp(4f)
-                },
-            )
+            background = rounded(palette.fieldFill, 10f)
+            setPadding(dp(5f), dp(9f), dp(5f), dp(2f))
+            addView(draftView, LinearLayout.LayoutParams(MATCH, dp(fieldSize.heightDp)))
+            addView(actions, LinearLayout.LayoutParams(MATCH, WRAP))
         }
 
         composeRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
+            orientation = LinearLayout.VERTICAL
             visibility = View.GONE
             setPadding(dp(4f), 0, dp(4f), dp(8f))
-            addView(draftView, LinearLayout.LayoutParams(0, dp(50f), 1f))
-            addView(
-                buttons,
-                LinearLayout.LayoutParams(dp(84f), LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                    leftMargin = dp(6f)
-                },
-            )
+            addView(card, LinearLayout.LayoutParams(MATCH, WRAP))
         }
         return composeRow
     }
@@ -328,6 +391,7 @@ class KryptosImeService : InputMethodService() {
             val pos = caret
             draftView.post { runCatching { draftView.bringPointIntoView(pos) } }
         }
+        clearAction?.visibility = if (draft.isEmpty()) View.GONE else View.VISIBLE
     }
 
     private fun buildCryptoBar(): LinearLayout {
@@ -341,6 +405,8 @@ class KryptosImeService : InputMethodService() {
             setImageResource(R.drawable.ic_kb_shield)
             setColorFilter(palette.accent)
         }
+        shieldMark = shield
+        styleShieldMark()
 
         profileChipText = chipLabel(13f, palette.accent)
         profileChip = LinearLayout(this).apply {
@@ -458,7 +524,7 @@ class KryptosImeService : InputMethodService() {
     private fun applyChipBudget(profileName: String, contactName: String) {
         if (!::profileChipText.isInitialized) return
         var fixed = dp(6f) * 2 + dp(4f) * 2
-        fixed += dp(18f) + dp(8f)
+        if (AppSettingsStore.keyboardShield) fixed += dp(18f) + dp(8f)
         if (AppSettingsStore.keyboardComposeToggle) fixed += dp(34f) + dp(8f)
         fixed += dp(56f) + dp(8f) + dp(56f)
         fixed += dp(2f)
@@ -478,6 +544,31 @@ class KryptosImeService : InputMethodService() {
         }
         profileChipText.maxWidth = forProfile
         contactChipText.maxWidth = forContact
+    }
+
+    private fun styleShieldMark() {
+        shieldMark?.visibility = if (AppSettingsStore.keyboardShield) View.VISIBLE else View.GONE
+    }
+
+    private fun applyNavigationBar() {
+        val w = window?.window ?: return
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            w.isNavigationBarContrastEnforced = false
+        }
+        w.navigationBarColor = palette.bg
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            val light = android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+            w.insetsController?.setSystemBarsAppearance(if (palette.dark) 0 else light, light)
+        } else {
+            val decor = w.decorView
+            @Suppress("DEPRECATION")
+            decor.systemUiVisibility =
+                if (palette.dark) {
+                    decor.systemUiVisibility and View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR.inv()
+                } else {
+                    decor.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+                }
+        }
     }
 
     private fun styleComposeToggle() {
@@ -504,6 +595,7 @@ class KryptosImeService : InputMethodService() {
     private fun toggleComposeMode() {
         composeOn = !composeOn
         AppSettingsStore.keyboardCompose = composeOn
+        applyFieldSize()
         composeRow.visibility = if (composeOn) View.VISIBLE else View.GONE
         styleComposeToggle()
         renderDraft()
@@ -597,8 +689,12 @@ class KryptosImeService : InputMethodService() {
         showChipMenu(profiles.map { it.name }, profiles.indexOfFirst { it.id == currentID }) { index ->
             val target = profiles.getOrNull(index)?.id ?: return@showChipMenu
             crypto.execute {
-                runCatching { SignalService.switchTo(target) }
-                handler.post { restoreContactSelection(); updateChips() }
+                val ok = runCatching { SignalService.switchTo(target) }.getOrDefault(false)
+                handler.post {
+                    restoreContactSelection()
+                    updateChips()
+                    if (!ok) flash(getString(R.string.storage_unavailable), error = true)
+                }
             }
         }
     }
@@ -671,8 +767,100 @@ class KryptosImeService : InputMethodService() {
         return suggestionBar
     }
 
+    private val isChinese: Boolean get() = langCode == "zh"
+
+    private fun buildPinyinBar(): LinearLayout {
+        pinyinPreedit = TextView(this).apply {
+            textSize = 14f
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.START
+            setTextColor(palette.accent)
+            setTypeface(typeface, Typeface.BOLD)
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8f), 0, dp(8f), 0)
+            visibility = View.GONE
+        }
+        pinyinRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val scroll = HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(pinyinRow, LinearLayout.LayoutParams(WRAP, MATCH))
+        }
+        pinyinBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            visibility = View.GONE
+            setPadding(dp(2f), 0, dp(2f), dp(6f))
+            addView(pinyinPreedit, LinearLayout.LayoutParams(WRAP, dp(30f)))
+            addView(scroll, LinearLayout.LayoutParams(0, dp(30f), 1f))
+        }
+        return pinyinBar
+    }
+
+    private fun refreshCandidates() {
+        if (!::pinyinBar.isInitialized) return
+        candidates = if (isChinese && pinyin.isNotEmpty()) {
+            PinyinEngine.candidates(pinyin, 24)
+        } else {
+            emptyList()
+        }
+        renderCandidates()
+    }
+
+    private fun renderCandidates() {
+        if (!::pinyinBar.isInitialized) return
+        pinyinBar.visibility = if (isChinese && !emojiOpen) View.VISIBLE else View.GONE
+        pinyinPreedit.text = pinyin
+        pinyinPreedit.visibility = if (pinyin.isEmpty()) View.GONE else View.VISIBLE
+        pinyinRow.removeAllViews()
+        candidates.forEachIndexed { index, candidate ->
+            val view = TextView(this).apply {
+                text = candidate.text
+                textSize = 18f
+                maxLines = 1
+                gravity = Gravity.CENTER
+                setTextColor(palette.text)
+                setTypeface(null, if (index == 0) Typeface.BOLD else Typeface.NORMAL)
+                setPadding(dp(11f), dp(2f), dp(11f), dp(2f))
+                background = StateListDrawable().apply {
+                    addState(intArrayOf(android.R.attr.state_pressed), rounded(palette.accentSoft, 8f))
+                    addState(intArrayOf(), rounded(Color.TRANSPARENT, 8f))
+                }
+                isClickable = true
+                setOnClickListener { haptic(); commitCandidate(candidate) }
+            }
+            pinyinRow.addView(view, LinearLayout.LayoutParams(WRAP, MATCH))
+        }
+    }
+
+    private fun commitCandidate(candidate: PinyinCandidate) {
+        if (composeOn) insertDraft(candidate.text)
+        else currentInputConnection?.commitText(candidate.text, 1)
+        if (!noLearning) PinyinEngine.note(candidate.text)
+        pinyin = if (candidate.consumed >= pinyin.length) "" else pinyin.substring(candidate.consumed)
+        refreshCandidates()
+        updateAutoShift()
+        refreshKeys()
+    }
+
+    private fun clearPinyin() {
+        if (pinyin.isEmpty() && candidates.isEmpty()) return
+        pinyin = ""
+        candidates = emptyList()
+        renderCandidates()
+    }
+
     private fun updateSuggestions() {
         if (!::suggestionBar.isInitialized) return
+        if (isChinese) {
+            suggestionBar.visibility = View.GONE
+            suggestionsStamp = null
+            renderCandidates()
+            return
+        }
+        if (::pinyinBar.isInitialized) pinyinBar.visibility = View.GONE
         val show = suggestionsOn && !passwordField && !emojiOpen
         suggestionBar.visibility = if (show) View.VISIBLE else View.GONE
         if (!show) { suggestionsStamp = null; return }
@@ -942,6 +1130,7 @@ class KryptosImeService : InputMethodService() {
             .takeIf { it in enabledLangs } ?: enabledLangs[0]
         lastAutoFix = null
         suggestionsStamp = null
+        clearPinyin()
         passwordField = isPasswordField(info)
         noLearningField =
             ((info?.imeOptions ?: 0) and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0 &&
@@ -953,6 +1142,9 @@ class KryptosImeService : InputMethodService() {
         status.visibility = View.GONE
         revealOverlay.visibility = View.GONE
         composeRow.visibility = if (composeOn) View.VISIBLE else View.GONE
+        applyFieldSize()
+        applyNavigationBar()
+        styleShieldMark()
         styleComposeToggle()
         styleSendBadge()
         renderDraft()
@@ -980,12 +1172,18 @@ class KryptosImeService : InputMethodService() {
         if (autoDecrypt) autoDecryptClipboard()
     }
 
+    override fun onFinishInput() {
+        cancelAssistedSend()
+        super.onFinishInput()
+    }
+
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
         clipboardManager.removePrimaryClipChangedListener(clipListener)
         hideKeyPopup()
         keyGrid.cancelTouches()
         SuggestionEngine.persistAsync()
+        crypto.execute { runCatching { PinyinEngine.persist() } }
     }
 
     override fun onCurrentInputMethodSubtypeChanged(subtype: android.view.inputmethod.InputMethodSubtype?) {
@@ -1015,14 +1213,17 @@ class KryptosImeService : InputMethodService() {
 
     override fun onDestroy() {
         clipboardManager.removePrimaryClipChangedListener(clipListener)
+        cancelAssistedSend()
         handler.removeCallbacksAndMessages(null)
         hideKeyPopup()
-        crypto.shutdown()
         if (live === this) live = null
         super.onDestroy()
+        crypto.shutdown()
     }
 
     private fun dropSensitiveState() {
+        cancelAssistedSend()
+        clearPinyin()
         draft = ""
         caret = 0
         lastAutoFix = null
@@ -1071,26 +1272,45 @@ class KryptosImeService : InputMethodService() {
         return if (around.length > extracted.length) around else extracted
     }
 
-    private fun replaceField(newText: String) {
-        val ic = currentInputConnection ?: return
-        ic.beginBatchEdit()
+    private fun fieldIsEmpty(ic: InputConnection): Boolean {
+        val before = ic.getTextBeforeCursor(1, 0)
+        val after = ic.getTextAfterCursor(1, 0)
+        if (before == null && after == null) {
+            return (ic.getExtractedText(ExtractedTextRequest(), 0)?.text?.length ?: 0) == 0
+        }
+        return (before?.length ?: 0) == 0 && (after?.length ?: 0) == 0
+    }
+
+    private fun clearField(ic: InputConnection): Boolean {
         if (ic.getSelectedText(0)?.isNotEmpty() == true) ic.commitText("", 1)
         var rounds = 0
-        var cleared = false
         while (rounds < FIELD_CLEAR_ROUNDS) {
             val before = ic.getTextBeforeCursor(FIELD_CLEAR_CHUNK, 0)?.length ?: 0
             val after = ic.getTextAfterCursor(FIELD_CLEAR_CHUNK, 0)?.length ?: 0
             if (before == 0 && after == 0) break
             ic.deleteSurroundingText(before, after)
-            cleared = true
+            if ((ic.getTextBeforeCursor(FIELD_CLEAR_CHUNK, 0)?.length ?: 0) == before &&
+                (ic.getTextAfterCursor(FIELD_CLEAR_CHUNK, 0)?.length ?: 0) == after
+            ) {
+                break
+            }
             rounds++
         }
-        if (!cleared) {
+        if (!fieldIsEmpty(ic)) {
             val length = ic.getExtractedText(ExtractedTextRequest(), 0)?.text?.length ?: 0
             if (length > 0) ic.deleteSurroundingText(length, length)
         }
-        ic.commitText(newText, 1)
+        return fieldIsEmpty(ic)
+    }
+
+    private fun harvestHostField(): String? {
+        val ic = currentInputConnection ?: return null
+        val text = fieldText()
+        if (text.isBlank()) return text
+        ic.beginBatchEdit()
+        val cleared = clearField(ic)
         ic.endBatchEdit()
+        return if (cleared) text else null
     }
 
     private fun cryptoLocked(): Boolean =
@@ -1099,45 +1319,103 @@ class KryptosImeService : InputMethodService() {
     private fun encryptTapped() {
         if (cryptoLocked()) { flash(getString(R.string.kb_locked), error = true); return }
         val contact = currentContact() ?: run { flash(getString(R.string.kb_no_contacts), error = true); return }
-        val plain = if (composeOn) draft else fieldText()
-        if (plain.isBlank()) { flash(getString(R.string.kb_nothing_to_encrypt), error = true); return }
         if (encryptInFlight) return
-        encryptInFlight = true
         val intoDraft = composeOn
+        val plain: String
+        if (intoDraft) {
+            plain = draft
+            if (plain.isBlank()) { flash(getString(R.string.kb_nothing_to_encrypt), error = true); return }
+        } else {
+            val harvested = harvestHostField()
+            if (harvested == null) { flash(getString(R.string.kb_field_locked), error = true); return }
+            if (harvested.isBlank()) { flash(getString(R.string.kb_nothing_to_encrypt), error = true); return }
+            plain = harvested
+        }
+        encryptInFlight = true
         crypto.execute {
             val outcome = runCatching { SignalService.encrypt(plain, contact) }
             handler.post {
                 encryptInFlight = false
                 outcome.onSuccess { armored ->
                     if (intoDraft) {
-                        currentInputConnection?.commitText(armored, 1)
-                        draft = ""; caret = 0
+                        draft = ""
+                        caret = 0
                         renderDraft()
-                    } else {
-                        replaceField(armored)
                     }
-                    sendEncrypted()
+                    currentInputConnection?.commitText(armored, 1)
+                    sendEncrypted(armored)
                     flash(getString(R.string.kb_encrypted), error = false)
                 }.onFailure { e ->
+                    if (!intoDraft) currentInputConnection?.commitText(plain, 1)
                     flash(e.message ?: "error", error = true)
                 }
             }
         }
     }
 
-    private fun sendEncrypted() {
+    private fun sendEncrypted(sent: String) {
         if (!sendAfterEncrypt) return
-        val declared = returnAction
-        val action = when (declared) {
-            EditorInfo.IME_ACTION_SEND, EditorInfo.IME_ACTION_GO,
-            EditorInfo.IME_ACTION_SEARCH, EditorInfo.IME_ACTION_DONE,
-            -> declared
-            else -> EditorInfo.IME_ACTION_SEND
-        }
-        runCatching { currentInputConnection?.performEditorAction(action) }
         updateAutoShift()
         refreshKeys()
         updateSuggestions()
+        val host = currentInputEditorInfo?.packageName?.toString()
+        if (ScreenDecryptService.isBound() && !host.isNullOrEmpty()) {
+            scheduleAssistedSend(sent, host, 0)
+            return
+        }
+        if (!performSendAction()) notifySendNeedsService()
+    }
+
+    private fun hostDeclaresSend(): Boolean =
+        (currentInputEditorInfo?.imeOptions ?: 0) and EditorInfo.IME_MASK_ACTION == EditorInfo.IME_ACTION_SEND
+
+    private fun performSendAction(): Boolean {
+        if (!hostDeclaresSend()) return false
+        return runCatching {
+            currentInputConnection?.performEditorAction(EditorInfo.IME_ACTION_SEND)
+        }.getOrNull() == true
+    }
+
+    private fun keyboardTopOnScreen(): Int {
+        if (!::rootFrame.isInitialized || rootFrame.height <= 0) return 0
+        val loc = IntArray(2)
+        rootFrame.getLocationOnScreen(loc)
+        return loc[1].coerceAtLeast(0)
+    }
+
+    private var assistedSend: Runnable? = null
+
+    private fun notifySendNeedsService() {
+        flash(getString(R.string.kb_send_needs_service), error = true)
+    }
+
+    private fun cancelAssistedSend() {
+        assistedSend?.let { handler.removeCallbacks(it) }
+        assistedSend = null
+    }
+
+    private fun stillOnHost(host: String): Boolean =
+        currentInputEditorInfo?.packageName?.toString() == host
+
+    private fun scheduleAssistedSend(sent: String, host: String, attempt: Int) {
+        cancelAssistedSend()
+        if (attempt >= SEND_ASSIST_ATTEMPTS) {
+            if (stillOnHost(host) && performSendAction()) return
+            notifySendNeedsService()
+            return
+        }
+        val top = keyboardTopOnScreen()
+        val task = Runnable {
+            assistedSend = null
+            if (!sendAfterEncrypt || !stillOnHost(host)) return@Runnable
+            when (ScreenDecryptService.sendInFocusedApp(sent, top, host)) {
+                SendOutcome.CLICKED -> Unit
+                SendOutcome.IDLE, SendOutcome.NOT_FOUND -> scheduleAssistedSend(sent, host, attempt + 1)
+                SendOutcome.NO_SERVICE -> if (!performSendAction()) notifySendNeedsService()
+            }
+        }
+        assistedSend = task
+        handler.postDelayed(task, if (attempt == 0) SEND_ASSIST_FIRST_MS else SEND_ASSIST_RETRY_MS)
     }
 
     private fun revealFrom(candidates: List<String>, onMiss: (() -> Unit)?) {
@@ -1149,13 +1427,13 @@ class KryptosImeService : InputMethodService() {
         crypto.execute {
             for (candidate in wanted) {
                 runCatching { SignalService.cachedDecrypt(candidate) }.getOrNull()?.let { (contact, text) ->
-                    DecryptCache.put(candidate, contact.displayName to text)
+                    DecryptCache.put(candidate, contact.displayName, text)
                     handler.post { showReveal(contact.displayName, text) }
                     return@execute
                 }
                 for (contact in contacts) {
                     val plain = runCatching { SignalService.decrypt(candidate, contact) }.getOrNull() ?: continue
-                    DecryptCache.put(candidate, contact.displayName to plain)
+                    DecryptCache.put(candidate, contact.displayName, plain)
                     handler.post { showReveal(contact.displayName, plain) }
                     return@execute
                 }
@@ -1166,8 +1444,13 @@ class KryptosImeService : InputMethodService() {
 
     private fun manualDecrypt() {
         if (cryptoLocked()) { flash(getString(R.string.kb_locked), error = true); return }
+        val clip = clipboardText(this)
+        for (candidate in listOf(clip, if (composeOn) draft else "")) {
+            if (candidate.isBlank()) continue
+            DecryptCache.get(candidate)?.let { (name, text) -> showReveal(name, text); return }
+        }
         val candidates = buildList {
-            add(clipboardText(this@KryptosImeService))
+            add(clip)
             add(fieldText())
             if (composeOn) add(draft)
         }
@@ -1188,9 +1471,9 @@ class KryptosImeService : InputMethodService() {
             if (OwnCipherMarker.matches(clip)) return@execute
             val key = DecryptCacheKey.of(clip)
             if (!freshCopy && key == AppSettingsStore.keyboardHandledClip) return@execute
-            AppSettingsStore.keyboardHandledClip = key
             handler.post {
                 if (revealOverlay.visibility != View.VISIBLE && !cryptoLocked()) {
+                    AppSettingsStore.keyboardHandledClip = key
                     revealFrom(listOf(clip), null)
                 }
             }
@@ -1200,6 +1483,7 @@ class KryptosImeService : InputMethodService() {
     private var statusGen = 0
 
     private fun flash(message: String, error: Boolean) {
+        if (!::status.isInitialized) return
         status.text = message
         status.setTextColor(if (error) palette.err else palette.ok)
         status.visibility = View.VISIBLE
@@ -1291,6 +1575,30 @@ class KryptosImeService : InputMethodService() {
         else currentInputConnection?.getTextBeforeCursor(n, 0)?.toString() ?: ""
 
     private fun typeChar(s: String) {
+        if (isChinese) {
+            val c = s.singleOrNull()
+            if (c != null && c in 'a'..'z' || c != null && c in 'A'..'Z') {
+                pinyin += c!!.lowercaseChar()
+                refreshCandidates()
+                if (shiftState == 1) { shiftState = 0; autoShifted = false }
+                refreshKeys()
+                return
+            }
+            if (s == "'" && pinyin.isNotEmpty()) {
+                pinyin += s
+                refreshCandidates()
+                if (symbols) symbols = false
+                refreshKeys()
+                return
+            }
+            candidates.firstOrNull()?.let { commitCandidate(it) }
+            val mapped = FULL_WIDTH[s] ?: s
+            if (composeOn) insertDraft(mapped) else currentInputConnection?.commitText(mapped, 1)
+            if (shiftState == 1) { shiftState = 0; autoShifted = false }
+            updateAutoShift()
+            refreshKeys()
+            return
+        }
         val first = s.firstOrNull()
         if (first != null && !first.isLetterOrDigit() && !isWordChar(first)) commitWordBeforeSeparator(s)
         else lastAutoFix = null
@@ -1302,6 +1610,11 @@ class KryptosImeService : InputMethodService() {
     }
 
     private fun backspace() {
+        if (isChinese && pinyin.isNotEmpty()) {
+            pinyin = pinyin.dropLast(1)
+            refreshCandidates()
+            return
+        }
         lastAutoFix?.let { fix ->
             lastAutoFix = null
             if (System.currentTimeMillis() - fix.at < 15_000 && undoAutoFix(fix)) {
@@ -1359,6 +1672,18 @@ class KryptosImeService : InputMethodService() {
     }
 
     private fun spaceTapped() {
+        if (isChinese) {
+            val best = candidates.firstOrNull()
+            if (best != null) {
+                commitCandidate(best)
+            } else {
+                if (composeOn) insertDraft(" ") else currentInputConnection?.commitText(" ", 1)
+                updateAutoShift()
+                refreshKeys()
+            }
+            if (symbols) { symbols = false; refreshKeys() }
+            return
+        }
         commitWordBeforeSeparator(" ")
         val now = System.currentTimeMillis()
         val before = textBeforeCaret(2)
@@ -1384,6 +1709,13 @@ class KryptosImeService : InputMethodService() {
     }
 
     private fun returnTapped() {
+        if (isChinese && pinyin.isNotEmpty()) {
+            val raw = pinyin
+            clearPinyin()
+            if (composeOn) insertDraft(raw) else currentInputConnection?.commitText(raw, 1)
+            refreshKeys()
+            return
+        }
         commitWordBeforeSeparator(if (!composeOn && returnAction != null) "" else "\n")
         if (composeOn) {
             insertDraft("\n")
@@ -1428,17 +1760,20 @@ class KryptosImeService : InputMethodService() {
     private fun shortLabel(code: String) = when (code) {
         "ru" -> "РУ"
         "de" -> "DE"
+        "zh" -> "中"
         else -> "EN"
     }
 
     private fun languageName(code: String) = when (code) {
         "ru" -> "Русский"
         "de" -> "Deutsch"
+        "zh" -> "中文"
         else -> "English"
     }
 
     private fun langTapped() {
         if (enabledLangs.size < 2) return
+        clearPinyin()
         langCode = nextLang()
         AppSettingsStore.keyboardLastLang = langCode
         symbols = false
@@ -1646,14 +1981,18 @@ class KryptosImeService : InputMethodService() {
         val v = vibrator
         if (v != null && v.hasVibrator()) {
             val ok = runCatching {
-                if (android.os.Build.VERSION.SDK_INT >= 26 && v.hasAmplitudeControl()) {
-                    v.vibrate(android.os.VibrationEffect.createOneShot(16, 200))
-                } else if (android.os.Build.VERSION.SDK_INT >= 29) {
-                    v.vibrate(android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_TICK))
-                } else {
-                    error("no effect API")
+                when {
+                    v.hasAmplitudeControl() -> {
+                        v.vibrate(android.os.VibrationEffect.createOneShot(16, 200))
+                        true
+                    }
+                    android.os.Build.VERSION.SDK_INT >= 29 -> {
+                        v.vibrate(android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_TICK))
+                        true
+                    }
+                    else -> false
                 }
-            }.isSuccess
+            }.getOrDefault(false)
             if (ok) return
         }
         window?.window?.decorView?.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
@@ -1743,7 +2082,7 @@ class KryptosImeService : InputMethodService() {
         hideKeyPopup()
         emojiOpen = true
         emojiAbc?.text = modeLabel()
-        showEmojiCategory(if (EmojiData.recents().isEmpty()) 0 else -1)
+        showEmojiCategory(if (EmojiData.cachedRecents().isEmpty()) 0 else -1)
         keyGrid.visibility = View.GONE
         panel.visibility = View.VISIBLE
         updateSuggestions()
@@ -1849,7 +2188,7 @@ class KryptosImeService : InputMethodService() {
 
     private fun showEmojiCategory(index: Int) {
         val grid = emojiGrid ?: return
-        val list = if (index < 0) EmojiData.recents() else EmojiData.categories[index].emoji
+        val list = if (index < 0) EmojiData.cachedRecents() else EmojiData.categories[index].emoji
         emojiEmpty?.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
 
         val perRow = 8
@@ -2324,10 +2663,21 @@ class KryptosImeService : InputMethodService() {
     }
 
     private companion object {
+        private val FULL_WIDTH = mapOf(
+            "," to "\uFF0C", "." to "\u3002", "?" to "\uFF1F", "!" to "\uFF01",
+            ":" to "\uFF1A", ";" to "\uFF1B", "(" to "\uFF08", ")" to "\uFF09",
+            "<" to "\u300A", ">" to "\u300B", "\\" to "\u3001", "$" to "\uFFE5",
+            "~" to "\uFF5E", "_" to "\u2014\u2014", "^" to "\u2026\u2026",
+        )
+
         const val WRAP = LinearLayout.LayoutParams.WRAP_CONTENT
         const val MATCH = LinearLayout.LayoutParams.MATCH_PARENT
         const val COMPOSE_ICON_ID = 0x4B430001
         const val CHIP_HEIGHT_DP = 30f
+        const val COMPOSE_ACTION_HEIGHT_DP = 34f
+        const val SEND_ASSIST_ATTEMPTS = 7
+        const val SEND_ASSIST_FIRST_MS = 250L
+        const val SEND_ASSIST_RETRY_MS = 250L
         const val FIELD_READ_MAX = 64 * 1024
         const val FIELD_CLEAR_CHUNK = 4096
         const val FIELD_CLEAR_ROUNDS = 64

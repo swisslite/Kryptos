@@ -9,6 +9,3 @@
 -keep class org.pgpainless.** { *; }
 -dontwarn org.pgpainless.**
 -dontwarn org.slf4j.**
-
--keepattributes SourceFile,LineNumberTable
--renamesourcefileattribute SourceFile

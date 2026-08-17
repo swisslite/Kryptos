@@ -24,6 +24,16 @@ enum ImageBridge {
         return cg.width * cg.height <= maxPixels
     }
 
+    static func isWithinLimits(data: Data) -> Bool {
+        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions),
+              let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = props[kCGImagePropertyPixelWidth] as? Int,
+              let height = props[kCGImagePropertyPixelHeight] as? Int,
+              width > 0, height > 0 else { return true }
+        return width * height <= maxPixels
+    }
+
     static func coverImage(from data: Data) -> UIImage? {
         let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
         guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
@@ -52,7 +62,7 @@ enum ImageBridge {
         return UIImage(cgImage: cg)
     }
 
-    static func rgba(from image: UIImage) -> (pixels: [UInt8], width: Int, height: Int)? {
+    static func rgbaBuffer(from image: UIImage, width: inout Int, height: inout Int) -> [UInt8]? {
         guard let cg = image.cgImage else { return nil }
         let w = cg.width, h = cg.height
         guard w > 0, h > 0, w * h <= maxPixels else { return nil }
@@ -65,7 +75,10 @@ enum ImageBridge {
             ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
             return true
         }
-        return drawn ? (pixels, w, h) : nil
+        guard drawn else { return nil }
+        width = w
+        height = h
+        return pixels
     }
 
     static func pngData(fromRGBA pixels: inout [UInt8], width w: Int, height h: Int) -> Data? {

@@ -35,6 +35,7 @@
     <string name="auto_delete">Disappearing messages</string>
     <string name="clear_chat">Clear chat</string>
     <string name="delete_contact">Delete contact</string>
+    <string name="delete_message">Delete message</string>
     <string name="off">Off</string>
     <string name="s30">30 seconds</string>
     <string name="m5">5 minutes</string>
@@ -45,8 +46,13 @@
 
     <string name="new_profile">New profile</string>
     <string name="profile_name">Profile name</string>
+    <string name="rename">Rename</string>
+    <string name="rename_profile">Rename profile</string>
+    <string name="rename_contact">Rename contact</string>
+    <string name="save">Save</string>
     <string name="regenerate_key">Regenerate key</string>
-    <string name="regenerate_warning">This creates a brand-new identity and invalidates all sessions of this profile.</string>
+    <string name="regenerate_warning">This creates a brand-new keypair and invalidates all sessions of this profile.</string>
+    <string name="profile_unavailable">Profile “%1$s” could not be opened right now — its encrypted storage is unreadable. Try again later.</string>
 
     <string name="password">Password</string>
     <string name="encrypt">Encrypt</string>
@@ -61,7 +67,7 @@
     <string name="capacity_exceeded">The message does not fit into this photo.</string>
     <string name="low_memory">Not enough memory on this device to finish this operation.</string>
     <string name="storage_broken_title">Encrypted storage is unavailable</string>
-    <string name="storage_broken_text">Kryptos cannot read its keys. This normally happens when the screen lock was removed from the device — Android then destroys the hardware key that protects the app data, and it cannot be restored, even by setting the screen lock again.\n\nYour keys and conversations are unrecoverable. Starting over creates a fresh identity; you will need to exchange keys with your contacts again.</string>
+    <string name="storage_broken_text">Kryptos cannot read its keys. This normally happens when the screen lock was removed from the device — Android then destroys the hardware key that protects the app data, and it cannot be restored, even by setting the screen lock again.\n\nYour keys and conversations are unrecoverable. Starting over creates a fresh profile; you will need to exchange keys with your contacts again.</string>
     <string name="storage_broken_reset">Erase and start over</string>
     <string name="stego_not_found">No message found — wrong password, or this photo carries nothing.</string>
 
@@ -81,16 +87,20 @@
     <string name="stego_mode_smart">Smart sentences</string>
     <string name="stego_mode_letters">Random letters</string>
     <string name="stego_letters_footer">The shortest mode — about half the length of Simple words.</string>
+    <string name="stego_letters_footer_han">A single unbroken run with no punctuation.</string>
     <string name="stego_smart_footer">Real sentences instead of a word salad, at the cost of a longer text.</string>
     <string name="lang_auto">Automatic (system language)</string>
     <string name="lang_en">English</string>
     <string name="lang_ru">Russian</string>
     <string name="lang_de">German</string>
+    <string name="lang_zh">Chinese</string>
     <string name="settings_keyboard">Keyboard</string>
     <string name="settings_enable_keyboard">Enable Kryptos keyboard</string>
     <string name="settings_kb_autodecrypt">Auto-decrypt clipboard in keyboard</string>
     <string name="settings_kb_sendafter">Send after encrypting</string>
     <string name="settings_kb_sendafter_desc">The lock encrypts and sends in one tap. The paper-plane badge on the lock means it is on.</string>
+    <string name="settings_kb_sendafter_service">The Kryptos accessibility service is needed - tap to turn it on.</string>
+    <string name="kb_send_needs_service">Turn on the Kryptos service to send in this app.</string>
     <string name="settings_privacy">Privacy</string>
     <string name="settings_shield">Block screenshots &amp; app-switcher snapshots</string>
     <string name="settings_clip_autodecrypt">Auto-decrypt clipboard on app open</string>
@@ -100,6 +110,11 @@
     <string name="settings_wipe_all">Erase everything</string>
 
     <string name="settings_about_row">About</string>
+    <string name="donate_title">Support the project</string>
+    <string name="donate_intro">Kryptos is free, with no ads and no tracking. If it is useful to you, you can support its development.</string>
+    <string name="donate_copy">Copy address</string>
+    <string name="donate_verify">Check the address before you send.</string>
+    <string name="donate_qr_unavailable">Could not build the QR code — copy the address instead.</string>
     <string name="settings_danger_footer">Erases the selected data with no way to undo it.</string>
     <string name="clip_section">Clipboard</string>
     <string name="clip_footer">Auto-clear erases whatever Kryptos copied after the chosen time.</string>
@@ -147,6 +162,7 @@
     <string name="kb_select_contact">Contact</string>
     <string name="kb_no_contacts">Add a contact in the Kryptos app first</string>
     <string name="kb_encrypted">Encrypted ✓</string>
+    <string name="kb_field_locked">This app will not let the keyboard clear the field - encrypt in the Kryptos app instead.</string>
     <string name="kb_nothing_to_encrypt">Nothing to encrypt — type a message first</string>
     <string name="kb_locked">Unlock the Kryptos app first</string>
 
@@ -237,7 +253,7 @@
     <string name="confirm_clear_chat_title">Clear this chat?</string>
     <string name="confirm_clear_chat_text">Securely erases this conversation. This cannot be undone.</string>
     <string name="confirm_delete_profile_title">Delete profile?</string>
-    <string name="confirm_delete_profile_text">This permanently removes this identity — its keys, contacts and messages. This cannot be undone.</string>
+    <string name="confirm_delete_profile_text">This permanently removes this profile — its keys, contacts and messages. This cannot be undone.</string>
     <string name="confirm_wipe_chats_text">Message history in all chats is wiped. Contacts stay. This cannot be undone.</string>
     <string name="confirm_wipe_contacts_text">All contacts\' keys, sessions and conversations are erased from this device; your own key stays. This cannot be undone.</string>
         <string name="confirm_remove_recipient_title">Remove recipient?</string>
@@ -251,6 +267,11 @@
     <string name="settings_kb_sounds">Key sounds</string>
     <string name="settings_kb_compose">Message field in the keyboard</string>
     <string name="settings_kb_compose_toggle">Field button on the keyboard</string>
+    <string name="settings_kb_shield">Kryptos mark on the keyboard</string>
+    <string name="settings_kb_fieldsize">Field size</string>
+    <string name="field_size_small">Small</string>
+    <string name="field_size_medium">Medium</string>
+    <string name="field_size_large">Large</string>
     <string name="settings_kb_compose_desc">The field lets you type outside the messenger, so it cannot keep a draft. The button toggles that field from the keyboard.</string>
 
     <string name="kb_typing">Typing</string>
@@ -389,7 +410,7 @@
     <string name="faq_q10">I forgot the password to my key backup</string>
     <string name="faq_a10">There is no way to recover it. The file is encrypted with that password and Kryptos keeps no copy of it anywhere. Make a fresh backup with a password you will not forget.</string>
     <string name="faq_q11">What are profiles for?</string>
-    <string name="faq_a11">A profile is a separate identity with its own key and its own contacts. You can keep several and switch between them — to keep work and private life apart, for example.</string>
+    <string name="faq_a11">A profile is a separate keypair with its own contacts. You can keep several and switch between them — to keep work and private life apart, for example.</string>
     <string name="faq_q12">How strong is the encryption?</string>
     <string name="faq_a12">Chats use Signal\'s own libsignal library — the same protocol as Signal itself, post-quantum handshake included. Password mode and photos use Argon2id and AES-256-GCM. Kryptos contains no home-made cryptography.</string>
     <string name="faq_q13">Does my contact need Kryptos too?</string>
@@ -416,6 +437,7 @@
     <string name="ui_dark">Dark</string>
     <string name="ui_appearance_footer">The theme changes at once. Changing the language restarts the app.</string>
     <string name="ui_tabs_footer">Tabs you switch off disappear from the bottom bar.</string>
+    <string name="ui_keyboard_footer">Shows the mark in the bar above the keys.</string>
     <string name="ui_tabs">Bottom bar</string>
     <string name="kb_a11y_space">Space</string>
     <string name="kb_a11y_backspace">Backspace</string>
@@ -435,4 +457,9 @@
     <string name="faq_q21">What is “Message field in the keyboard” for?</string>
     <string name="faq_a21">Normally you type into the messenger\'s own input field, so it sees every letter before anything is encrypted — and most messengers save what you typed as a draft. Switch this field on and you type inside the Kryptos keyboard instead: the messenger receives nothing at all until you tap the lock, and then it gets only the finished ciphertext. What you are typing stays inside the keyboard, is never written to storage, and disappears with the rest of your data when you erase it. The separate “Field button on the keyboard” setting puts a button next to the lock so you can turn the field on without opening Settings.</string>
     <string name="about_website">Website</string>
+    <string name="engine_title">Signal engine</string>
+    <string name="engine_ok">Chats run on the official libsignal.</string>
+    <string name="profiles_intro">A profile is a separate keypair with its own contacts. Create several to keep things apart. Your safety number is public (safe to share, used only to verify a contact); your private key never leaves this device.</string>
+    <string name="current_profile">CURRENT PROFILE</string>
+    <string name="safety_number_label">SAFETY NUMBER</string>
 </resources>

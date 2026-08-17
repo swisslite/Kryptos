@@ -126,14 +126,17 @@ final class SharedSignalStore {
         return encoder
     }()
 
-    private func appendMessage(_ text: String, mine: Bool, to fingerprint: String, decryptedFrom armored: String? = nil) {
+    private func appendMessage(_ text: String, mine: Bool, to fingerprint: String,
+                               decryptedFrom armored: String? = nil, stego: Data? = nil) {
         for _ in 0 ..< Self.metaWriteAttempts {
             guard let enc = SharedStore.read(metaKey),
                   let box = try? AES.GCM.SealedBox(combined: enc),
                   let dec = try? AES.GCM.open(box, using: cryptKey),
                   var meta = try? JSONDecoder().decode(Meta.self, from: dec) else { return }
             meta.messages[fingerprint, default: []].append(ChatMessage(text: text, mine: mine))
-            if let armored { meta.rememberDecrypt(armored: armored, fingerprint: fingerprint, text: text) }
+            if let armored {
+                meta.rememberDecrypt(armored: armored, fingerprint: fingerprint, text: text, stego: .some(stego))
+            }
             guard let json = try? Self.metaEncoder.encode(meta),
                   let sealed = try? AES.GCM.seal(json, using: cryptKey),
                   let combined = sealed.combined else { return }
@@ -148,26 +151,30 @@ final class SharedSignalStore {
         return try body()
     }
 
-    func cachedDecrypt(_ armored: String) -> (contact: Contact, text: String)? {
+    func cachedDecrypt(_ armored: String, stego: Data?? = nil) -> (contact: Contact, text: String)? {
         guard let enc = SharedStore.read(metaKey),
               let box = try? AES.GCM.SealedBox(combined: enc),
               let dec = try? AES.GCM.open(box, using: cryptKey),
               let meta = try? JSONDecoder().decode(Meta.self, from: dec),
-              let hit = meta.cachedDecrypt(for: armored) else { return nil }
+              let hit = meta.cachedDecrypt(for: armored, stego: stego) else { return nil }
         let contact = contacts.first { $0.fingerprint == hit.fingerprint }
             ?? Contact(fingerprint: hit.fingerprint, displayName: String(hit.fingerprint.prefix(8)))
         return (contact, hit.text)
     }
 
-    func decryptFromAnyContact(_ armored: String) -> (contact: Contact, text: String)? {
-        if let hit = cachedDecrypt(armored) { return hit }
+    func decryptFromAnyContact(_ armored: String, stego: Data?? = nil) -> (contact: Contact, text: String)? {
+        let cacheStego = stego ?? DecryptCacheKey.stegoPayload(armored)
+        if let hit = cachedDecrypt(armored, stego: .some(cacheStego)) { return hit }
+        let wire = cacheStego ?? SignalWire.stegoPayload(armored)
         return withLock {
             var store = freshStore()
             for contact in contacts {
                 do {
                     let text = try SignalWire.decrypt(armored, fromFingerprint: contact.fingerprint,
-                                                      myFingerprint: myFingerprint, store: store)
-                    appendMessage(text, mine: false, to: contact.fingerprint, decryptedFrom: armored)
+                                                      myFingerprint: myFingerprint, store: store,
+                                                      stego: .some(wire))
+                    appendMessage(text, mine: false, to: contact.fingerprint,
+                                  decryptedFrom: armored, stego: cacheStego)
                     return (contact, text)
                 } catch {
                     if store.hadStaleConflict { store = freshStore() }

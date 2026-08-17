@@ -126,6 +126,12 @@ enum SharedStore {
         }
     }
 
+    private static let obsoleteKeys = ["engine.check"]
+
+    static func purgeObsolete() {
+        for key in obsoleteKeys { delete(key) }
+    }
+
     static func eraseAll() {
         var q: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
                                 kSecAttrService as String: kcService]

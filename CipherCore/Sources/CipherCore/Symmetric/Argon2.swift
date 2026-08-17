@@ -9,19 +9,38 @@ public enum Argon2id {
     public static let minSaltLength = 16
 
     public static func derive(password: Data, salt: Data, length: Int) throws -> [UInt8] {
+        var bytes = [UInt8](password)
+        defer { zero(&bytes) }
+        return try derive(passwordBytes: bytes, salt: salt, length: length)
+    }
+
+    public static func derive(password: String, salt: Data, length: Int) throws -> [UInt8] {
+        var bytes = [UInt8](password.utf8)
+        defer { zero(&bytes) }
+        return try derive(passwordBytes: bytes, salt: salt, length: length)
+    }
+
+    static func derive(passwordBytes: [UInt8], salt: Data, length: Int) throws -> [UInt8] {
         guard salt.count >= minSaltLength else { throw CipherError.invalidInput }
-        return try hash(password: password, salt: salt, memoryKiB: memoryKiB,
+        return try hash(passwordBytes: passwordBytes, salt: salt, memoryKiB: memoryKiB,
                         iterations: iterations, lanes: lanes, length: length)
     }
 
     public static func hash(password: Data, salt: Data, memoryKiB: UInt32,
                             iterations: UInt32, lanes: UInt32, length: Int) throws -> [UInt8] {
+        var bytes = [UInt8](password)
+        defer { zero(&bytes) }
+        return try hash(passwordBytes: bytes, salt: salt, memoryKiB: memoryKiB,
+                        iterations: iterations, lanes: lanes, length: length)
+    }
+
+    static func hash(passwordBytes: [UInt8], salt: Data, memoryKiB: UInt32,
+                     iterations: UInt32, lanes: UInt32, length: Int) throws -> [UInt8] {
         guard length > 0 else { throw CipherError.invalidInput }
         var out = [UInt8](repeating: 0, count: length)
-        var pwd = [UInt8](password)
-        let pwdLength = pwd.count
-        if pwd.isEmpty { pwd = [0] }
-        let status: Int32 = pwd.withUnsafeBufferPointer { p in
+        let pwdLength = passwordBytes.count
+        var scratch = passwordBytes.isEmpty ? [0] : passwordBytes
+        let status: Int32 = scratch.withUnsafeBufferPointer { p in
             salt.withUnsafeBytes { s in
                 out.withUnsafeMutableBufferPointer { o in
                     argon2id_hash_raw(iterations, memoryKiB, lanes,
@@ -31,7 +50,7 @@ public enum Argon2id {
                 }
             }
         }
-        zero(&pwd)
+        if passwordBytes.isEmpty { zero(&scratch) }
         guard status == ARGON2_OK.rawValue else {
             zero(&out)
             throw CipherError.invalidInput

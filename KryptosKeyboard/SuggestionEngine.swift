@@ -356,8 +356,8 @@ final class SuggestionEngine: @unchecked Sendable {
         lock.lock()
         let toLoad = wanted.subtracting(claimedLanguages)
         claimedLanguages.formUnion(toLoad)
-        let needPersonal = !loadStarted
-        loadStarted = true
+        let needPersonal = typingAids && !loadStarted
+        if needPersonal { loadStarted = true }
         lock.unlock()
         guard !toLoad.isEmpty || needPersonal else { return }
         DispatchQueue.global(qos: .utility).async { [self] in
@@ -425,17 +425,17 @@ final class SuggestionEngine: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         guard dirty else { return }
-        dirty = false
         if loadedFromStore, SharedStore.read(Self.storeKey) == nil {
             words = [:]
             bigrams = [:]
             loadedFromStore = false
+            dirty = false
             return
         }
-        if let d = try? JSONEncoder().encode(Personal(words: words, bigrams: bigrams)) {
-            SharedStore.write(Self.storeKey, d)
-            loadedFromStore = true
-        }
+        guard let d = try? JSONEncoder().encode(Personal(words: words, bigrams: bigrams)),
+              SharedStore.write(Self.storeKey, d) else { return }
+        loadedFromStore = true
+        dirty = false
     }
 
     private func decay(_ map: inout [String: Int]) {
@@ -490,7 +490,6 @@ final class SuggestionEngine: @unchecked Sendable {
         let bigrams: Bigrams?
         let lex: Lexicon?
         let alphabet: [Character]
-        let neighbors: [Character: Set<Character>]
 
 
         func knows(_ w: String) -> Bool { dict.contains(w) || lex?.contains(w) == true }
@@ -508,10 +507,19 @@ final class SuggestionEngine: @unchecked Sendable {
         let code = Self.codeFor(firstChar: firstChar, active: active)
         guard let dict = dicts[code] else { return nil }
         return Lang(code: code, dict: dict, bigrams: bigramTables[code], lex: lexicons[code],
-                    alphabet: Self.alphabet(code), neighbors: Self.neighbors(code))
+                    alphabet: Self.alphabet(code))
     }
 
-    private static func toU16(_ c: Character) -> UInt16 { Array(String(c).utf16)[0] }
+    private static func toU16(_ c: Character) -> UInt16 {
+        guard let scalar = c.unicodeScalars.first, scalar.value <= 0xFFFF else { return 0 }
+        return UInt16(scalar.value)
+    }
+
+    private static let alphabetUnitsByCode: [String: [UInt16]] = [
+        "en": enAlphabet.map(toU16),
+        "ru": ruAlphabet.map(toU16),
+        "de": deAlphabet.map(toU16),
+    ]
 
     private static func neighborsU(_ code: String) -> [UInt16: Set<UInt16>] {
         var m: [UInt16: Set<UInt16>] = [:]
@@ -790,15 +798,12 @@ final class SuggestionEngine: @unchecked Sendable {
             var c = chars; c.swapAt(i, i + 1)
             offer(c, transpose)
         }
+        let units = alphabetUnitsByCode[lang.code] ?? []
         for i in 0 ..< n {
             let orig = chars[i]
-            for a in lang.alphabet where a != orig {
-                let cost: Double
-                if (orig == "е" && a == "ё") || (orig == "ё" && a == "е") { cost = subYo }
-                else if Self.confusable(lang.code).contains("\(orig)\(a)") { cost = subRuConfuse }
-                else if lang.neighbors[orig]?.contains(a) == true { cost = subAdjacent }
-                else if Self.vowels(lang.code).contains(orig), Self.vowels(lang.code).contains(a) { cost = subEnVowel }
-                else { cost = subOther }
+            let origU = toU16(orig)
+            for (k, a) in lang.alphabet.enumerated() where a != orig {
+                let cost = subAdjustU(origU, k < units.count ? units[k] : toU16(a), code: lang.code)
                 var c = chars; c[i] = a
                 offer(c, cost)
             }
@@ -978,7 +983,7 @@ final class SuggestionEngine: @unchecked Sendable {
     func autocorrect(_ word: String, previous: String?, language: String, deep: Bool = true) -> String? {
         let folded = word.lowercased()
         guard folded.allSatisfy({ $0.isLetter || $0 == "'" || $0 == "-" || $0 == "’" }) else { return nil }
-        if folded == "i", word != "I" {
+        if folded == "i", word != "I", Self.codeFor(firstChar: "i", active: language) == "en" {
             lock.lock()
             defer { lock.unlock() }
             if (words["i"] ?? 0) >= 2 { return nil }

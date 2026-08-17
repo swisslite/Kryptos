@@ -52,12 +52,16 @@ object PasswordCipher {
     fun encrypt(plaintext: ByteArray, password: String, pad: Boolean = false): ByteArray {
         val salt = randomBytes(SALT_LEN)
         val version = Argon2id.PROFILE_VERSION
-        val km = Argon2id.derive(password.toByteArray(Charsets.UTF_8), salt, DERIVED_LEN)
+        val km = Argon2id.derive(password, salt, DERIVED_LEN)
         val key = km.copyOfRange(0, KEY_LEN)
         val nonce = km.copyOfRange(KEY_LEN, DERIVED_LEN)
         km.fill(0)
-        val sealed = sealBody(plaintext, key, nonce, version, pad)
-        key.fill(0)
+        val sealed = try {
+            sealBody(plaintext, key, nonce, version, pad)
+        } finally {
+            key.fill(0)
+            nonce.fill(0)
+        }
         return salt + version + sealed
     }
 
@@ -67,7 +71,7 @@ object PasswordCipher {
         val version = data[SALT_LEN]
         if (version != Argon2id.PROFILE_VERSION) throw CipherException(CipherException.Kind.MALFORMED)
         val sealed = data.copyOfRange(SALT_LEN + 1, data.size)
-        val km = Argon2id.derive(password.toByteArray(Charsets.UTF_8), salt, DERIVED_LEN)
+        val km = Argon2id.derive(password, salt, DERIVED_LEN)
         val key = km.copyOfRange(0, KEY_LEN)
         val nonce = km.copyOfRange(KEY_LEN, DERIVED_LEN)
         km.fill(0)
@@ -75,6 +79,7 @@ object PasswordCipher {
             return openBody(sealed, key, nonce, version)
         } finally {
             key.fill(0)
+            nonce.fill(0)
         }
     }
 }

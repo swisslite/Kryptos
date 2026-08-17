@@ -20,7 +20,7 @@ struct LockCode: Sendable {
         let stored = SharedStore.read(storeKey)
         let present = stored?.count == Self.blobLength
         let bytes = present ? [UInt8](stored!) : [UInt8](repeating: 0, count: Self.blobLength)
-        guard var digest = try? Argon2id.derive(password: Data(code.utf8),
+        guard var digest = try? Argon2id.derive(password: code,
                                                 salt: Data(bytes[0 ..< Self.saltLength]),
                                                 length: Self.hashLength) else { return false }
         defer { Argon2id.zero(&digest) }
@@ -32,7 +32,7 @@ struct LockCode: Sendable {
         guard code.count >= Self.minLength else { return .tooShort }
         if other.matches(code) { return .duplicate }
         let salt = randomBytes(Self.saltLength)
-        guard var digest = try? Argon2id.derive(password: Data(code.utf8), salt: salt, length: Self.hashLength) else {
+        guard var digest = try? Argon2id.derive(password: code, salt: salt, length: Self.hashLength) else {
             return .failed
         }
         defer { Argon2id.zero(&digest) }

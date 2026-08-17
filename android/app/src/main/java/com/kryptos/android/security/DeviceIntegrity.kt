@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.view.accessibility.AccessibilityManager
-import java.security.MessageDigest
+import com.kryptos.android.core.sha256Hex
 
 object DeviceIntegrity {
     data class Report(
@@ -30,10 +30,7 @@ object DeviceIntegrity {
             @Suppress("DEPRECATION")
             pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES).signatures ?: return false
         }
-        val digest = MessageDigest.getInstance("SHA-256")
-        signatures.any { sig ->
-            digest.digest(sig.toByteArray()).joinToString("") { "%02x".format(it) } == EXPECTED_CERT_SHA256
-        }
+        signatures.any { sig -> sha256Hex(sig.toByteArray()) == EXPECTED_CERT_SHA256 }
     }.getOrDefault(false)
 
     private fun foreignAccessibilityServices(context: Context): List<String> = runCatching {

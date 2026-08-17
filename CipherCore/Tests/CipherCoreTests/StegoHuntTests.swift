@@ -19,9 +19,10 @@ final class StegoIntegrityTests: XCTestCase {
         for language in StegoLanguage.allCases {
             for n in 1...80 {
                 for trial in 0..<40 {
-                    var g = SplitMix(seed: UInt64(n) &* 1000 &+ UInt64(trial) &+ (language == .russian ? 500_000 : 0))
+                    var g = SplitMix(seed: UInt64(n) &* 1000 &+ UInt64(trial)
+                        &+ UInt64(StegoLanguage.allCases.firstIndex(of: language) ?? 0) &* 500_000)
                     let payload = Data((0..<n).map { _ in UInt8(g.next() & 0xFF) })
-                    let text = TextStego.encode(payload, language: language)
+                    let text = try XCTUnwrap(TextStego.encode(payload, language: language))
                     let back = try XCTUnwrap(TextStego.decode(text), "decode nil n=\(n) trial=\(trial) lang=\(language)")
                     XCTAssertEqual(back, payload, "mismatch n=\(n) trial=\(trial) lang=\(language)")
                 }

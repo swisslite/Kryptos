@@ -12,6 +12,7 @@ struct AddContactView: View {
     @State private var showScanner = false
     @State private var errorText: String?
     @State private var cameraDenied = false
+    @State private var busy = false
 
     var body: some View {
         NavigationStack {
@@ -76,8 +77,12 @@ struct AddContactView: View {
                             .background(RoundedRectangle(cornerRadius: KTheme.cornerSmall, style: .continuous).fill(KTheme.danger.opacity(0.12)))
                         }
 
-                        Button(action: add) { Label("Add contact", systemImage: "person.fill.badge.plus") }
-                            .buttonStyle(PrimaryButtonStyle())
+                        Button(action: add) {
+                            Label(busy ? "Working…" : "Add contact",
+                                  systemImage: busy ? "hourglass" : "person.fill.badge.plus")
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(busy)
                     }
                     .padding(20)
                 }
@@ -128,17 +133,25 @@ struct AddContactView: View {
     }
 
     private func add() {
+        guard !busy else { return }
         errorText = nil
         let display = name.trimmingCharacters(in: .whitespaces)
-        do {
-            if let scanned {
-                try signal.addContact(scanned: scanned, displayName: display)
-            } else {
-                try signal.addContact(fromKeyString: keyText, displayName: display)
+        let payload = scanned
+        let text = keyText
+        busy = true
+        Task { @MainActor in
+            await Task.yield()
+            defer { busy = false }
+            do {
+                if let payload {
+                    try signal.addContact(scanned: payload, displayName: display)
+                } else {
+                    try signal.addContact(fromKeyString: text, displayName: display)
+                }
+                dismiss()
+            } catch {
+                errorText = (error as? LocalizedError)?.errorDescription ?? String(localized: "This is not a valid Kryptos key.")
             }
-            dismiss()
-        } catch {
-            errorText = (error as? LocalizedError)?.errorDescription ?? String(localized: "This is not a valid Kryptos key.")
         }
     }
 }

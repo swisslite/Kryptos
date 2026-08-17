@@ -1,32 +1,5 @@
 import SwiftUI
 
-@MainActor
-private enum EngineCheck {
-    private static let storeKey = "engine.check"
-    private static var cached: Bool?
-
-    private static var build: String {
-        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
-    }
-
-    static func result() async -> Bool {
-        if let cached { return cached }
-        if let stored = SharedStore.read(storeKey),
-           let text = String(data: stored, encoding: .utf8) {
-            let parts = text.split(separator: "|", maxSplits: 1, omittingEmptySubsequences: false)
-            if parts.count == 2, parts[0] == build {
-                let ok = parts[1] == "1"
-                cached = ok
-                return ok
-            }
-        }
-        let ok = await Task.detached { SignalWire.engineCheckError() == nil }.value
-        cached = ok
-        SharedStore.write(storeKey, Data("\(build)|\(ok ? "1" : "0")".utf8))
-        return ok
-    }
-}
-
 struct SessionsView: View {
     @EnvironmentObject private var signal: SignalService
     @EnvironmentObject private var lock: LockGate
@@ -36,7 +9,9 @@ struct SessionsView: View {
     @State private var confirmWipeAll = false
     @State private var confirmWipeContacts = false
     @State private var confirmDeleteContact: Contact?
-    @State private var engineOK: Bool?
+    @State private var renameTarget: Contact?
+    @State private var renameText = ""
+    @State private var switchFailed = false
 
     var body: some View {
         NavigationStack {
@@ -44,15 +19,19 @@ struct SessionsView: View {
                 ScreenBackground()
                 ScrollView {
                     VStack(spacing: 16) {
-                        engineCard
+                        if switchFailed { switchFailedCard }
                         if signal.keyMaterialLost { keyLostCard }
                         if signal.contacts.isEmpty {
+                            engineCard
                             emptyCard
                         } else {
                             ForEach(signal.contacts) { contact in
                                 NavigationLink { ChatView(contact: contact) } label: { contactRow(contact) }
                                     .buttonStyle(.plain)
                                     .contextMenu {
+                                        Button { renameText = contact.displayName; renameTarget = contact } label: {
+                                            Label("Rename", systemImage: "pencil")
+                                        }
                                         Button(role: .destructive) { confirmDeleteContact = contact } label: {
                                             Label("Delete contact & chat", systemImage: "person.badge.minus")
                                         }
@@ -79,12 +58,12 @@ struct SessionsView: View {
                 ToolbarItem(placement: .principal) {
                     Menu {
                         ForEach(signal.profiles) { p in
-                            Button { signal.switchTo(p.id) } label: {
+                            Button { switchFailed = !signal.switchTo(p.id) } label: {
                                 Label(p.name, systemImage: p.id == signal.currentID ? "checkmark" : "person")
                             }
                         }
                         Divider()
-                        Button { showProfiles = true } label: { Label("Manage identities…", systemImage: "person.crop.circle.badge.plus") }
+                        Button { showProfiles = true } label: { Label("Manage profiles…", systemImage: "person.crop.circle.badge.plus") }
                     } label: {
                         HStack(spacing: 4) {
                             Text(signal.currentProfile?.name ?? "Chats").font(.kHeadline()).foregroundStyle(KTheme.textPrimary)
@@ -118,24 +97,32 @@ struct SessionsView: View {
             .sheet(isPresented: $showMyKey) { MyKeyView() }
             .sheet(isPresented: $showAdd) { AddContactView() }
             .sheet(isPresented: $showProfiles) { ProfilesView() }
+            .alert("Rename contact",
+                   isPresented: Binding(get: { renameTarget != nil },
+                                        set: { if !$0 { renameTarget = nil } }),
+                   presenting: renameTarget) { target in
+                TextField("Name", text: $renameText)
+                Button("Save") { signal.renameContact(target, to: renameText) }
+                Button("Cancel", role: .cancel) {}
+            }
         }
-        .task { engineOK = await EngineCheck.result() }
         .onAppear { signal.reloadCurrentFromDisk() }
         .onChange(of: lock.isLocked) { _, locked in
             guard locked else { return }
             showMyKey = false
             showAdd = false
             showProfiles = false
+            renameTarget = nil
         }
     }
 
     private var engineCard: some View {
         HStack(spacing: 12) {
-            Image(systemName: engineOK == false ? "xmark.seal.fill" : "checkmark.seal.fill")
-                .foregroundStyle(engineOK == false ? KTheme.danger : Color(red: 0.2, green: 0.72, blue: 0.45))
+            Image(systemName: "checkmark.seal.fill")
+                .foregroundStyle(Color(red: 0.2, green: 0.72, blue: 0.45))
             VStack(alignment: .leading, spacing: 2) {
                 Text("Signal engine").font(.kHeadline()).foregroundStyle(KTheme.textPrimary)
-                Text(engineOK == false ? "The libsignal check failed." : "Official libsignal — verified working.")
+                Text("Chats run on the official libsignal.")
                     .font(.kBody()).foregroundStyle(KTheme.textSecondary)
             }
             Spacer(minLength: 0)
@@ -143,18 +130,30 @@ struct SessionsView: View {
         .glassCard()
     }
 
+    private var switchFailedCard: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(KTheme.danger)
+            Text("Secure storage is unavailable right now. Try again in a moment.")
+                .font(.kBody()).foregroundStyle(KTheme.textPrimary)
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: KTheme.cornerSmall, style: .continuous)
+            .fill(KTheme.danger.opacity(0.12)))
+    }
+
     private var keyLostCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(KTheme.danger)
-                Text("This identity's key is gone").font(.kHeadline()).foregroundStyle(KTheme.textPrimary)
+                Text("This profile's key is gone").font(.kHeadline()).foregroundStyle(KTheme.textPrimary)
                 Spacer(minLength: 0)
             }
-            Text("The data saved for this identity can no longer be decrypted. Open the identity menu above, choose Manage identities and regenerate the key to use this profile again — the old contacts and messages cannot be recovered.")
+            Text("The data saved for this profile can no longer be decrypted. Open the profile menu above, choose Manage profiles and regenerate the key to use this profile again — the old contacts and messages cannot be recovered.")
                 .font(.kBody()).foregroundStyle(KTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             Button { showProfiles = true } label: {
-                Label("Manage identities…", systemImage: "person.crop.circle.badge.plus")
+                Label("Manage profiles…", systemImage: "person.crop.circle.badge.plus")
             }
             .buttonStyle(SecondaryButtonStyle(accent: true))
         }

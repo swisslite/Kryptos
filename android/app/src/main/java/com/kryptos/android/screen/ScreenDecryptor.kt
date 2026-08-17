@@ -5,8 +5,8 @@ import com.kryptos.android.core.LetterStego
 import com.kryptos.android.core.SmartTextStego
 import com.kryptos.android.core.TextStego
 import com.kryptos.android.core.WireFormat
+import com.kryptos.android.core.sha256Hex
 import com.kryptos.android.signal.SignalService
-import java.security.MessageDigest
 
 object ScreenDecryptor {
     private const val MAX_ENTRIES = 500
@@ -27,6 +27,7 @@ object ScreenDecryptor {
 
     init {
         CachePurge.register { synchronized(lock) { cache.clear() } }
+        CachePurge.registerDecrypted { synchronized(lock) { cache.clear() } }
     }
 
     fun quickCheck(text: String): Boolean {
@@ -66,17 +67,13 @@ object ScreenDecryptor {
 
     private fun dedupKey(text: String): String {
         WireFormat.extractToken(text)?.let { run ->
-            WireFormat.tokenBytes(run)?.let { return "W" + sha256(it) }
+            WireFormat.tokenBytes(run)?.let { return "W" + sha256Hex(it) }
         }
         if (text.length in 40..MAX_STEGO_CHARS) {
-            TextStego.decode(text)?.let { return "S" + sha256(it) }
-            SmartTextStego.decode(text)?.let { return "M" + sha256(it) }
-            LetterStego.decode(text)?.let { return "L" + sha256(it) }
+            TextStego.decode(text)?.let { return "S" + sha256Hex(it) }
+            SmartTextStego.decode(text)?.let { return "M" + sha256Hex(it) }
+            LetterStego.decode(text)?.let { return "L" + sha256Hex(it) }
         }
-        return NO_PAYLOAD + sha256(text.trim().toByteArray(Charsets.UTF_8))
+        return NO_PAYLOAD + sha256Hex(text.trim().toByteArray(Charsets.UTF_8))
     }
-
-    private fun sha256(data: ByteArray): String =
-        MessageDigest.getInstance("SHA-256").digest(data)
-            .joinToString("") { "%02x".format(it) }
 }

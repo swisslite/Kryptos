@@ -277,6 +277,7 @@ fun KTextField(
         fontFamily = if (mono) FontFamily.Monospace else null,
         color = K.textPrimary,
     )
+    val masked = remember { PasswordVisualTransformation() }
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
@@ -288,7 +289,7 @@ fun KTextField(
             .padding(horizontal = 14.dp, vertical = 13.dp),
         textStyle = style,
         cursorBrush = SolidColor(K.accent),
-        visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
+        visualTransformation = if (password) masked else VisualTransformation.None,
         keyboardOptions = keyboardOptions,
         singleLine = singleLine,
         minLines = minLines,
@@ -668,6 +669,56 @@ fun MenuRow(
             }
         }
     }
+}
+
+@Composable
+fun PromptDialog(
+    title: String,
+    initial: String,
+    placeholder: String,
+    confirmLabel: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var value by remember(initial) { mutableStateOf(initial) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = K.surface,
+        titleContentColor = K.textPrimary,
+        textContentColor = K.textSecondary,
+        title = { Text(title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold) },
+        text = {
+            KTextField(
+                value, { value = it },
+                Modifier.fillMaxWidth(),
+                placeholder = placeholder,
+                maxLines = 1,
+            )
+        },
+        confirmButton = {
+            val enabled = value.isNotBlank()
+            Text(
+                confirmLabel,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (enabled) K.accent else K.textSecondary,
+                modifier = Modifier
+                    .quietClickable(enabled = enabled) { onDismiss(); onConfirm(value) }
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+            )
+        },
+        dismissButton = {
+            Text(
+                stringResource(com.kryptos.android.R.string.cancel),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = K.accent,
+                modifier = Modifier
+                    .quietClickable(onClick = onDismiss)
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+            )
+        },
+    )
 }
 
 @Composable

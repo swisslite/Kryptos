@@ -80,7 +80,6 @@ object PgpService {
     val busy = MutableStateFlow(false)
 
     val currentIdentity: PgpIdentity? get() = identities.value.firstOrNull { it.id == currentID.value }
-    val myPublicKey: String get() = currentIdentity?.publicKey ?: ""
 
     @Volatile private var initialized = false
 
@@ -104,6 +103,14 @@ object PgpService {
                 if (identities.value.isEmpty()) return
             }
             initialized = true
+        }
+    }
+
+    private fun ready() {
+        try {
+            ensureInitialized()
+        } catch (e: Exception) {
+            throw PgpException(R.string.storage_unavailable)
         }
     }
 
@@ -160,10 +167,19 @@ object PgpService {
                 fingerprint = prettyFingerprint(OpenPgpFingerprint.of(ring)),
                 publicKey = publicArmored,
             )
+            val previousIdentities = identities.value
+            val previousCurrent = currentID.value
             SecureStore.write(secretKeyName(done.id), secretArmored.toByteArray())
-            identities.value = identities.value + done
+            identities.value = previousIdentities + done
             currentID.value = done.id
-            persistIndex()
+            try {
+                persistIndex()
+            } catch (t: Throwable) {
+                identities.value = previousIdentities
+                currentID.value = previousCurrent
+                runCatching { SecureStore.delete(secretKeyName(done.id)) }
+                throw t
+            }
             done
         } finally {
             busy.value = false
@@ -177,18 +193,18 @@ object PgpService {
     }
 
     fun deleteIdentity(id: String) = synchronized(lock) {
-        SecureStore.delete(secretKeyName(id))
-        identities.value = identities.value.filter { it.id != id }
-        if (identities.value.isEmpty()) {
-            persistIndex()
-            generateBlocking(name = "My key", email = "", algo = PgpAlgo.CURVE25519)
-            return
-        }
-        if (currentID.value == id) currentID.value = identities.value[0].id
+        if (identities.value.none { it.id == id }) return
+        val remaining = identities.value.filter { it.id != id }
+        identities.value = remaining
+        if (currentID.value == id) currentID.value = remaining.firstOrNull()?.id ?: ""
         persistIndex()
+        SecureStore.delete(secretKeyName(id))
+        if (remaining.isEmpty()) generateBlocking(name = "My key", email = "", algo = PgpAlgo.CURVE25519)
     }
 
     fun addRecipient(name: String, armoredKey: String) = synchronized(lock) {
+        if (armoredKey.length > MAX_ARMORED_CHARS) throw PgpException(R.string.pgp_too_large)
+        ready()
         val ring = runCatching { PGPainless.readKeyRing().publicKeyRing(armoredKey) }.getOrNull()
             ?: throw PgpException(R.string.pgp_invalid_key)
         val fp = prettyFingerprint(OpenPgpFingerprint.of(ring))
@@ -224,6 +240,7 @@ object PgpService {
     }
 
     fun encrypt(text: String, to: PgpRecipient): String = synchronized(lock) {
+        ready()
         val secret = secretRing(currentID.value) ?: throw PgpException(R.string.pgp_no_key)
         val recipientRing = runCatching { PGPainless.readKeyRing().publicKeyRing(to.publicKey) }.getOrNull()
             ?: throw PgpException(R.string.pgp_invalid_key)
@@ -250,6 +267,7 @@ object PgpService {
 
     fun decrypt(armored: String): PgpDecryption = synchronized(lock) {
         if (armored.length > MAX_ARMORED_CHARS) throw PgpException(R.string.pgp_too_large)
+        ready()
         val secret = secretRing(currentID.value) ?: throw PgpException(R.string.pgp_no_key)
         val ownCert = PGPainless.extractCertificate(secret)
         val known = recipientRings()

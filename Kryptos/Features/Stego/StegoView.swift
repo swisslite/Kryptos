@@ -14,14 +14,17 @@ private enum StegoWork {
     static let previewPixels = 900
 
     static func hide(cover: Data, password: String, message: String) -> StegoOutcome {
-        guard let img = ImageBridge.coverImage(from: cover),
-              let (pixels, w, h) = ImageBridge.rgba(from: img) else {
+        var w = 0, h = 0
+        guard let img = ImageBridge.coverImage(from: cover) else {
+            return .failed(String(localized: "Could not read the photo."))
+        }
+        guard var pixels = ImageBridge.rgbaBuffer(from: img, width: &w, height: &h) else {
             return .failed(String(localized: "Could not read the photo."))
         }
         do {
-            var stego = try ImageStego.hide(Data(message.utf8), password: password, rgba: pixels,
-                                            width: w, height: h)
-            guard let png = ImageBridge.pngData(fromRGBA: &stego, width: w, height: h) else {
+            try ImageStego.hideInto(&pixels, message: Data(message.utf8), password: password,
+                                    width: w, height: h)
+            guard let png = ImageBridge.pngData(fromRGBA: &pixels, width: w, height: h) else {
                 return .failed(String(localized: "Could not build the image."))
             }
             return .hidden(png)
@@ -33,13 +36,17 @@ private enum StegoWork {
     }
 
     static func reveal(carrier: Data, password: String) -> StegoOutcome {
+        guard ImageBridge.isWithinLimits(data: carrier) else {
+            return .failed(String(localized: "This photo is too large. Use a smaller one."))
+        }
         guard let img = UIImage(data: carrier) else {
             return .failed(String(localized: "Could not read the photo."))
         }
         guard ImageBridge.isWithinLimits(img) else {
             return .failed(String(localized: "This photo is too large. Use a smaller one."))
         }
-        guard let (pixels, w, h) = ImageBridge.rgba(from: img) else {
+        var w = 0, h = 0
+        guard let pixels = ImageBridge.rgbaBuffer(from: img, width: &w, height: &h) else {
             return .failed(String(localized: "Could not read the photo."))
         }
         do {
@@ -57,6 +64,7 @@ struct StegoView: View {
     @EnvironmentObject private var lock: LockGate
     @State private var mode: Mode = .hide
     @State private var pickerItem: PhotosPickerItem?
+    @State private var showPhotoPicker = false
     @State private var showFileImporter = false
     @State private var sourceData: Data?
     @State private var preview: UIImage?
@@ -86,11 +94,17 @@ struct StegoView: View {
             if mode == .reveal, let revealed { revealedCard(revealed) }
         }
         .onChange(of: pickerItem) { _, item in loadImage(item) }
+        .photosPicker(isPresented: $showPhotoPicker, selection: $pickerItem, matching: .images)
         .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.image]) { loadFile($0) }
         .onChange(of: lock.isLocked) { _, locked in
             guard locked else { return }
+            showPhotoPicker = false
             showFileImporter = false
-            revealed = nil
+            reset()
+            pickerItem = nil
+            sourceData = nil
+            preview = nil
+            message = ""
             password = ""
         }
         .onDisappear { discardResultFile() }
@@ -100,7 +114,7 @@ struct StegoView: View {
         let shown = preview
         return VStack(alignment: .leading, spacing: 12) {
             fieldLabel(mode == .hide ? "COVER PHOTO" : "PHOTO WITH A SECRET")
-            PhotosPicker(selection: $pickerItem, matching: .images) {
+            Button { showPhotoPicker = true } label: {
                 if let shown {
                     Image(uiImage: shown)
                         .resizable().scaledToFill()
@@ -113,6 +127,7 @@ struct StegoView: View {
                         .background(FieldBackground())
                 }
             }
+            .buttonStyle(.plain)
             Button { showFileImporter = true } label: {
                 Label("Choose a file (PNG, JPG…)", systemImage: "folder")
             }
@@ -255,13 +270,22 @@ struct StegoView: View {
         guard let item else { return }
         reset()
         Task {
-            guard let data = try? await item.loadTransferable(type: Data.self) else { return }
+            guard let data = try? await item.loadTransferable(type: Data.self) else {
+                errorText = String(localized: "Could not read the photo.")
+                return
+            }
             await adopt(data)
         }
     }
 
     private func loadFile(_ result: Result<URL, Error>) {
-        guard case .success(let url) = result else { return }
+        guard case .success(let url) = result else {
+            if case .failure(let error) = result, (error as NSError).code != NSUserCancelledError {
+                reset()
+                errorText = String(localized: "Could not read the file.")
+            }
+            return
+        }
         reset()
         let secured = url.startAccessingSecurityScopedResource()
         defer { if secured { url.stopAccessingSecurityScopedResource() } }

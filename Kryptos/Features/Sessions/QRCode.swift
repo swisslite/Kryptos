@@ -21,11 +21,11 @@ enum QRCode {
         return CGFloat(modules * scale) / density
     }
 
-    static func image(from payload: Data) -> UIImage? {
+    static func image(from payload: Data, correction: String = "L") -> UIImage? {
         guard !payload.isEmpty else { return nil }
         let filter = CIFilter.qrCodeGenerator()
         filter.message = payload
-        filter.correctionLevel = "L"
+        filter.correctionLevel = correction
         guard let output = filter.outputImage,
               let code = context.createCGImage(output, from: output.extent) else { return nil }
         let width = code.width + quietZone * 2

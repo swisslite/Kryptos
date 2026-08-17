@@ -37,7 +37,9 @@ data class ArchivedProfile(
     val kyberPreKeys: Map<String, String> = emptyMap(),
     val sessions: Map<String, String> = emptyMap(),
     val identities: Map<String, String> = emptyMap(),
-)
+) {
+    override fun toString(): String = "ArchivedProfile(id=$id, contacts=${contacts.size})"
+}
 
 @Serializable
 data class ArchivedPgpIdentity(
@@ -49,7 +51,9 @@ data class ArchivedPgpIdentity(
     val created: Long,
     val publicKey: String,
     val secret: String,
-)
+) {
+    override fun toString(): String = "ArchivedPgpIdentity(id=$id, fingerprint=$fingerprint)"
+}
 
 @Serializable
 data class ArchivedPgpRecipient(val name: String, val publicKey: String, val fingerprint: String)
