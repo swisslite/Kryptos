@@ -34,7 +34,7 @@ contact carries.
 ## Features
 
 - The Kryptos keyboard installs like any ordinary system keyboard and encrypts the text right in the input field of any app
-- It is a full keyboard as well: completions, autocorrection, emoji and three layouts. English, Russian and German, all of it working offline
+- It is a full keyboard as well: completions, autocorrection, emoji and four layouts. English, Russian, German and Chinese with pinyin input, all of it working offline
 - On Android the ciphertext is decrypted right on screen, over the message in the chat. Nothing has to be copied or opened separately - the conversation reads like an ordinary one. The feature works only with your contacts and is off by default
 - Conversations run on the Signal Protocol: a new key is created for every message, and the initial key exchange is protected even against future quantum computers
 - You exchange keys with a contact once, by QR code or as a string. Several profiles can be kept in the app

@@ -1,0 +1,6 @@
+Chinese: interface and a keyboard layout with pinyin input.
+Rude and unsafe words are out of the text steganography dictionaries, still 4096 words per language. Covers made by the word and sentence modes cannot be read by versions before 2.3.2, both sides have to update.
+Keyboard: bigger buttons, adjustable field size, the badge can be hidden.
+Send after encrypting now works in messengers with their own send button.
+Profiles and contacts can be renamed.
+Around twenty fixes.

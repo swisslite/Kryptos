@@ -1,0 +1,6 @@
+Chinesisch: Oberfläche und eine Tastaturbelegung mit Pinyin-Eingabe.
+Grobe und unsichere Wörter sind aus den Wörterbüchern der Textsteganografie entfernt, weiterhin 4096 Wörter pro Sprache. Hüllen der Wort- und Satzmodi lassen sich mit Versionen vor 2.3.2 nicht lesen, beide Seiten müssen aktualisieren.
+Tastatur: größere Tasten, einstellbare Feldgröße.
+Senden nach dem Verschlüsseln funktioniert in Messengern mit eigener Sendetaste.
+Profile und Kontakte umbenennbar.
+Etwa zwanzig Fehlerbehebungen.
