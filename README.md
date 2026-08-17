@@ -9,7 +9,7 @@
 
 <br>
 
-<a href="fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg" width="20%" alt="End-to-end encryption"></a><a href="fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg" width="20%" alt="Key exchange"></a><a href="fastlane/metadata/android/en-US/images/phoneScreenshots/3.jpg"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.jpg" width="20%" alt="PGP mode"></a><a href="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg" width="20%" alt="Any messenger"></a><a href="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg" width="20%" alt="Steganography"></a>
+<a href="fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg"><img src="assets/readme/1.jpg" width="20%" alt="End-to-end encryption"></a><a href="fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg"><img src="assets/readme/2.jpg" width="20%" alt="Key exchange"></a><a href="fastlane/metadata/android/en-US/images/phoneScreenshots/3.jpg"><img src="assets/readme/3.jpg" width="20%" alt="PGP mode"></a><a href="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg"><img src="assets/readme/4.jpg" width="20%" alt="Any messenger"></a><a href="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg"><img src="assets/readme/5.jpg" width="20%" alt="Steganography"></a>
 
 </div>
 

@@ -9,7 +9,7 @@
 
 <br>
 
-<a href="fastlane/metadata/android/ru-RU/images/phoneScreenshots/1.jpg"><img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/1.jpg" width="20%" alt="Сквозное шифрование"></a><a href="fastlane/metadata/android/ru-RU/images/phoneScreenshots/2.jpg"><img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/2.jpg" width="20%" alt="Обмен ключами"></a><a href="fastlane/metadata/android/ru-RU/images/phoneScreenshots/3.jpg"><img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/3.jpg" width="20%" alt="Режим PGP"></a><a href="fastlane/metadata/android/ru-RU/images/phoneScreenshots/4.jpg"><img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/4.jpg" width="20%" alt="Любой мессенджер"></a><a href="fastlane/metadata/android/ru-RU/images/phoneScreenshots/5.jpg"><img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/5.jpg" width="20%" alt="Стеганография"></a>
+<a href="fastlane/metadata/android/ru-RU/images/phoneScreenshots/1.jpg"><img src="assets/readme/ru/1.jpg" width="20%" alt="Сквозное шифрование"></a><a href="fastlane/metadata/android/ru-RU/images/phoneScreenshots/2.jpg"><img src="assets/readme/ru/2.jpg" width="20%" alt="Обмен ключами"></a><a href="fastlane/metadata/android/ru-RU/images/phoneScreenshots/3.jpg"><img src="assets/readme/ru/3.jpg" width="20%" alt="Режим PGP"></a><a href="fastlane/metadata/android/ru-RU/images/phoneScreenshots/4.jpg"><img src="assets/readme/ru/4.jpg" width="20%" alt="Любой мессенджер"></a><a href="fastlane/metadata/android/ru-RU/images/phoneScreenshots/5.jpg"><img src="assets/readme/ru/5.jpg" width="20%" alt="Стеганография"></a>
 
 </div>
 
