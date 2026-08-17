@@ -9,7 +9,7 @@
 
 <br>
 
-<img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/1.jpg" width="20%" alt="Сквозное шифрование"><img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/2.jpg" width="20%" alt="Обмен ключами"><img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/3.jpg" width="20%" alt="Режим PGP"><img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/4.jpg" width="20%" alt="Любой мессенджер"><img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/5.jpg" width="20%" alt="Стеганография">
+<a href="fastlane/metadata/android/ru-RU/images/phoneScreenshots/1.jpg"><img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/1.jpg" width="20%" alt="Сквозное шифрование"></a><a href="fastlane/metadata/android/ru-RU/images/phoneScreenshots/2.jpg"><img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/2.jpg" width="20%" alt="Обмен ключами"></a><a href="fastlane/metadata/android/ru-RU/images/phoneScreenshots/3.jpg"><img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/3.jpg" width="20%" alt="Режим PGP"></a><a href="fastlane/metadata/android/ru-RU/images/phoneScreenshots/4.jpg"><img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/4.jpg" width="20%" alt="Любой мессенджер"></a><a href="fastlane/metadata/android/ru-RU/images/phoneScreenshots/5.jpg"><img src="fastlane/metadata/android/ru-RU/images/phoneScreenshots/5.jpg" width="20%" alt="Стеганография"></a>
 
 </div>
 
@@ -18,6 +18,7 @@
 [![Релиз](https://img.shields.io/github/v/release/swisslite/Kryptos?label=%D1%80%D0%B5%D0%BB%D0%B8%D0%B7&color=2f62e9)](https://github.com/swisslite/Kryptos/releases/latest)
 [![F-Droid](https://img.shields.io/f-droid/v/com.kryptos.android?logo=fdroid&logoColor=white&label=F-Droid&color=2f62e9)](https://f-droid.org/packages/com.kryptos.android/)
 [![Лицензия](https://img.shields.io/badge/%D0%BB%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-AGPL--3.0-2f62e9)](LICENSE)
+[![Поддержать](https://img.shields.io/badge/%D0%BF%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%B0%D1%82%D1%8C-%D0%BF%D1%80%D0%BE%D0%B5%D0%BA%D1%82-2f62e9?logo=githubsponsors&logoColor=white)](#%D0%BF%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%B0%D1%82%D1%8C-%D0%BF%D1%80%D0%BE%D0%B5%D0%BA%D1%82)
 
 Kryptos — приложение для iPhone и Android, которое шифрует переписку в любом мессенджере.
 
@@ -83,6 +84,29 @@ Kryptos — приложение для iPhone и Android, которое шиф
 
 Режимы пароля и PGP обходятся без первого шага: для пароля достаточно слова, о котором вы
 договорились, для PGP нужен открытый ключ получателя.
+
+## Поддержать проект
+
+Если Kryptos вам пригодился, можно поддержать разработку. Те же три адреса есть в самом
+приложении, в настройках.
+
+![Monero](https://img.shields.io/badge/Monero-XMR-FF6600?style=for-the-badge&logo=monero&logoColor=white)
+
+```
+86oyPpT7CitPFQTxWdwYwSZ9BUABib37G9AQeeYd2KRcFfwbamaUiZfJYC8gPrfTCiV2X7K4DC1XFi3cfX6N1d1uUL5s3jh
+```
+
+![Toncoin](https://img.shields.io/badge/GRAM-Toncoin-0088CC?style=for-the-badge&logo=ton&logoColor=white)
+
+```
+UQDrhHMQy8-mZ7pq9KerKAd7QUwjCXjNK-20f0m4yjOkL8jF
+```
+
+![Bitcoin](https://img.shields.io/badge/Bitcoin-BTC-F7931A?style=for-the-badge&logo=bitcoin&logoColor=white)
+
+```
+bc1qwsnex9q5ux88fnt93udn2xmf8752mnx4km2rvm
+```
 
 ## Безопасность
 

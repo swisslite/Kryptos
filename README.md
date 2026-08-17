@@ -9,7 +9,7 @@
 
 <br>
 
-<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg" width="20%" alt="End-to-end encryption"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg" width="20%" alt="Key exchange"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.jpg" width="20%" alt="PGP mode"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg" width="20%" alt="Any messenger"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg" width="20%" alt="Steganography">
+<a href="fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg" width="20%" alt="End-to-end encryption"></a><a href="fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg" width="20%" alt="Key exchange"></a><a href="fastlane/metadata/android/en-US/images/phoneScreenshots/3.jpg"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.jpg" width="20%" alt="PGP mode"></a><a href="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg" width="20%" alt="Any messenger"></a><a href="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg" width="20%" alt="Steganography"></a>
 
 </div>
 
@@ -18,6 +18,7 @@
 [![Release](https://img.shields.io/github/v/release/swisslite/Kryptos?label=release&color=2f62e9)](https://github.com/swisslite/Kryptos/releases/latest)
 [![F-Droid](https://img.shields.io/f-droid/v/com.kryptos.android?logo=fdroid&logoColor=white&label=F-Droid&color=2f62e9)](https://f-droid.org/packages/com.kryptos.android/)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-2f62e9)](LICENSE)
+[![Support](https://img.shields.io/badge/support-the%20project-2f62e9?logo=githubsponsors&logoColor=white)](#support-the-project)
 
 Kryptos is an iPhone and Android app that encrypts conversations inside any messenger.
 
@@ -83,6 +84,29 @@ release and on the website.
 
 Password mode and PGP mode do without the first step: password mode needs only a word the two of you
 agreed on, PGP needs the recipient's public key.
+
+## Support the project
+
+If Kryptos is useful to you, you can support its development. The same three addresses are in the
+app itself, under Settings.
+
+![Monero](https://img.shields.io/badge/Monero-XMR-FF6600?style=for-the-badge&logo=monero&logoColor=white)
+
+```
+86oyPpT7CitPFQTxWdwYwSZ9BUABib37G9AQeeYd2KRcFfwbamaUiZfJYC8gPrfTCiV2X7K4DC1XFi3cfX6N1d1uUL5s3jh
+```
+
+![Toncoin](https://img.shields.io/badge/GRAM-Toncoin-0088CC?style=for-the-badge&logo=ton&logoColor=white)
+
+```
+UQDrhHMQy8-mZ7pq9KerKAd7QUwjCXjNK-20f0m4yjOkL8jF
+```
+
+![Bitcoin](https://img.shields.io/badge/Bitcoin-BTC-F7931A?style=for-the-badge&logo=bitcoin&logoColor=white)
+
+```
+bc1qwsnex9q5ux88fnt93udn2xmf8752mnx4km2rvm
+```
 
 ## Security
 
