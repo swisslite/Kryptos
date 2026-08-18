@@ -12,4 +12,4 @@ Nothing goes online: there is no networking code in the app at all, and the buil
 
 Entry can be closed off with biometrics or a passcode. There is also a panic password: typed into the same field, it wipes everything for good instead of unlocking. The clipboard clears itself, messages can disappear on a timer, screenshots and the app-switcher snapshot can be blocked, and all your keys can be exported into one password protected file to move them to a new phone.
 
-Also inside: light and dark themes, an app language separate from the system one, a step-by-step guide with answers to common questions, and a keyboard with suggestions, autocorrection and emoji for English, Russian and German, entirely offline.
+Also inside: light and dark themes, an app language separate from the system one, a step-by-step guide with answers to common questions, and a keyboard with suggestions, autocorrection and emoji for English, Russian, German and Chinese, entirely offline.

@@ -12,4 +12,4 @@ Nichts geht ins Netz: In der App steckt überhaupt kein Netzwerkcode, und der Bu
 
 Der Zugang lässt sich mit Biometrie oder einem Code sperren. Dazu kommt ein Panik-Passwort: ins selbe Feld getippt, löscht es alles endgültig, statt zu entsperren. Die Zwischenablage leert sich selbst, Nachrichten können nach einer Frist verschwinden, Screenshots und die Vorschau im App-Wechsler lassen sich blockieren, und alle Schlüssel können in eine einzige passwortgeschützte Datei exportiert werden, um sie auf ein neues Telefon zu bringen.
 
-Außerdem dabei: helles und dunkles Design, eine App-Sprache unabhängig von der Systemsprache, eine Schritt-für-Schritt-Anleitung mit Antworten auf häufige Fragen und eine Tastatur mit Vorschlägen, Autokorrektur und Emoji für Deutsch, Englisch und Russisch, vollständig offline.
+Außerdem dabei: helles und dunkles Design, eine App-Sprache unabhängig von der Systemsprache, eine Schritt-für-Schritt-Anleitung mit Antworten auf häufige Fragen und eine Tastatur mit Vorschlägen, Autokorrektur und Emoji für Deutsch, Englisch, Russisch und Chinesisch, vollständig offline.
