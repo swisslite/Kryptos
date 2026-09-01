@@ -21,4 +21,9 @@
         android:imeSubtypeLocale="zh_CN"
         android:languageTag="zh"
         android:imeSubtypeMode="keyboard" />
+    <subtype
+        android:label="@string/lang_fa"
+        android:imeSubtypeLocale="fa_IR"
+        android:languageTag="fa"
+        android:imeSubtypeMode="keyboard" />
 </input-method>

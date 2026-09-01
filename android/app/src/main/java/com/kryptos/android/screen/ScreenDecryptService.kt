@@ -44,7 +44,7 @@ class ScreenDecryptService : AccessibilityService() {
     override fun attachBaseContext(newBase: Context) {
         com.kryptos.android.store.SecureStore.init(newBase)
         super.attachBaseContext(
-            runCatching { com.kryptos.android.AppLanguage.wrap(newBase) }.getOrDefault(newBase),
+            runCatching { com.kryptos.android.AppLanguage.wrapLtr(newBase) }.getOrDefault(newBase),
         )
     }
 
@@ -71,6 +71,7 @@ class ScreenDecryptService : AccessibilityService() {
         super.onServiceConnected()
         worker.execute {
             runCatching { SignalService.ensureInitialized() }
+            runCatching { AppLock.isCryptoSessionLocked(this) }
             runCatching {
                 TextStego.decode("warm")
                 SmartTextStego.decode("warm")
@@ -108,7 +109,12 @@ class ScreenDecryptService : AccessibilityService() {
             handler.removeCallbacks(scan)
             generation++
             clearOverlay()
+            ScreenDecryptor.forget()
             return
+        }
+        if (reader != null) {
+            if (pkg == null || pkg == readerHost) return
+            dismissReader()
         }
         val switched = event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
             (pkg != null && pkg != lastPackage)
@@ -220,7 +226,9 @@ class ScreenDecryptService : AccessibilityService() {
 
     private fun doScan() {
         handler.removeCallbacks(verify)
-        if (!active()) { clearOverlay(); return }
+        if (!active()) { clearOverlay(); ScreenDecryptor.forget(); return }
+        if (reader != null) return
+        if (overlay == null) addOverlay()
         val root = rootInActiveWindow
         if (root == null) { generation++; clearOverlay(); return }
         lastPackage = root.packageName?.toString()
@@ -509,6 +517,9 @@ class ScreenDecryptService : AccessibilityService() {
         if (overlay != null) return
         val view = OverlayView(localized())
         view.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            view.importantForContentCapture = View.IMPORTANT_FOR_CONTENT_CAPTURE_NO_EXCLUDE_DESCENDANTS
+        }
         view.onPanelsLaidOut = { frames, clipped ->
             handler.post { rebuildExpandButtons(frames, clipped) }
         }
@@ -523,7 +534,7 @@ class ScreenDecryptService : AccessibilityService() {
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                 secureFlag(),
             PixelFormat.TRANSLUCENT,
-        ).apply { gravity = Gravity.TOP or Gravity.START }.spanFullScreen()
+        ).apply { gravity = Gravity.TOP or Gravity.LEFT }.spanFullScreen()
         runCatching { windowManager?.addView(view, params); overlay = view }
     }
 
@@ -636,7 +647,7 @@ class ScreenDecryptService : AccessibilityService() {
                     secureFlag(),
                 PixelFormat.TRANSLUCENT,
             ).apply {
-                gravity = Gravity.TOP or Gravity.START
+                gravity = Gravity.TOP or Gravity.LEFT
                 x = buttonX(frame, size, screenW)
                 y = buttonY(frame, size)
             }.spanFullScreen()
@@ -645,11 +656,13 @@ class ScreenDecryptService : AccessibilityService() {
     }
 
     private var readerText: String? = null
+    private var readerHost: String? = null
 
     private fun showReader(item: OverlayItem) {
         dismissReader()
         val wm = windowManager ?: return
         readerText = item.text
+        readerHost = lastPackage
 
         val ink = Color.parseColor(if (dark) "#F2F5FA" else "#12141A")
         val sub = Color.parseColor(if (dark) "#94FFFFFF" else "#8712141A")
@@ -719,9 +732,22 @@ class ScreenDecryptService : AccessibilityService() {
             addView(actions)
         }
 
-        val dim = FrameLayout(this).apply {
+        val dim = object : FrameLayout(this) {
+            override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+                if (event.keyCode == android.view.KeyEvent.KEYCODE_BACK) {
+                    if (event.action == android.view.KeyEvent.ACTION_UP) dismissReader()
+                    return true
+                }
+                return super.dispatchKeyEvent(event)
+            }
+        }.apply {
             setBackgroundColor(Color.parseColor("#66000000"))
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                importantForContentCapture = View.IMPORTANT_FOR_CONTENT_CAPTURE_NO_EXCLUDE_DESCENDANTS
+            }
+            isFocusable = true
+            isFocusableInTouchMode = true
             filterTouchesWhenObscured = true
             setOnClickListener { dismissReader() }
             addView(
@@ -736,16 +762,21 @@ class ScreenDecryptService : AccessibilityService() {
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 secureFlag(),
             PixelFormat.TRANSLUCENT,
         ).spanFullScreen()
-        runCatching { wm.addView(dim, params); reader = dim }
+        runCatching {
+            wm.addView(dim, params)
+            reader = dim
+            dim.requestFocus()
+        }
     }
 
     private fun dismissReader() {
         readerText = null
+        readerHost = null
         reader?.let { runCatching { windowManager?.removeView(it) } }
         reader = null
     }
@@ -782,6 +813,19 @@ class ScreenDecryptService : AccessibilityService() {
         private const val MATCH = LinearLayout.LayoutParams.MATCH_PARENT
 
         fun isBound(): Boolean = live != null
+
+        fun turnOff() {
+            live?.let { service ->
+                service.handler.post {
+                    service.generation++
+                    service.clearOverlay()
+                    ScreenDecryptor.forget()
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                        runCatching { service.disableSelf() }
+                    }
+                }
+            }
+        }
 
         fun sendInFocusedApp(expected: String, keyboardTop: Int, host: CharSequence): SendOutcome =
             live?.let { service ->

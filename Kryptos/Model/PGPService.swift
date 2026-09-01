@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import CipherCore
 import ObjectivePGP
 
 struct PGPIdentity: Codable, Identifiable, Hashable {
@@ -58,15 +59,17 @@ enum PGPAlgo: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-enum PGPVerification { case verified, unverified }
+enum PGPVerification: Sendable { case verified, unverified }
 
 enum PGPError: LocalizedError {
-    case notReady, badKey, badMessage, generationFailed, storageUnavailable
+    case notReady, badKey, badMessage, notEncrypted, tooLarge, generationFailed, storageUnavailable
     var errorDescription: String? {
         switch self {
         case .notReady: return String(localized: "No PGP key is selected.")
         case .badKey: return String(localized: "This is not a valid PGP public key.")
         case .badMessage: return String(localized: "No PGP message found.")
+        case .notEncrypted: return String(localized: "This text is not an encrypted PGP message — it carries no encrypted layer.")
+        case .tooLarge: return String(localized: "This message is too large to open.")
         case .generationFailed: return String(localized: "Could not generate the key.")
         case .storageUnavailable: return String(localized: "Secure storage is unavailable right now. Try again in a moment.")
         }
@@ -91,6 +94,21 @@ final class PGPService: ObservableObject {
     @Published private(set) var failure: String?
 
     private var currentKey: Key?
+
+    private struct KeySet: @unchecked Sendable {
+        let signing: Key
+        let recipients: [Key]
+    }
+
+    nonisolated private static let cryptoQueue = DispatchQueue(label: "kryptos.pgp.crypto", qos: .userInitiated)
+
+    nonisolated private static func onCryptoQueue<T: Sendable>(
+        _ work: @escaping @Sendable () throws -> T
+    ) async throws -> T {
+        try await withCheckedThrowingContinuation { continuation in
+            cryptoQueue.async { continuation.resume(with: Result { try work() }) }
+        }
+    }
 
     private static let indexStoreKey = "pgp.index"
     private static let recipientsStoreKey = "pgp.recipients"
@@ -124,7 +142,7 @@ final class PGPService: ObservableObject {
 
         if index.identities.isEmpty, let data = Keychain.load(account: Self.legacySecret),
            let key = try? ObjectivePGP.readKeys(from: data).first {
-            let ident = PGPIdentity(id: UUID(), name: "My key", email: "", fingerprint: Self.fingerprint(of: key), algo: "imported", createdAt: Date(), publicKey: Self.exportPublicArmored(key))
+            let ident = PGPIdentity(id: UUID(), name: String(localized: "My key"), email: "", fingerprint: Self.fingerprint(of: key), algo: "imported", createdAt: Date(), publicKey: Self.exportPublicArmored(key))
             let secret = Self.exportSecret(key)
             if !secret.isEmpty, Keychain.save(secret, account: Self.secretAccount(ident.id)) {
                 let migrated = PGPIndex(identities: [ident], currentID: ident.id)
@@ -141,7 +159,7 @@ final class PGPService: ObservableObject {
         currentID = index.identities.contains { $0.id == index.currentID } ? index.currentID : (index.identities.first?.id ?? UUID())
 
         if identities.isEmpty {
-            generate(name: "My key", email: "", algo: .curve25519)
+            generate(name: String(localized: "My key"), email: "", algo: .curve25519)
         } else {
             loadCurrent()
         }
@@ -156,8 +174,9 @@ final class PGPService: ObservableObject {
         guard !storeUnavailable else { return nil }
         var out: [KeyArchive.ArchivedPgpIdentity] = []
         for ident in identities {
-            guard case .found(let secret) = Keychain.loadStrict(account: Self.secretAccount(ident.id)),
-                  let armored = String(data: secret, encoding: .utf8), !armored.isEmpty else { return nil }
+            guard case .found(var secret) = Keychain.loadStrict(account: Self.secretAccount(ident.id)) else { return nil }
+            defer { secret.resetBytes(in: secret.startIndex ..< secret.endIndex) }
+            guard let armored = String(data: secret, encoding: .utf8), !armored.isEmpty else { return nil }
             out.append(KeyArchive.ArchivedPgpIdentity(
                 id: ident.id.uuidString, name: ident.name, email: ident.email,
                 fingerprint: ident.fingerprint, algo: ident.algo,
@@ -434,7 +453,7 @@ final class PGPService: ObservableObject {
         }
         Keychain.delete(account: Self.secretAccount(id))
         if remaining.isEmpty {
-            generate(name: "My key", email: "", algo: .curve25519)
+            generate(name: String(localized: "My key"), email: "", algo: .curve25519)
             return
         }
         loadCurrent()
@@ -472,45 +491,62 @@ final class PGPService: ObservableObject {
         return keys
     }
 
-    func encrypt(_ text: String, to recipient: PGPRecipient) throws -> String {
+    func encrypt(_ text: String, to recipient: PGPRecipient) async throws -> String {
         retryBootstrapIfNeeded()
         guard !storeUnavailable else { throw PGPError.storageUnavailable }
         guard let currentKey else { throw PGPError.notReady }
         guard let recipientKeys = try? ObjectivePGP.readKeys(from: Data(recipient.publicKey.utf8)), !recipientKeys.isEmpty else {
             throw PGPError.badKey
         }
+        let keys = KeySet(signing: currentKey, recipients: recipientKeys)
+        return try await Self.onCryptoQueue { try Self.seal(text, keys: keys) }
+    }
+
+    nonisolated private static func seal(_ text: String, keys: KeySet) throws -> String {
         let encrypted = try ObjectivePGP.encrypt(Data(text.utf8), addSignature: true,
-                                                 using: recipientKeys + [currentKey], passphraseForKey: nil)
+                                                 using: keys.recipients + [keys.signing], passphraseForKey: nil)
         return Armor.armored(encrypted, as: .message)
     }
 
-    private static let maxMessageBytes = 8 * 1024 * 1024
+    nonisolated private static let maxMessageBytes = 4 * 1024 * 1024
+    nonisolated private static let maxPlaintextBytes = 8 * 1024 * 1024
+    nonisolated private static let maxCompressedLayers = 1
 
-    func decrypt(_ armored: String) throws -> (text: String, verification: PGPVerification) {
+    func decrypt(_ armored: String) async throws -> (text: String, verification: PGPVerification) {
         retryBootstrapIfNeeded()
         guard !storeUnavailable else { throw PGPError.storageUnavailable }
         guard let currentKey else { throw PGPError.notReady }
-        guard armored.utf8.count <= Self.maxMessageBytes else { throw PGPError.badMessage }
+        guard armored.utf8.count <= Self.maxMessageBytes else { throw PGPError.tooLarge }
+        let keys = KeySet(signing: currentKey, recipients: allRecipientKeys())
+        return try await Self.onCryptoQueue { try Self.open(armored, keys: keys) }
+    }
+
+    nonisolated private static func open(_ armored: String, keys: KeySet) throws -> (text: String, verification: PGPVerification) {
         let binary: Data
         if let blocks = try? Armor.convertArmoredMessage2BinaryBlocks(whenNecessary: Data(armored.utf8)), let b = blocks.first {
             binary = b
         } else {
             binary = Data(armored.utf8)
         }
-        let verifyKeys = [currentKey] + allRecipientKeys()
+        let shape = OpenPGPEnvelope.shape(of: binary)
+        guard shape.encrypted else { throw PGPError.notEncrypted }
+        guard shape.compressedLayers <= maxCompressedLayers else { throw PGPError.tooLarge }
+        let verifyKeys = [keys.signing] + keys.recipients
         var verifiedCode: Int32 = -1
         var decryptionError: NSError?
-        if let plain = try? ObjectivePGP.decrypt(binary, verified: &verifiedCode, certifyWithRootKey: false,
-                                                 using: verifyKeys, passphraseForKey: nil,
-                                                 decryptionError: &decryptionError),
-           decryptionError == nil {
+        let verifiedAttempt = try? ObjectivePGP.decrypt(binary, verified: &verifiedCode, certifyWithRootKey: false,
+                                                        using: verifyKeys, passphraseForKey: nil,
+                                                        decryptionError: &decryptionError)
+        if let plain = verifiedAttempt, decryptionError == nil {
+            guard plain.count <= maxPlaintextBytes else { throw PGPError.tooLarge }
             return (String(decoding: plain, as: UTF8.self), verifiedCode == 0 ? .verified : .unverified)
         }
-        guard let plain = try? ObjectivePGP.decrypt(binary, andVerifySignature: false, using: [currentKey], passphraseForKey: nil) else {
+        guard let plain = try? ObjectivePGP.decrypt(binary, andVerifySignature: false,
+                                                    using: [keys.signing], passphraseForKey: nil) else {
             throw PGPError.badMessage
         }
-        let verified = Self.verificationCode(binary, keys: verifyKeys) == 0
-        return (String(decoding: plain, as: UTF8.self), verified ? .verified : .unverified)
+        guard plain.count <= maxPlaintextBytes else { throw PGPError.tooLarge }
+        return (String(decoding: plain, as: UTF8.self), verifiedCode == 0 ? .verified : .unverified)
     }
 
     static func eraseAllStorage() {
@@ -523,13 +559,6 @@ final class PGPService: ObservableObject {
         SharedStore.delete(recipientsStoreKey)
         UserDefaults.standard.removeObject(forKey: indexKey)
         UserDefaults.standard.removeObject(forKey: recipientsKey)
-    }
-
-    nonisolated private static func verificationCode(_ data: Data, keys: [Key]) -> Int32 {
-        var verified: Int32 = -1
-        var decErr: NSError?
-        _ = try? ObjectivePGP.decrypt(data, verified: &verified, certifyWithRootKey: false, using: keys, passphraseForKey: nil, decryptionError: &decErr)
-        return verified
     }
 
 }

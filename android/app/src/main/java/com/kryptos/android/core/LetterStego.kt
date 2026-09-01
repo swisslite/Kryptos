@@ -55,12 +55,15 @@ object LetterStego {
     private val english by lazy { Alphabet("abcdefghijklmnopqrstuvwxyz", 7) }
     private val chinese by lazy { Alphabet("一不与丢个中为久么之乔也买了事于些什仍从令以们份但住使信俩借假停像先克全关其再写冷刚别到前办加却又另只叫号吃名后向吧听吹呀呆呢和哇哈哎哦哪哭唱啊啥啦喂喝嗨嘛嘿回因在坏块多够太她好如妳字它完家对将少就已带年弧当往很得德心忘忙快怎怕怪总恨恩您想懂成我或戴所才扔把抓抱拍拜拿挂指按挺换掉提搞搬救敢斯新於无时是晚更曾替最月有未来查梦欠次正此每比水求没滚点热爸特猜猫玩球用由画留疼病盯盾看真着睡瞧碰祝神离秒穿站笑第等算米糟约给美老而耶能脚脸腿臭船花若著街被要见让讲读谁谈谢赢跑跟躲躺车达还这远连送选都酒里金错长问间陪饿高鱼", 1) }
 
-    private val tables by lazy { listOf(russian, english, chinese) }
+    private val persian by lazy { Alphabet("ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی", 5) }
+
+    private val tables by lazy { listOf(russian, english, chinese, persian) }
 
     private fun table(language: StegoLanguage): Alphabet =
         when (language) {
             StegoLanguage.RUSSIAN -> russian
             StegoLanguage.CHINESE -> chinese
+            StegoLanguage.PERSIAN -> persian
             StegoLanguage.ENGLISH, StegoLanguage.GERMAN -> english
         }
 

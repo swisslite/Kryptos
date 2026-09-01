@@ -1,17 +1,18 @@
 import java.util.Properties
 
+val keystoreProps = Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+val hasSigning = keystoreProps.getProperty("storePassword").isNullOrEmpty().not() &&
+    rootProject.file(keystoreProps.getProperty("storeFile", "kryptos.keystore")).exists()
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
 }
-
-val keystorePropsFile = rootProject.file("keystore.properties")
-val keystoreProps = Properties().apply {
-    if (keystorePropsFile.exists()) keystorePropsFile.inputStream().use { load(it) }
-}
-val hasSigning = keystorePropsFile.exists()
 
 android {
     namespace = "com.kryptos.android"
@@ -22,8 +23,8 @@ android {
         applicationId = "com.kryptos.android"
         minSdk = 26
         targetSdk = 34
-        versionCode = 10
-        versionName = "2.3.2"
+        versionCode = 11
+        versionName = "2.3.3"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 
@@ -34,6 +35,9 @@ android {
                 storePassword = keystoreProps.getProperty("storePassword")
                 keyAlias = keystoreProps.getProperty("keyAlias")
                 keyPassword = keystoreProps.getProperty("keyPassword")
+                enableV1Signing = false
+                enableV2Signing = true
+                enableV3Signing = true
             }
         }
     }
@@ -63,6 +67,8 @@ android {
             "org/bouncycastle/pqc/crypto/picnic/*.properties",
             "org/bouncycastle/x509/CertPathReviewerMessages*.properties",
             "DebugProbesKt.bin",
+            "kotlin-tooling-metadata.json",
+            "kotlin/**.kotlin_builtins",
         )
         jniLibs.excludes += "**/libsignal_jni_testing.so"
     }

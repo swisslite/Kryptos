@@ -131,18 +131,61 @@ object EmojiData {
         return list
     }
 
+    private val sessionAdded = LinkedHashSet<String>()
+
     fun addRecent(emoji: String) {
         val gen = generation
         runCatching {
             writer.execute {
                 if (gen != generation) return@execute
-                val list = (listOf(emoji) + recents().filter { it != emoji }).take(MAX_RECENTS)
+                val previous = recents()
+                val fresh = emoji !in previous
+                val list = (listOf(emoji) + previous.filter { it != emoji }).take(MAX_RECENTS)
                 if (gen != generation) return@execute
                 cached = list
-                runCatching {
-                    SecureStore.write(STORE_RECENTS, list.joinToString(" ").toByteArray(Charsets.UTF_8))
-                }
+                if (fresh) synchronized(this) { sessionAdded.add(emoji) }
+                store(list)
+                if (gen != generation) runCatching { SecureStore.delete(STORE_RECENTS) }
             }
+        }
+    }
+
+    private fun store(list: List<String>) {
+        runCatching {
+            if (list.isEmpty()) SecureStore.delete(STORE_RECENTS)
+            else SecureStore.write(STORE_RECENTS, list.joinToString(" ").toByteArray(Charsets.UTF_8))
+        }
+    }
+
+    @Synchronized fun beginTypingSession() {
+        sessionAdded.clear()
+    }
+
+    fun forgetTypingSession() {
+        val drop = synchronized(this) {
+            if (sessionAdded.isEmpty()) return
+            HashSet(sessionAdded).also { sessionAdded.clear() }
+        }
+        val gen = generation
+        runCatching {
+            writer.execute {
+                if (gen != generation) return@execute
+                val list = recents().filter { it !in drop }
+                if (gen != generation) return@execute
+                cached = list
+                store(list)
+                if (gen != generation) runCatching { SecureStore.delete(STORE_RECENTS) }
+            }
+        }
+    }
+
+    @Synchronized fun forget() {
+        generation++
+        cached = null
+        sessionAdded.clear()
+        runCatching {
+            SecureStore.delete(STORE_RECENTS)
+            SecureStore.prefs().edit().remove(PREF_RECENTS).commit()
         }
     }
 
@@ -152,6 +195,6 @@ object EmojiData {
         if (SecureStore.read(STORE_RECENTS) == null && legacy.isNotBlank()) {
             SecureStore.write(STORE_RECENTS, legacy.toByteArray(Charsets.UTF_8))
         }
-        prefs.edit().remove(PREF_RECENTS).apply()
+        prefs.edit().remove(PREF_RECENTS).commit()
     }
 }

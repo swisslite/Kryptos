@@ -6,13 +6,18 @@ public enum Padding {
 
     public static func target(_ n: Int) -> Int {
         if n <= floor { return floor }
-        if n > cap { return ((n + cap - 1) / cap) * cap }
+        if n > cap {
+            let blocks = (n / cap) + (n % cap == 0 ? 0 : 1)
+            let (total, overflow) = blocks.multipliedReportingOverflow(by: cap)
+            return overflow ? Int.max : total
+        }
         var p = floor
         while p < n { p <<= 1 }
         return p
     }
 
     public static func frame(_ content: Data) -> Data {
+        guard content.count <= Int.max - 4 else { return Data() }
         let total = target(4 + content.count)
         let padLen = total - 4 - content.count
         let n = UInt32(truncatingIfNeeded: content.count)

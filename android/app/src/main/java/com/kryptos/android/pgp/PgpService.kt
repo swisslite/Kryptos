@@ -1,12 +1,16 @@
 package com.kryptos.android.pgp
 
+import com.kryptos.android.AppLanguage
 import com.kryptos.android.R
+import com.kryptos.android.core.wipingBytes
 import com.kryptos.android.store.SecureStore
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToStream
 import org.bouncycastle.openpgp.PGPPublicKeyRing
 import org.bouncycastle.openpgp.PGPSecretKeyRing
 import org.pgpainless.PGPainless
@@ -99,7 +103,7 @@ object PgpService {
             currentID.value = if (index.identities.any { it.id == index.currentID }) index.currentID
             else index.identities.firstOrNull()?.id ?: ""
             if (identities.value.isEmpty()) {
-                generateBlocking(name = "My key", email = "", algo = PgpAlgo.CURVE25519)
+                generateBlocking(name = defaultKeyName(), email = "", algo = PgpAlgo.CURVE25519)
                 if (identities.value.isEmpty()) return
             }
             initialized = true
@@ -114,11 +118,18 @@ object PgpService {
         }
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     private fun persistIndex() {
-        SecureStore.write(
-            INDEX_KEY,
-            json.encodeToString(PgpIndex.serializer(), PgpIndex(identities.value, currentID.value)).toByteArray()
-        )
+        val index = PgpIndex(identities.value, currentID.value)
+        writeWiped(INDEX_KEY, wipingBytes { json.encodeToStream(PgpIndex.serializer(), index, it) })
+    }
+
+    private fun writeWiped(name: String, data: ByteArray) {
+        try {
+            SecureStore.write(name, data)
+        } finally {
+            data.fill(0)
+        }
     }
 
     private fun loadRecipients() {
@@ -132,9 +143,14 @@ object PgpService {
         } ?: emptyList()
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     private fun saveRecipients() {
         ringCacheKey = null
-        SecureStore.write(RECIPIENTS_KEY, json.encodeToString(recipients.value).toByteArray())
+        val list = recipients.value
+        writeWiped(
+            RECIPIENTS_KEY,
+            wipingBytes { json.encodeToStream(ListSerializer(PgpRecipient.serializer()), list, it) },
+        )
     }
 
     private fun secretRing(id: String): PGPSecretKeyRing? {
@@ -143,6 +159,8 @@ object PgpService {
             PGPainless.readKeyRing().secretKeyRing(String(raw, Charsets.UTF_8))
         } catch (e: Exception) {
             throw PgpException(R.string.pgp_key_unreadable)
+        } finally {
+            raw.fill(0)
         }
         return ring ?: throw PgpException(R.string.pgp_key_unreadable)
     }
@@ -155,6 +173,9 @@ object PgpService {
 
     private fun prettyFingerprint(fp: OpenPgpFingerprint): String =
         fp.toString().uppercase().chunked(4).joinToString(" ")
+
+    private fun defaultKeyName(): String =
+        AppLanguage.wrap(SecureStore.appContext()).getString(R.string.my_key)
 
     fun generateBlocking(name: String, email: String, algo: PgpAlgo): PgpIdentity = synchronized(lock) {
         busy.value = true
@@ -169,7 +190,7 @@ object PgpService {
             )
             val previousIdentities = identities.value
             val previousCurrent = currentID.value
-            SecureStore.write(secretKeyName(done.id), secretArmored.toByteArray())
+            writeWiped(secretKeyName(done.id), secretArmored.toByteArray())
             identities.value = previousIdentities + done
             currentID.value = done.id
             try {
@@ -194,12 +215,20 @@ object PgpService {
 
     fun deleteIdentity(id: String) = synchronized(lock) {
         if (identities.value.none { it.id == id }) return
-        val remaining = identities.value.filter { it.id != id }
+        val previousIdentities = identities.value
+        val previousCurrent = currentID.value
+        val remaining = previousIdentities.filter { it.id != id }
         identities.value = remaining
         if (currentID.value == id) currentID.value = remaining.firstOrNull()?.id ?: ""
-        persistIndex()
+        try {
+            persistIndex()
+        } catch (t: Throwable) {
+            identities.value = previousIdentities
+            currentID.value = previousCurrent
+            throw t
+        }
         SecureStore.delete(secretKeyName(id))
-        if (remaining.isEmpty()) generateBlocking(name = "My key", email = "", algo = PgpAlgo.CURVE25519)
+        if (remaining.isEmpty()) generateBlocking(name = defaultKeyName(), email = "", algo = PgpAlgo.CURVE25519)
     }
 
     fun addRecipient(name: String, armoredKey: String) = synchronized(lock) {
@@ -304,6 +333,7 @@ object PgpService {
             throw PgpException(R.string.pgp_no_message)
         }
         val metadata = stream.metadata
+        if (!metadata.isEncrypted) throw PgpException(R.string.pgp_no_message)
         val signedBy = runCatching {
             known.firstOrNull { metadata.isVerifiedSignedBy(it.second) }?.first?.name
                 ?: if (metadata.isVerifiedSignedBy(ownCert)) currentIdentity?.name else null
@@ -320,7 +350,11 @@ object PgpService {
         identities.value.map { ident ->
             val raw = runCatching { SecureStore.readStrict(secretKeyName(ident.id)) }.getOrNull()
                 ?: return@synchronized null
-            val armored = String(raw, Charsets.UTF_8)
+            val armored = try {
+                String(raw, Charsets.UTF_8)
+            } finally {
+                raw.fill(0)
+            }
             if (armored.isBlank()) return@synchronized null
             com.kryptos.android.core.ArchivedPgpIdentity(
                 id = ident.id, name = ident.name, email = ident.email,
@@ -351,7 +385,7 @@ object PgpService {
             val valid = runCatching { PGPainless.readKeyRing().secretKeyRing(entry.secret) != null }.getOrDefault(false)
             if (!valid) continue
             val written = runCatching {
-                SecureStore.write(secretKeyName(entry.id), entry.secret.toByteArray(Charsets.UTF_8))
+                writeWiped(secretKeyName(entry.id), entry.secret.toByteArray(Charsets.UTF_8))
             }.isSuccess
             if (!written) continue
             restored.add(

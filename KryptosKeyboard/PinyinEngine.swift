@@ -23,8 +23,12 @@ final class PinyinEngine: @unchecked Sendable {
     private var maxSyllable = 6
 
     private var personal: [String: Int] = [:]
+    private var sessionNoted: [String: Int] = [:]
     private var personalDirty = false
     private var personalLoaded = false
+    private var loadStarted = false
+    private var wipeGeneration = 0
+    private var storedCopyExists = false
 
     private static let joinPenalty = 45000
     private static let boundaryPenalty = 400000
@@ -34,7 +38,7 @@ final class PinyinEngine: @unchecked Sendable {
     private static let userBoost = 4000
     private static let personalCap = 400
     private static let maxInput = 32
-    private static let storeKey = "kbpinyin"
+    private static let storeKey = TypingMemory.pinyinKey
 
     var isLoaded: Bool {
         lock.lock(); defer { lock.unlock() }
@@ -45,9 +49,18 @@ final class PinyinEngine: @unchecked Sendable {
         lock.lock()
         let already = loaded
         let hadPersonal = personalLoaded
+        let busy = loadStarted
+        let generation = wipeGeneration
+        if !already || !hadPersonal { loadStarted = true }
         lock.unlock()
         if already && hadPersonal { return }
+        if busy { return }
+        DispatchQueue.global(qos: .utility).async { [self] in
+            load(already: already, hadPersonal: hadPersonal, generation: generation)
+        }
+    }
 
+    private func load(already: Bool, hadPersonal: Bool, generation: Int) {
         let built = already ? nil : PinyinEngine.build()
         var stored: [String: Int]?
         if !hadPersonal {
@@ -57,6 +70,11 @@ final class PinyinEngine: @unchecked Sendable {
         }
 
         lock.lock()
+        guard wipeGeneration == generation else {
+            loadStarted = false
+            lock.unlock()
+            return
+        }
         if !loaded, let built {
             keyChars = built.keyChars; keyStarts = built.keyStarts
             initChars = built.initChars; initStarts = built.initStarts
@@ -67,8 +85,12 @@ final class PinyinEngine: @unchecked Sendable {
         }
         if !personalLoaded {
             personalLoaded = true
-            if let stored { personal = stored }
+            if let stored {
+                personal = stored
+                storedCopyExists = true
+            }
         }
+        loadStarted = false
         lock.unlock()
     }
 
@@ -76,6 +98,7 @@ final class PinyinEngine: @unchecked Sendable {
         guard !word.isEmpty else { return }
         lock.lock()
         personal[word, default: 0] += 1
+        sessionNoted[word, default: 0] += 1
         if personal.count > PinyinEngine.personalCap {
             let keep = personal.sorted { $0.value > $1.value }.prefix(PinyinEngine.personalCap)
             personal = Dictionary(uniqueKeysWithValues: keep.map { ($0.key, $0.value) })
@@ -84,22 +107,71 @@ final class PinyinEngine: @unchecked Sendable {
         lock.unlock()
     }
 
+    func forgetTypingSession() {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !sessionNoted.isEmpty else { return }
+        for (word, count) in sessionNoted {
+            let left = (personal[word] ?? 0) - count
+            if left > 0 { personal[word] = left } else { personal[word] = nil }
+        }
+        sessionNoted.removeAll()
+        personalDirty = true
+    }
+
+    func dropIfStoreGone() {
+        lock.lock()
+        let hadCopy = storedCopyExists
+        lock.unlock()
+        guard hadCopy, SharedStore.read(PinyinEngine.storeKey) == nil else { return }
+        dropEverything()
+    }
+
+    func dropEverything() {
+        lock.lock()
+        wipeGeneration &+= 1
+        personal = [:]
+        sessionNoted.removeAll()
+        personalDirty = false
+        personalLoaded = false
+        storedCopyExists = false
+        lock.unlock()
+    }
+
     func persist() {
         lock.lock()
         guard personalDirty, personalLoaded else { lock.unlock(); return }
+        guard SharedStore.isShared else {
+            personalDirty = false
+            storedCopyExists = false
+            lock.unlock()
+            SharedStore.delete(PinyinEngine.storeKey)
+            return
+        }
+        if storedCopyExists, SharedStore.read(PinyinEngine.storeKey) == nil {
+            personal = [:]
+            sessionNoted.removeAll()
+            personalDirty = false
+            storedCopyExists = false
+            lock.unlock()
+            return
+        }
         let snapshot = personal
         lock.unlock()
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
         guard SharedStore.write(PinyinEngine.storeKey, data) else { return }
         lock.lock()
         personalDirty = false
+        storedCopyExists = true
         lock.unlock()
     }
 
     func forget() {
         lock.lock()
         personal = [:]
+        sessionNoted.removeAll()
         personalDirty = false
+        storedCopyExists = false
         lock.unlock()
         SharedStore.delete(PinyinEngine.storeKey)
     }
@@ -333,8 +405,8 @@ final class PinyinEngine: @unchecked Sendable {
     private static func build() -> Built? {
         guard let syllableURL = bundleURL("pinyin-syllables"),
               let dictURL = bundleURL("pinyin-zh"),
-              let syllableData = try? Data(contentsOf: syllableURL),
-              let dictData = try? Data(contentsOf: dictURL) else { return nil }
+              let syllableData = try? Data(contentsOf: syllableURL, options: .mappedIfSafe),
+              let dictData = try? Data(contentsOf: dictURL, options: .mappedIfSafe) else { return nil }
 
         var syllables = Set<String>()
         var maxSyllable = 1

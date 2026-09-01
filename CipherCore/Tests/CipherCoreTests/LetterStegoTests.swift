@@ -18,7 +18,7 @@ final class LetterStegoTests: XCTestCase {
         for language in StegoLanguage.allCases {
             let text = try XCTUnwrap(LetterStego.encode(randomBytes(120), language: language))
             XCTAssertTrue(text.allSatisfy { $0.isLetter })
-            if !language.isHan { XCTAssertTrue(text.allSatisfy(\.isLowercase)) }
+            XCTAssertFalse(text.contains { $0.isUppercase })
             XCTAssertFalse(text.contains(" "))
             if language == .russian {
                 XCTAssertFalse(text.contains("ё"))

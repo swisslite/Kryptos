@@ -17,24 +17,16 @@ enum AutoDecrypt {
         guard pb.changeCount != lastChangeCount, pb.hasStrings else { return nil }
         lastChangeCount = pb.changeCount
         guard !RemoteClipboard.isRemote else { return nil }
-        guard let s = pb.string, !s.isEmpty, s != Clipboard.lastWritten else { return nil }
+        guard let s = pb.string, !s.isEmpty, !Clipboard.wroteExactly(s) else { return nil }
         let marker = OwnCipherMarker.storedKey()
         let verdict = await Task.detached(priority: .userInitiated) {
             ClipProbe.inspect(s, ownMarker: marker)
         }.value
         guard verdict.worthDecrypting else { return nil }
         signal.reloadCurrentFromDisk()
-        if let hit = signal.cachedDecrypt(s, stego: .some(verdict.stego)) {
-            return RevealedIncoming(contact: hit.contact, text: hit.text)
-        }
-        for contact in signal.contacts {
-            if let text = try? signal.decrypt(s, from: contact, refreshOnFailure: false,
-                                              stego: .some(verdict.stego),
-                                              wireStego: .some(verdict.stego)) {
-                return RevealedIncoming(contact: contact, text: text)
-            }
-        }
-        return nil
+        guard let hit = signal.decryptFromAnyContact(s, stego: .some(verdict.stego),
+                                                     wireStego: .some(verdict.stego)) else { return nil }
+        return RevealedIncoming(contact: hit.contact, text: hit.text)
     }
 }
 

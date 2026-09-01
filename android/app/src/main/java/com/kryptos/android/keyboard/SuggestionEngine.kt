@@ -1,7 +1,6 @@
 package com.kryptos.android.keyboard
 
 import android.content.Context
-import com.kryptos.android.core.CachePurge
 import com.kryptos.android.store.SecureStore
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.ln
@@ -240,6 +239,15 @@ object SuggestionEngine {
     private val RU_ROWS = listOf("йцукенгшщзх", "фывапролджэ", "ячсмитьбю")
     private val EN_ROWS = listOf("qwertyuiop", "asdfghjkl", "zxcvbnm")
     private val DE_ROWS = listOf("qwertzuiopü", "asdfghjklöä", "yxcvbnmß")
+    private val FA_ROWS = listOf("ضصثقفغعهخحجچ", "شسیبلاتنمکگ", "ظطژزرذدپوآ")
+
+    private fun buildConfusable(groups: List<String>): Set<String> {
+        val out = HashSet<String>()
+        for (group in groups) {
+            for (a in group) for (b in group) if (a != b) out.add("$a$b")
+        }
+        return out
+    }
 
     private fun buildNeighbors(rows: List<String>): Map<Char, Set<Char>> {
         val map = HashMap<Char, MutableSet<Char>>()
@@ -262,12 +270,15 @@ object SuggestionEngine {
     private val RU_NEIGHBORS = buildNeighbors(RU_ROWS)
     private val EN_NEIGHBORS = buildNeighbors(EN_ROWS)
     private val DE_NEIGHBORS = buildNeighbors(DE_ROWS)
+    private val FA_NEIGHBORS = buildNeighbors(FA_ROWS)
 
     private val RU_CONFUSABLE = setOf("еи", "ие", "ао", "оа", "ея", "яе", "ьъ", "ъь")
+    private val FA_CONFUSABLE = buildConfusable(listOf("سصث", "زذضظ", "تط", "هح", "قغ", "اآ", "یئ", "وؤ"))
     private val DE_CONFUSABLE = setOf("äa", "aä", "öo", "oö", "üu", "uü", "ßs", "sß", "ei", "ie")
     private const val EN_VOWELS = "aeiou"
     private const val DE_VOWELS = "aeiouäöü"
 
+    private val FA_ALPHABET = "آابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهیءئؤ".toCharArray()
     private val RU_ALPHABET = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя".toCharArray()
     private val EN_ALPHABET = "abcdefghijklmnopqrstuvwxyz".toCharArray()
     private val DE_ALPHABET = "abcdefghijklmnopqrstuvwxyzäöüß".toCharArray()
@@ -276,45 +287,51 @@ object SuggestionEngine {
     private val RU_COMMON = listOf("привет", "да", "нет", "спасибо", "как", "хорошо", "я", "что")
     private val EN_COMMON = listOf("hi", "yes", "no", "thanks", "how", "okay", "i", "the")
     private val DE_COMMON = listOf("hallo", "ja", "nein", "danke", "wie", "gut", "ich", "das")
+    private val FA_COMMON = listOf("سلام", "بله", "نه", "ممنون", "چطوری", "خوبم", "من", "که")
 
-    val SUPPORTED_LANGUAGES = setOf("en", "ru", "de")
+val SUPPORTED_LANGUAGES = setOf("en", "ru", "de", "fa")
 
     private fun alphabetOf(code: String) = when (code) {
         "ru" -> RU_ALPHABET
         "de" -> DE_ALPHABET
+        "fa" -> FA_ALPHABET
         else -> EN_ALPHABET
     }
 
     private fun neighborsOf(code: String) = when (code) {
         "ru" -> RU_NEIGHBORS
         "de" -> DE_NEIGHBORS
+        "fa" -> FA_NEIGHBORS
         else -> EN_NEIGHBORS
     }
 
     private fun commonOf(code: String) = when (code) {
         "ru" -> RU_COMMON
         "de" -> DE_COMMON
+        "fa" -> FA_COMMON
         else -> EN_COMMON
     }
 
     private fun confusableOf(code: String) = when (code) {
         "ru" -> RU_CONFUSABLE
         "de" -> DE_CONFUSABLE
+        "fa" -> FA_CONFUSABLE
         else -> emptySet()
     }
 
     private fun vowelsOf(code: String) = when (code) {
-        "ru" -> ""
+        "ru", "fa" -> ""
         "de" -> DE_VOWELS
         else -> EN_VOWELS
     }
 
-    private fun isLatin(code: String) = code != "ru"
+private fun isLatin(code: String) = code != "ru" && code != "fa"
 
     private fun codeFor(firstChar: Char?, active: String): String = when {
         firstChar == null -> active
         firstChar in 'а'..'я' || firstChar in 'А'..'Я' || firstChar == 'ё' || firstChar == 'Ё' -> "ru"
         firstChar in "äöüßÄÖÜ" -> "de"
+        firstChar in '\u0600'..'\u06FF' -> "fa"
         firstChar in 'a'..'z' || firstChar in 'A'..'Z' -> if (isLatin(active)) active else "en"
         else -> active
     }
@@ -402,23 +419,12 @@ object SuggestionEngine {
 
     private val userWords = HashMap<String, Int>()
     private val userBigrams = HashMap<String, Int>()
+    private val sessionWords = HashMap<String, Int>()
+    private val sessionBigrams = HashMap<String, Int>()
     private var wordsDirty = false
     private var bigramsDirty = false
 
-    init {
-        CachePurge.register { clearMemory() }
-    }
-
     private var storeGeneration = 0
-
-    @Synchronized private fun clearMemory() {
-        storeGeneration++
-        userWords.clear()
-        userBigrams.clear()
-        sessionSkip.clear()
-        wordsDirty = false
-        bigramsDirty = false
-    }
 
     @Synchronized private fun loadPersonal() {
         runCatching {
@@ -446,7 +452,7 @@ object SuggestionEngine {
         if (bigrams != null && SecureStore.read(STORE_BIGRAMS) == null) {
             SecureStore.write(STORE_BIGRAMS, bigrams.toByteArray(Charsets.UTF_8))
         }
-        prefs.edit().remove(PREF_WORDS).remove(PREF_BIGRAMS).apply()
+        prefs.edit().remove(PREF_WORDS).remove(PREF_BIGRAMS).commit()
     }
 
     private val writer = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
@@ -478,6 +484,10 @@ object SuggestionEngine {
             payload = serializeCounts(counts)
         }
         val data = payload ?: return
+        if (synchronized(this) { generation != storeGeneration }) {
+            data.fill(0)
+            return
+        }
         val ok = runCatching { SecureStore.write(name, data); true }.getOrDefault(false)
         data.fill(0)
         synchronized(this) {
@@ -495,13 +505,43 @@ object SuggestionEngine {
         storeGeneration++
         userWords.clear()
         userBigrams.clear()
+        sessionWords.clear()
+        sessionBigrams.clear()
+        sessionSkip.clear()
         wordsDirty = false
         bigramsDirty = false
         runCatching {
             SecureStore.delete(STORE_WORDS)
             SecureStore.delete(STORE_BIGRAMS)
-            SecureStore.prefs().edit().remove(PREF_WORDS).remove(PREF_BIGRAMS).apply()
+            SecureStore.prefs().edit().remove(PREF_WORDS).remove(PREF_BIGRAMS).commit()
         }
+    }
+
+    @Synchronized internal fun learnedForTest(word: String): Int = userWords[word] ?: 0
+
+    @Synchronized internal fun learnedBigramForTest(key: String): Int = userBigrams[key] ?: 0
+
+    @Synchronized fun beginTypingSession() {
+        sessionWords.clear()
+        sessionBigrams.clear()
+        sessionSkip.clear()
+    }
+
+    @Synchronized fun forgetTypingSession() {
+        if (sessionWords.isEmpty() && sessionBigrams.isEmpty()) return
+        for ((word, count) in sessionWords) {
+            val left = (userWords[word] ?: 0) - count
+            if (left > 0) userWords[word] = left else userWords.remove(word)
+        }
+        for ((key, count) in sessionBigrams) {
+            val left = (userBigrams[key] ?: 0) - count
+            if (left > 0) userBigrams[key] = left else userBigrams.remove(key)
+        }
+        sessionWords.clear()
+        sessionBigrams.clear()
+        sessionSkip.clear()
+        wordsDirty = true
+        bigramsDirty = true
     }
 
     private fun decay(map: HashMap<String, Int>) {
@@ -517,10 +557,12 @@ object SuggestionEngine {
         val word = normalize(rawWord) ?: return
         if (word.length < 2) return
         userWords[word] = (userWords[word] ?: 0) + 1
+        sessionWords[word] = (sessionWords[word] ?: 0) + 1
         if (userWords.size > MAX_WORDS) decay(userWords)
         val prev = rawPrevious?.let { normalize(it) }
         val key = if (prev != null) "$prev $word" else "$START_TOKEN $word"
         userBigrams[key] = (userBigrams[key] ?: 0) + 1
+        sessionBigrams[key] = (sessionBigrams[key] ?: 0) + 1
         if (userBigrams.size > MAX_BIGRAMS) decay(userBigrams)
         wordsDirty = true
         bigramsDirty = true
@@ -536,6 +578,7 @@ object SuggestionEngine {
         val word = normalize(rawWord) ?: return
         if (word.length < 2) return
         userWords[word] = (userWords[word] ?: 0) + 2
+        sessionWords[word] = (sessionWords[word] ?: 0) + 2
         wordsDirty = true
     }
 
@@ -1064,6 +1107,7 @@ object SuggestionEngine {
         val c = w.firstOrNull { it.isLetter() } ?: return true
         if (c in 'а'..'я' || c in 'А'..'Я' || c == 'ё' || c == 'Ё') return language == "ru"
         if (c in 'a'..'z' || c in 'A'..'Z' || c in "äöüßÄÖÜ") return isLatin(language)
+        if (c in '\u0600'..'\u06FF') return language == "fa"
         return true
     }
 

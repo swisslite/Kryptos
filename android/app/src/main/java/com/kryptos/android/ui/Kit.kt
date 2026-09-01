@@ -34,6 +34,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.material.icons.filled.Warning
@@ -66,6 +67,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -74,6 +76,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -130,7 +133,7 @@ fun KScreen(
             ) {
                 Icon(
                     Icons.Default.ArrowBackIosNew, null,
-                    Modifier.size(15.dp), tint = K.accent,
+                    Modifier.size(15.dp).mirrorForRtl(), tint = K.accent,
                 )
                 Spacer(Modifier.width(3.dp))
                 Text(
@@ -179,7 +182,7 @@ fun KLazyScreen(
                     ) {
                         Icon(
                             Icons.Default.ArrowBackIosNew, null,
-                            Modifier.size(15.dp), tint = K.accent,
+                            Modifier.size(15.dp).mirrorForRtl(), tint = K.accent,
                         )
                         Spacer(Modifier.width(3.dp))
                         Text(
@@ -464,6 +467,7 @@ fun GlassIconButton(
     tint: Color = K.accent,
     filled: Boolean = false,
     enabled: Boolean = true,
+    mirrored: Boolean = false,
     onClick: () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -493,9 +497,17 @@ fun GlassIconButton(
             .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription, Modifier.size(size * 0.45f), tint = if (filled) Color.White else tint)
+        Icon(
+            icon, contentDescription,
+            Modifier.size(size * 0.45f).mirrorForRtl(mirrored),
+            tint = if (filled) Color.White else tint,
+        )
     }
 }
+
+@Composable
+fun Modifier.mirrorForRtl(enabled: Boolean = true): Modifier =
+    if (enabled && LocalLayoutDirection.current == LayoutDirection.Rtl) graphicsLayer { scaleX = -1f } else this
 
 enum class BannerKind { Error, Success, Warning }
 
@@ -635,6 +647,7 @@ fun MenuRow(
     options: List<String>,
     selected: Int,
     onPick: (Int) -> Unit,
+    optionEnabled: (Int) -> Boolean = { true },
 ) {
     var open by remember { mutableStateOf(false) }
     Row(
@@ -650,17 +663,29 @@ fun MenuRow(
         Text(title, fontSize = 15.sp, color = K.textPrimary, modifier = Modifier.weight(1f))
         Box {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(options.getOrNull(selected) ?: "", fontSize = 14.sp, color = K.textSecondary)
+                Text(
+                    options.getOrNull(selected) ?: "",
+                    fontSize = 14.sp,
+                    color = K.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Spacer(Modifier.width(2.dp))
                 Icon(Icons.Default.UnfoldMore, null, Modifier.size(16.dp), tint = K.textSecondary)
             }
             DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
                 options.forEachIndexed { i, label ->
+                    val enabled = optionEnabled(i)
                     DropdownMenuItem(
+                        enabled = enabled,
                         text = {
                             Text(
                                 (if (i == selected) "✓ " else "") + label,
-                                color = if (i == selected) K.accent else K.textPrimary,
+                                color = when {
+                                    !enabled -> K.textSecondary.copy(alpha = 0.5f)
+                                    i == selected -> K.accent
+                                    else -> K.textPrimary
+                                },
                             )
                         },
                         onClick = { open = false; onPick(i) },
@@ -719,6 +744,28 @@ fun PromptDialog(
             )
         },
     )
+}
+
+@Composable
+fun ShareButton(text: String, plaintext: Boolean, modifier: Modifier = Modifier) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var confirm by remember { mutableStateOf(false) }
+    PrimaryButton(
+        stringResource(com.kryptos.android.R.string.share),
+        modifier,
+        icon = Icons.Default.Share,
+    ) {
+        if (plaintext) confirm = true else shareText(context, text)
+    }
+    if (confirm) {
+        ConfirmDialog(
+            title = stringResource(com.kryptos.android.R.string.share_plain_title),
+            text = stringResource(com.kryptos.android.R.string.share_plain_text),
+            confirmLabel = stringResource(com.kryptos.android.R.string.share),
+            onConfirm = { shareText(context, text) },
+            onDismiss = { confirm = false },
+        )
+    }
 }
 
 @Composable

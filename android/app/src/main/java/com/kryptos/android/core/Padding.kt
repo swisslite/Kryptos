@@ -5,14 +5,20 @@ object Padding {
     private const val CAP = 1 shl 20
 
     fun target(n: Int): Int {
+        if (n < 0) throw CipherException(CipherException.Kind.INVALID_INPUT)
         if (n <= FLOOR) return FLOOR
-        if (n > CAP) return ((n + CAP - 1) / CAP) * CAP
+        if (n > CAP) {
+            val total = ((n.toLong() + CAP - 1) / CAP) * CAP
+            if (total > Int.MAX_VALUE) throw CipherException(CipherException.Kind.INVALID_INPUT)
+            return total.toInt()
+        }
         var p = FLOOR
         while (p < n) p = p shl 1
         return p
     }
 
     fun frame(content: ByteArray): ByteArray {
+        if (content.size > Int.MAX_VALUE - 4) throw CipherException(CipherException.Kind.INVALID_INPUT)
         val total = target(4 + content.size)
         val padLen = total - 4 - content.size
         val out = ByteArray(total)

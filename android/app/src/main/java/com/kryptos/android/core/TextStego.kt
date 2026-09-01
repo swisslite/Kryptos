@@ -4,7 +4,7 @@ import java.text.Normalizer
 import java.util.Locale
 
 enum class StegoLanguage {
-    ENGLISH, RUSSIAN, GERMAN, CHINESE;
+    ENGLISH, RUSSIAN, GERMAN, CHINESE, PERSIAN;
 
     val words: List<String>
         get() = when (this) {
@@ -12,9 +12,30 @@ enum class StegoLanguage {
             RUSSIAN -> Wordlists.russian
             GERMAN -> Wordlists.german
             CHINESE -> Wordlists.chinese
+            PERSIAN -> Wordlists.persian
         }
 
     val isHan: Boolean get() = this == CHINESE
+
+    val needsWideResync: Boolean get() = this == CHINESE || this == PERSIAN
+
+    val comma: String
+        get() = when (this) {
+            CHINESE -> "\uFF0C"
+            PERSIAN -> "\u060C"
+            else -> ","
+        }
+
+    val question: String
+        get() = when (this) {
+            CHINESE -> "\uFF1F"
+            PERSIAN -> "\u061F"
+            else -> "?"
+        }
+
+    val bang: String get() = if (isHan) "\uFF01" else "!"
+
+    val stop: String get() = if (isHan) "\u3002" else "."
 
     internal val indexMap: Map<String, Int>
         get() = when (this) {
@@ -22,6 +43,7 @@ enum class StegoLanguage {
             RUSSIAN -> Wordlists.russianIndex
             GERMAN -> Wordlists.germanIndex
             CHINESE -> Wordlists.chineseIndex
+            PERSIAN -> Wordlists.persianIndex
         }
 
     companion object {
@@ -30,6 +52,7 @@ enum class StegoLanguage {
                 "ru" -> RUSSIAN
                 "de" -> GERMAN
                 "zh" -> CHINESE
+                "fa" -> PERSIAN
                 else -> ENGLISH
             }
     }
@@ -40,10 +63,12 @@ internal object Wordlists {
     val russian: List<String> by lazy { load("russian") }
     val german: List<String> by lazy { load("german") }
     val chinese: List<String> by lazy { load("chinese") }
+    val persian: List<String> by lazy { load("persian") }
     val englishIndex: Map<String, Int> by lazy { index(english) }
     val russianIndex: Map<String, Int> by lazy { index(russian) }
     val germanIndex: Map<String, Int> by lazy { index(german) }
     val chineseIndex: Map<String, Int> by lazy { index(chinese) }
+    val persianIndex: Map<String, Int> by lazy { index(persian) }
 
     private fun load(name: String): List<String> {
         val stream = Wordlists::class.java.classLoader!!.getResourceAsStream("wordlists/$name.txt")
@@ -61,7 +86,7 @@ object TextStego {
     private const val BITS_PER_WORD = 12
     private const val WORD_MASK = 0xFFF
     private const val RESYNC_STARTS = 3
-    private const val HAN_RESYNC_STARTS = 8
+    private const val WIDE_RESYNC_STARTS = 8
     private const val MAGIC = 0xC7
 
     const val MAX_PAYLOAD_BYTES = 0x7FFF
@@ -131,7 +156,7 @@ object TextStego {
     private fun decode(tokens: List<String>, language: StegoLanguage): ByteArray? {
         val index = language.indexMap
         val kept = tokens.filter { index.containsKey(it) }
-        val starts = minOf(if (language.isHan) HAN_RESYNC_STARTS else RESYNC_STARTS, kept.size)
+        val starts = minOf(if (language.needsWideResync) WIDE_RESYNC_STARTS else RESYNC_STARTS, kept.size)
         for (start in 0 until starts) {
             decodeFrom(kept, start, index)?.let { return it }
         }
@@ -210,12 +235,12 @@ object TextStego {
             for ((k, word) in chunk.withIndex()) {
                 if (k > 0 && !han) sb.append(' ')
                 sb.append(word)
-                if (k < chunk.size - 1 && next() % 6 == 0) sb.append(if (han) '\uFF0C' else ',')
+                if (k < chunk.size - 1 && next() % 6 == 0) sb.append(language.comma)
             }
             val mark = when (next() % 10) {
-                8 -> if (han) "\uFF1F" else "?"
-                9 -> if (han) "\uFF01" else "!"
-                else -> if (han) "\u3002" else "."
+                8 -> language.question
+                9 -> language.bang
+                else -> language.stop
             }
             val body = if (han) sb.toString() else sb.toString().replaceFirstChar { it.uppercase() }
             sentences.add(body + mark)

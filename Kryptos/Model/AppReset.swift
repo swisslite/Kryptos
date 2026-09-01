@@ -16,6 +16,7 @@ enum AppReset {
         Keychain.eraseAll()
         if let bundle = Bundle.main.bundleIdentifier {
             UserDefaults.standard.removePersistentDomain(forName: bundle)
+            UserDefaults.standard.synchronize()
         }
         SecItemDelete([kSecClass as String: kSecClassGenericPassword,
                        kSecAttrService as String: KeychainProbe.probeAccount] as CFDictionary)
@@ -23,6 +24,7 @@ enum AppReset {
         sweepFiles()
         ConfigCaches.invalidateAll()
         OwnCipherMarker.forget()
+        WipeMarker.bump()
     }
 
     private static func sweepFiles() {
@@ -44,6 +46,11 @@ enum AppReset {
         if let caches = try? fm.url(for: .cachesDirectory, in: .userDomainMask,
                                     appropriateFor: nil, create: false) {
             emptied.append(caches)
+        }
+        if let library = try? fm.url(for: .libraryDirectory, in: .userDomainMask,
+                                     appropriateFor: nil, create: false) {
+            emptied.append(library.appendingPathComponent("SplashBoard"))
+            emptied.append(library.appendingPathComponent("Saved Application State"))
         }
         for dir in emptied {
             guard let files = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else { continue }

@@ -92,18 +92,59 @@ private struct PrivacySettingsView: View {
     @EnvironmentObject private var settings: AppSettings
     @State private var panicSet = false
     @State private var appCodeSet = false
+    @State private var codesLoaded = false
     private let lockAvailable = LockGate.canAuthenticate
 
     var body: some View {
         List {
             Section {
-                Toggle("Lock with Face ID", isOn: $settings.appLock).disabled(!lockAvailable)
+                Toggle("App lock", isOn: Binding(
+                    get: { settings.appLock },
+                    set: { setLock(enabled: $0) }
+                ))
+                .disabled(!lockReady)
+                if settings.appLock {
+                    Menu {
+                        Button { setLock(codeOnly: false) } label: {
+                            if settings.appLockCodeOnly {
+                                Text("Face ID or passcode")
+                            } else {
+                                Label("Face ID or passcode", systemImage: "checkmark")
+                            }
+                        }
+                        .disabled(!lockAvailable)
+                        Button { setLock(codeOnly: true) } label: {
+                            if settings.appLockCodeOnly {
+                                Label("App code", systemImage: "checkmark")
+                            } else {
+                                Text("App code")
+                            }
+                        }
+                        .disabled(!appCodeSet)
+                    } label: {
+                        HStack {
+                            Text("Unlock with").foregroundStyle(Color.primary)
+                            Spacer()
+                            Text(settings.appLockCodeOnly ? "App code" : "Face ID or passcode")
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
                 Toggle("Hide content when switching apps", isOn: $settings.privacyShield)
             } header: {
                 Text("Security")
             } footer: {
-                if !lockAvailable {
-                    Text("To use the lock, set a passcode on your device.")
+                if !lockReady {
+                    Text("To use the lock, set a passcode on your device or create an app passcode.")
+                } else if settings.appLock, !lockAvailable {
+                    Text("Face ID and the device passcode are unavailable: this device has no passcode set.")
+                } else if settings.appLock, !appCodeSet {
+                    Text("To unlock with a code only, create an app passcode below.")
                 }
             }
 
@@ -111,12 +152,14 @@ private struct PrivacySettingsView: View {
                 NavigationLink {
                     LockCodeView(code: LockCodes.app, other: LockCodes.panic, isSet: $appCodeSet,
                                  title: "App passcode",
-                                 explanation: "An ordinary passcode that opens Kryptos when you do not want to use biometrics. Optional.",
+                                 explanation: "Opens Kryptos on the lock screen. It can be the only way in, without Face ID.",
                                  newLabel: "New passcode", repeatLabel: "Repeat passcode",
                                  saveLabel: "Save passcode", setFooter: "At least 4 characters. It must be different from the panic password.",
                                  removeLabel: "Remove app passcode",
-                                 removeConfirm: "Remove the app passcode? You will still be able to unlock with biometrics or your device passcode.",
-                                 savedMessage: "App passcode saved.", removedMessage: "App passcode removed.")
+                                 removeConfirm: "Remove the app passcode? Unlocking goes back to Face ID or your device passcode; without them the app lock turns off.",
+                                 savedMessage: "App passcode saved.", removedMessage: "App passcode removed.",
+                                 appCodeSet: appCodeSet,
+                                 setHeader: "Set a passcode", changeHeader: "Change the passcode")
                 } label: {
                     HStack {
                         Text("App passcode")
@@ -132,7 +175,9 @@ private struct PrivacySettingsView: View {
                                  saveLabel: "Save password", setFooter: "At least 4 characters. Pick something you would never type by accident.",
                                  removeLabel: "Remove panic password",
                                  removeConfirm: "Remove the panic password? Typing it will no longer erase anything.",
-                                 savedMessage: "Panic password saved.", removedMessage: "Panic password removed.")
+                                 savedMessage: "Panic password saved.", removedMessage: "Panic password removed.",
+                                 appCodeSet: appCodeSet,
+                                 setHeader: "Set a password", changeHeader: "Change the password")
                 } label: {
                     HStack {
                         Text("Panic password")
@@ -158,7 +203,7 @@ private struct PrivacySettingsView: View {
             } header: {
                 Text("Clipboard")
             } footer: {
-                Text("“This device only” keeps copied text off your other Apple devices. Auto-clear erases it after the chosen time.")
+                Text("“This device only” keeps copied text off your other Apple devices, except your public key. Auto-clear erases it after the chosen time.")
             }
 
             Section {
@@ -172,9 +217,35 @@ private struct PrivacySettingsView: View {
         .navigationTitle("Privacy")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            panicSet = LockCodes.panic.isSet
-            appCodeSet = LockCodes.app.isSet
+            let state = await LockCodes.stateOffMain()
+            guard state.readable else { return }
+            panicSet = state.panic == .set
+            appCodeSet = state.app == .set
+            codesLoaded = true
+            syncLockMethod()
         }
+        .onChange(of: appCodeSet) { _, _ in syncLockMethod() }
+    }
+
+    private var lockReady: Bool { lockAvailable || appCodeSet }
+
+    private func apply(_ state: LockGate.LockState) {
+        settings.applyLock(
+            LockGate.resolveLockState(state, canSystem: lockAvailable, appCodeSet: appCodeSet)
+        )
+    }
+
+    private func setLock(enabled: Bool) {
+        apply(LockGate.LockState(enabled: enabled, codeOnly: settings.appLockCodeOnly))
+    }
+
+    private func setLock(codeOnly: Bool) {
+        apply(LockGate.LockState(enabled: settings.appLock, codeOnly: codeOnly))
+    }
+
+    private func syncLockMethod() {
+        guard codesLoaded else { return }
+        apply(LockGate.LockState(enabled: settings.appLock, codeOnly: settings.appLockCodeOnly))
     }
 }
 
@@ -192,6 +263,9 @@ private struct LockCodeView: View {
     let removeConfirm: LocalizedStringKey
     let savedMessage: LocalizedStringKey
     let removedMessage: LocalizedStringKey
+    let appCodeSet: Bool
+    let setHeader: LocalizedStringKey
+    let changeHeader: LocalizedStringKey
 
     @EnvironmentObject private var settings: AppSettings
     @State private var entry = ""
@@ -214,18 +288,16 @@ private struct LockCodeView: View {
                 Text(explanation)
             }
 
-            if !settings.appLock || !lockAvailable {
-                Section {
-                    if lockAvailable, !settings.appLock {
-                        Button("Turn on app lock") { settings.appLock = true }
-                    }
-                } header: {
-                    if !lockAvailable { Text("Not active right now") }
-                } footer: {
-                    Text(lockAvailable
-                         ? "Turn on the app lock so the codes can be used."
-                         : "This device has no passcode, so Kryptos never shows its lock screen.")
-                }
+            Section {
+                Toggle("App lock", isOn: Binding(
+                    get: { settings.appLock },
+                    set: { setLock($0) }
+                ))
+                .disabled(!lockReady)
+            } footer: {
+                Text(lockReady
+                     ? "Codes are typed on the lock screen. Without the app lock it never appears."
+                     : "To use the lock, set a passcode on your device or create an app passcode.")
             }
 
             Section {
@@ -241,7 +313,7 @@ private struct LockCodeView: View {
                         .foregroundStyle(failed ? KTheme.danger : .secondary)
                 }
             } header: {
-                Text("Set a password")
+                Text(isSet ? changeHeader : setHeader)
             } footer: {
                 Text(setFooter)
             }
@@ -258,6 +330,17 @@ private struct LockCodeView: View {
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var lockReady: Bool { lockAvailable || appCodeSet }
+
+    private func setLock(_ enabled: Bool) {
+        settings.applyLock(
+            LockGate.resolveLockState(
+                LockGate.LockState(enabled: enabled, codeOnly: settings.appLockCodeOnly),
+                canSystem: lockAvailable, appCodeSet: appCodeSet
+            )
+        )
     }
 
     private func save() {
@@ -402,13 +485,11 @@ private struct KeyboardSettingsView: View {
                 Toggle("Word suggestions", isOn: $settings.keyboardSuggestions)
                 Toggle("Auto-correction", isOn: $settings.keyboardAutocorrect)
                 Toggle("Emoji key", isOn: $settings.keyboardEmoji)
-                if settings.keyboardSuggestions || settings.keyboardAutocorrect {
-                    Button("Forget learned words", role: .destructive) { confirmForget = true }
-                        .confirmationDialog("Forget the words the keyboard has learned from your typing? The built-in dictionaries stay.",
-                                            isPresented: $confirmForget, titleVisibility: .visible) {
-                            Button("Forget learned words", role: .destructive) { SharedStore.delete("kbdict") }
-                        }
-                }
+                Button("Forget learned words", role: .destructive) { confirmForget = true }
+                    .confirmationDialog("Forget the words the keyboard has learned from your typing? The built-in dictionaries stay.",
+                                        isPresented: $confirmForget, titleVisibility: .visible) {
+                        Button("Forget learned words", role: .destructive) { TypingMemory.forgetAll() }
+                    }
             } header: {
                 Text("Typing")
             } footer: {
@@ -433,6 +514,8 @@ private struct KeyboardSettingsView: View {
                     }
                 }
                 .pickerStyle(.menu)
+            } header: {
+                Text("Message field")
             } footer: {
                 Text("The field lets you type outside the messenger, so it cannot keep a draft. The button toggles that field from the keyboard.")
             }
@@ -453,7 +536,8 @@ private let keyboardLanguageCatalog: [(code: String, title: String.LocalizationV
     ("en", "English"),
     ("ru", "Russian"),
     ("de", "German"),
-    ("zh", "Chinese")
+    ("zh", "Chinese"),
+    ("fa", "Persian")
 ]
 
 private struct KeyboardLanguagesView: View {
@@ -737,7 +821,7 @@ private struct AboutView: View {
 
             Section {
                 infoRow("checkmark.shield.fill", "Signal Protocol — official libsignal",
-                        "The very library the Signal app uses: post-quantum key agreement (PQXDH with Kyber) and the Double Ratchet — a fresh key for every message.")
+                        "The very library the Signal app uses: post-quantum key agreement (PQXDH with Kyber) and the Triple Ratchet — a fresh key for every message.")
                 infoRow("envelope.fill", "OpenPGP — ObjectivePGP",
                         "Classic asymmetric encryption with signatures, compatible with other PGP tools.")
                 infoRow("key.fill", "Password mode — Argon2id",
@@ -750,7 +834,7 @@ private struct AboutView: View {
 
             Section {
                 Link(destination: URL(string: "https://github.com/swisslite/Kryptos")!) {
-                    LinkRow(icon: "chevron.left.forwardslash.chevron.right", title: "GitHub", value: "swisslite/Kryptos")
+                    LinkRow(icon: "BrandGitHub", title: "GitHub", value: "swisslite/Kryptos", asset: true)
                 }
             } header: {
                 Text("Source code")
@@ -813,20 +897,30 @@ private struct LinkRow: View {
     let icon: String
     let title: LocalizedStringKey
     let value: String
+    var asset = false
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold)).foregroundStyle(KTheme.accent)
+            symbol
+                .foregroundStyle(KTheme.accent)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).font(.caption).foregroundStyle(.secondary)
                 Text(value).font(.body).foregroundStyle(.primary)
             }
             Spacer(minLength: 0)
-            Image(systemName: "arrow.up.right").font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
+            Image(systemName: "arrow.up.forward").font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
         }
         .padding(.vertical, 2)
+    }
+
+    @ViewBuilder
+    private var symbol: some View {
+        if asset {
+            Image(icon).renderingMode(.template).resizable().scaledToFit().frame(width: 21, height: 21)
+        } else {
+            Image(systemName: icon).font(.system(size: 17, weight: .semibold))
+        }
     }
 }
 
@@ -841,14 +935,13 @@ private struct DeveloperView: View {
                     LinkRow(icon: "envelope.fill", title: "Email", value: "datakeepers@proton.me")
                 }
                 Link(destination: URL(string: "https://t.me/datakeeper")!) {
-                    LinkRow(icon: "paperplane.fill", title: "Telegram", value: "@datakeeper")
+                    LinkRow(icon: "BrandTelegram", title: "Telegram", value: "@datakeeper", asset: true)
                 }
                 Link(destination: URL(string: "https://t.me/KryptosApp")!) {
                     LinkRow(icon: "megaphone.fill", title: "Telegram channel", value: "@KryptosApp")
                 }
                 Link(destination: URL(string: "https://github.com/swisslite")!) {
-                    LinkRow(icon: "chevron.left.forwardslash.chevron.right",
-                            title: "GitHub profile", value: "@swisslite")
+                    LinkRow(icon: "BrandGitHub", title: "GitHub profile", value: "@swisslite", asset: true)
                 }
             } footer: {
                 Text("Questions, ideas or a bug? I'd be glad to hear from you.")

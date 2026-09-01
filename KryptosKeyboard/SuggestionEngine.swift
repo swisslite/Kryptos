@@ -253,6 +253,17 @@ final class SuggestionEngine: @unchecked Sendable {
     private static let ruRows = ["йцукенгшщзх", "фывапролджэ", "ячсмитьбю"]
     private static let enRows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"]
     private static let deRows = ["qwertzuiopü", "asdfghjklöä", "yxcvbnmß"]
+    private static let faRows = ["ضصثقفغعهخحجچ", "شسیبلاتنمکگ", "ظطژزرذدپوآ"]
+
+    private static func buildConfusable(_ groups: [String]) -> Set<String> {
+        var out: Set<String> = []
+        for group in groups {
+            for a in group {
+                for b in group where a != b { out.insert("\(a)\(b)") }
+            }
+        }
+        return out
+    }
 
     private static func buildNeighbors(_ rows: [String]) -> [Character: Set<Character>] {
         let grid = rows.map(Array.init)
@@ -276,25 +287,30 @@ final class SuggestionEngine: @unchecked Sendable {
     private static let ruNeighbors = buildNeighbors(ruRows)
     private static let enNeighbors = buildNeighbors(enRows)
     private static let deNeighbors = buildNeighbors(deRows)
+    private static let faNeighbors = buildNeighbors(faRows)
 
     private static let ruConfusable: Set<String> = ["еи", "ие", "ао", "оа", "ея", "яе", "ьъ", "ъь"]
     private static let deConfusable: Set<String> = ["äa", "aä", "öo", "oö", "üu", "uü", "ßs", "sß", "ei", "ie"]
+    private static let faConfusable: Set<String> = buildConfusable(["سصث", "زذضظ", "تط", "هح", "قغ", "اآ", "یئ", "وؤ"])
     private static let enVowels: Set<Character> = ["a", "e", "i", "o", "u"]
     private static let deVowels: Set<Character> = ["a", "e", "i", "o", "u", "ä", "ö", "ü"]
 
     private static let ruAlphabet = Array("абвгдеёжзийклмнопрстуфхцчшщъыьэюя")
     private static let enAlphabet = Array("abcdefghijklmnopqrstuvwxyz")
     private static let deAlphabet = Array("abcdefghijklmnopqrstuvwxyzäöüß")
+    private static let faAlphabet = Array("آابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهیءئؤ")
 
     private static let startToken = "^"
     private static let ruCommon = ["привет", "да", "нет", "спасибо", "как", "хорошо", "я", "что"]
     private static let enCommon = ["hi", "yes", "no", "thanks", "how", "okay", "i", "the"]
     private static let deCommon = ["hallo", "ja", "nein", "danke", "wie", "gut", "ich", "das"]
+    private static let faCommon = ["سلام", "بله", "نه", "ممنون", "چطوری", "خوبم", "من", "که"]
 
     private static func alphabet(_ code: String) -> [Character] {
         switch code {
         case "ru": return ruAlphabet
         case "de": return deAlphabet
+        case "fa": return faAlphabet
         default: return enAlphabet
         }
     }
@@ -303,6 +319,7 @@ final class SuggestionEngine: @unchecked Sendable {
         switch code {
         case "ru": return ruNeighbors
         case "de": return deNeighbors
+        case "fa": return faNeighbors
         default: return enNeighbors
         }
     }
@@ -311,6 +328,7 @@ final class SuggestionEngine: @unchecked Sendable {
         switch code {
         case "ru": return ruCommon
         case "de": return deCommon
+        case "fa": return faCommon
         default: return enCommon
         }
     }
@@ -319,29 +337,31 @@ final class SuggestionEngine: @unchecked Sendable {
         switch code {
         case "ru": return ruConfusable
         case "de": return deConfusable
+        case "fa": return faConfusable
         default: return []
         }
     }
 
     private static func vowels(_ code: String) -> Set<Character> {
         switch code {
-        case "ru": return []
+        case "ru", "fa": return []
         case "de": return deVowels
         default: return enVowels
         }
     }
 
-    static func isLatin(_ code: String) -> Bool { code != "ru" }
+    static func isLatin(_ code: String) -> Bool { code != "ru" && code != "fa" }
 
     private let lock = NSLock()
     private var dicts: [String: Dict] = [:]
     private var bigramTables: [String: Bigrams] = [:]
     private var lexicons: [String: Lexicon] = [:]
     private var loadStarted = false
+    private var wipeGeneration = 0
     private var claimedLanguages: Set<String> = []
     private var loadedLanguages: Set<String> = []
 
-    static let supportedLanguages: Set<String> = ["en", "ru", "de"]
+    static let supportedLanguages: Set<String> = ["en", "ru", "de", "fa"]
 
     private static func buildLexicon(_ dict: Dict, _ vocab: Data) -> Lexicon {
         Lexicon.build(
@@ -358,17 +378,35 @@ final class SuggestionEngine: @unchecked Sendable {
         claimedLanguages.formUnion(toLoad)
         let needPersonal = typingAids && !loadStarted
         if needPersonal { loadStarted = true }
+        let generation = wipeGeneration
         lock.unlock()
         guard !toLoad.isEmpty || needPersonal else { return }
         DispatchQueue.global(qos: .utility).async { [self] in
             func read(_ name: String) -> [String] {
-                guard let url = Bundle.main.url(forResource: name, withExtension: "txt"),
-                      let text = try? String(contentsOf: url, encoding: .utf8) else { return [] }
-                return text.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
+                let data = readData(name)
+                guard !data.isEmpty else { return [] }
+                var lines: [String] = []
+                lines.reserveCapacity(data.count / 12)
+                data.withUnsafeBytes { raw in
+                    guard let base = raw.bindMemory(to: UInt8.self).baseAddress else { return }
+                    var start = 0
+                    for i in 0 ..< raw.count where base[i] == 0x0A {
+                        if i > start {
+                            lines.append(String(decoding: UnsafeBufferPointer(start: base + start, count: i - start),
+                                                as: UTF8.self))
+                        }
+                        start = i + 1
+                    }
+                    if start < raw.count {
+                        lines.append(String(decoding: UnsafeBufferPointer(start: base + start, count: raw.count - start),
+                                            as: UTF8.self))
+                    }
+                }
+                return lines
             }
             func readData(_ name: String) -> Data {
                 guard let url = Bundle.main.url(forResource: name, withExtension: "txt"),
-                      let d = try? Data(contentsOf: url) else { return Data() }
+                      let d = try? Data(contentsOf: url, options: .mappedIfSafe) else { return Data() }
                 return d
             }
             func load(_ code: String) -> (Dict, Bigrams, Lexicon) {
@@ -382,7 +420,7 @@ final class SuggestionEngine: @unchecked Sendable {
                 let stored = SharedStore.read(Self.storeKey)
                 let personal = Self.decodePersonal(stored)
                 lock.lock()
-                if !loadedFromStore, words.isEmpty, bigrams.isEmpty {
+                if wipeGeneration == generation, !loadedFromStore, words.isEmpty, bigrams.isEmpty {
                     words = personal.words
                     bigrams = personal.bigrams
                     loadedFromStore = stored != nil
@@ -402,7 +440,7 @@ final class SuggestionEngine: @unchecked Sendable {
         }
     }
 
-    static let storeKey = "kbdict"
+    static let storeKey = TypingMemory.wordsKey
     private static let maxWords = 800
     private static let maxBigrams = 1600
 
@@ -413,6 +451,8 @@ final class SuggestionEngine: @unchecked Sendable {
 
     private var words: [String: Int] = [:]
     private var bigrams: [String: Int] = [:]
+    private var sessionWords: [String: Int] = [:]
+    private var sessionBigrams: [String: Int] = [:]
     private var dirty = false
     private var loadedFromStore = false
 
@@ -421,13 +461,60 @@ final class SuggestionEngine: @unchecked Sendable {
         return p
     }
 
+    func forgetTypingSession() {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !sessionWords.isEmpty || !sessionBigrams.isEmpty else { return }
+        for (word, count) in sessionWords {
+            let left = (words[word] ?? 0) - count
+            if left > 0 { words[word] = left } else { words[word] = nil }
+        }
+        for (key, count) in sessionBigrams {
+            let left = (bigrams[key] ?? 0) - count
+            if left > 0 { bigrams[key] = left } else { bigrams[key] = nil }
+        }
+        sessionWords.removeAll()
+        sessionBigrams.removeAll()
+        sessionSkip.removeAll()
+        dirty = true
+    }
+
+    func dropIfStoreGone() {
+        lock.lock()
+        let hadCopy = loadedFromStore
+        lock.unlock()
+        guard hadCopy, SharedStore.read(Self.storeKey) == nil else { return }
+        dropEverything()
+    }
+
+    func dropEverything() {
+        lock.lock()
+        defer { lock.unlock() }
+        wipeGeneration &+= 1
+        words.removeAll()
+        bigrams.removeAll()
+        sessionWords.removeAll()
+        sessionBigrams.removeAll()
+        sessionSkip.removeAll()
+        loadedFromStore = false
+        dirty = false
+    }
+
     func persist() {
         lock.lock()
         defer { lock.unlock() }
         guard dirty else { return }
+        guard SharedStore.isShared else {
+            SharedStore.delete(Self.storeKey)
+            loadedFromStore = false
+            dirty = false
+            return
+        }
         if loadedFromStore, SharedStore.read(Self.storeKey) == nil {
             words = [:]
             bigrams = [:]
+            sessionWords.removeAll()
+            sessionBigrams.removeAll()
             loadedFromStore = false
             dirty = false
             return
@@ -447,12 +534,12 @@ final class SuggestionEngine: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         words[word, default: 0] += 1
+        sessionWords[word, default: 0] += 1
         if words.count > Self.maxWords { decay(&words) }
-        if let prev = rawPrevious.flatMap(Self.normalize) {
-            bigrams["\(prev) \(word)", default: 0] += 1
-        } else {
-            bigrams["\(Self.startToken) \(word)", default: 0] += 1
-        }
+        let key = rawPrevious.flatMap(Self.normalize).map { "\($0) \(word)" }
+            ?? "\(Self.startToken) \(word)"
+        bigrams[key, default: 0] += 1
+        sessionBigrams[key, default: 0] += 1
         if bigrams.count > Self.maxBigrams { decay(&bigrams) }
         dirty = true
     }
@@ -473,6 +560,7 @@ final class SuggestionEngine: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         words[word, default: 0] += 2
+        sessionWords[word, default: 0] += 2
         dirty = true
     }
 
@@ -495,10 +583,16 @@ final class SuggestionEngine: @unchecked Sendable {
         func knows(_ w: String) -> Bool { dict.contains(w) || lex?.contains(w) == true }
     }
 
+    static func isPersianLetter(_ c: Character) -> Bool {
+        guard let v = c.unicodeScalars.first?.value else { return false }
+        return v >= 0x0600 && v <= 0x06FF
+    }
+
     private static func codeFor(firstChar: Character?, active: String) -> String {
         guard let c = firstChar else { return active }
         if ("а"..."я").contains(c) || ("А"..."Я").contains(c) || c == "ё" || c == "Ё" { return "ru" }
         if "äöüßÄÖÜ".contains(c) { return "de" }
+        if isPersianLetter(c) { return "fa" }
         if ("a"..."z").contains(c) || ("A"..."Z").contains(c) { return isLatin(active) ? active : "en" }
         return active
     }
@@ -515,11 +609,8 @@ final class SuggestionEngine: @unchecked Sendable {
         return UInt16(scalar.value)
     }
 
-    private static let alphabetUnitsByCode: [String: [UInt16]] = [
-        "en": enAlphabet.map(toU16),
-        "ru": ruAlphabet.map(toU16),
-        "de": deAlphabet.map(toU16),
-    ]
+    private static let alphabetUnitsByCode: [String: [UInt16]] =
+        Dictionary(uniqueKeysWithValues: supportedLanguages.map { ($0, alphabet($0).map(toU16)) })
 
     private static func neighborsU(_ code: String) -> [UInt16: Set<UInt16>] {
         var m: [UInt16: Set<UInt16>] = [:]
@@ -535,11 +626,11 @@ final class SuggestionEngine: @unchecked Sendable {
     }
 
     private static let neighborsByCode: [String: [UInt16: Set<UInt16>]] =
-        ["en": neighborsU("en"), "ru": neighborsU("ru"), "de": neighborsU("de")]
+        Dictionary(uniqueKeysWithValues: supportedLanguages.map { ($0, neighborsU($0)) })
     private static let confusableByCode: [String: Set<UInt32>] =
-        ["en": confusableU("en"), "ru": confusableU("ru"), "de": confusableU("de")]
+        Dictionary(uniqueKeysWithValues: supportedLanguages.map { ($0, confusableU($0)) })
     private static let vowelsByCode: [String: Set<UInt16>] =
-        ["en": Set(vowels("en").map(toU16)), "ru": [], "de": Set(vowels("de").map(toU16))]
+        Dictionary(uniqueKeysWithValues: supportedLanguages.map { ($0, Set(vowels($0).map(toU16))) })
 
     private static let yeU: UInt16 = 0x0435
     private static let yoU: UInt16 = 0x0451
@@ -1114,6 +1205,7 @@ final class SuggestionEngine: @unchecked Sendable {
         guard let c = w.first(where: \.isLetter) else { return true }
         if ("а"..."я").contains(c) || ("А"..."Я").contains(c) || c == "ё" || c == "Ё" { return language == "ru" }
         if ("a"..."z").contains(c) || ("A"..."Z").contains(c) || "äöüßÄÖÜ".contains(c) { return isLatin(language) }
+        if isPersianLetter(c) { return language == "fa" }
         return true
     }
 

@@ -11,6 +11,7 @@ final class SignalService: ObservableObject {
     @Published private(set) var contacts: [Contact] = []
     @Published private(set) var messages: [String: [ChatMessage]] = [:]
     @Published private(set) var autoDelete: [String: TimeInterval] = [:]
+    @Published private(set) var pinned: Set<String> = []
     @Published private(set) var myFingerprint = ""
     @Published private(set) var mySafetyNumber = ""
     @Published private(set) var isLoaded = false
@@ -74,14 +75,24 @@ final class SignalService: ObservableObject {
     private static func defaultProfileName(_ n: Int) -> String { String(localized: "Profile \(n)") }
 
     private static func relocalizedDefaultName(_ p: Profile) -> Profile {
-        for prefix in ["Profile ", "Профиль ", "Profil ", "个人资料 "] where p.name.hasPrefix(prefix) {
-            if let n = Int(p.name.dropFirst(prefix.count)) {
+        for prefix in ["Profile ", "Профиль ", "Profil ", "个人资料 ", "نمایه "] where p.name.hasPrefix(prefix) {
+            if let n = decimalSuffix(p.name.dropFirst(prefix.count)) {
                 var q = p
                 q.name = defaultProfileName(n)
                 return q
             }
         }
         return p
+    }
+
+    private static func decimalSuffix(_ text: Substring) -> Int? {
+        guard !text.isEmpty, text.count <= 18 else { return nil }
+        var value = 0
+        for char in text {
+            guard let digit = char.wholeNumberValue, (0 ... 9).contains(digit) else { return nil }
+            value = value * 10 + digit
+        }
+        return value
     }
 
     private static func loadIndexStrict() -> ProfilesIndex? {
@@ -201,6 +212,7 @@ final class SignalService: ObservableObject {
         contacts = []
         messages = [:]
         autoDelete = [:]
+        pinned = []
         myFingerprint = ""
         mySafetyNumber = ""
         store = nil
@@ -285,10 +297,10 @@ final class SignalService: ObservableObject {
             break
         }
 
-        if keyIsNew, !SharedStore.write(StoreKey.fileKey(id), key.withUnsafeBytes { Data($0) }) {
+        if keyIsNew, !SharedStore.write(StoreKey.fileKey(id), key.withUnsafeBytes { Data($0) }, keyMaterial: true) {
             return (.unavailable, nil)
         }
-        if identityIsNew, !SharedStore.write(StoreKey.identity(id), identity.serialize()) {
+        if identityIsNew, !SharedStore.write(StoreKey.identity(id), identity.serialize(), keyMaterial: true) {
             return (.unavailable, nil)
         }
         SignalPaths.purgeLegacyMirror(id)
@@ -328,6 +340,7 @@ final class SignalService: ObservableObject {
         myFingerprint = loaded.fingerprint
         mySafetyNumber = loaded.safetyNumber
         autoDelete = loaded.meta.autoDelete ?? [:]
+        pinned = Set(loaded.meta.pinned ?? [])
         contacts = loaded.meta.contacts
         messages = loaded.meta.messages
         keyMaterialLost = false
@@ -399,6 +412,8 @@ final class SignalService: ObservableObject {
                                                retiredAt: Int64($0.retiredAt.timeIntervalSince1970 * 1000))
                 },
                 autoDelete: m.autoDelete ?? [:],
+                pinned: m.pinned,
+                usedPreKeys: m.usedPreKeys,
                 contacts: m.contacts.map {
                     KeyArchive.ArchivedContact(fingerprint: $0.fingerprint, displayName: $0.displayName)
                 },
@@ -444,13 +459,16 @@ final class SignalService: ObservableObject {
             meta.nextOneTimePreKeyId = UInt32(truncatingIfNeeded: entry.nextOneTimePreKeyId)
             meta.oneTimePreKeyIds = entry.oneTimePreKeyIds.map { UInt32(truncatingIfNeeded: $0) }
             meta.autoDelete = entry.autoDelete.isEmpty ? nil : entry.autoDelete
+            let keptPins = (entry.pinned ?? []).filter { fp in entry.contacts.contains { $0.fingerprint == fp } }
+            meta.pinned = keptPins.isEmpty ? nil : keptPins
+            meta.usedPreKeys = entry.usedPreKeys
 
             let key = SymmetricKey(size: .bits256)
             guard let json = try? JSONEncoder().encode(meta),
                   let box = try? AES.GCM.seal(json, using: key),
                   let combined = box.combined,
-                  SharedStore.write(StoreKey.fileKey(id), key.withUnsafeBytes { Data($0) }),
-                  SharedStore.write(StoreKey.identity(id), identityData),
+                  SharedStore.write(StoreKey.fileKey(id), key.withUnsafeBytes { Data($0) }, keyMaterial: true),
+                  SharedStore.write(StoreKey.identity(id), identityData, keyMaterial: true),
                   SharedStore.write(StoreKey.meta(id), combined) else { continue }
 
             let archive = PersistentSignalStore.Archive(
@@ -708,28 +726,39 @@ final class SignalService: ObservableObject {
         let ik = try IdentityKey(bytes: peer.identityKey)
         let spk = try PublicKey(peer.signedPreKey)
         let kyber = try KEMPublicKey(peer.kyberPreKey)
-        let bundle: PreKeyBundle
+        let oneTime: (id: UInt32, key: PublicKey, mark: String)?
         if let otpId = peer.oneTimePreKeyId, let otp = peer.oneTimePreKey, let otpKey = try? PublicKey(otp) {
-            bundle = try PreKeyBundle(
-                registrationId: peer.registrationId, deviceId: peer.deviceId,
-                prekeyId: otpId, prekey: otpKey,
-                signedPrekeyId: peer.signedPreKeyId, signedPrekey: spk, signedPrekeySignature: peer.signedPreKeySignature,
-                identity: ik,
-                kyberPrekeyId: peer.kyberPreKeyId, kyberPrekey: kyber, kyberPrekeySignature: peer.kyberPreKeySignature)
+            oneTime = (otpId, otpKey, PreKeyMark.of(identityKey: peer.identityKey, oneTimePreKey: otp))
         } else {
-            bundle = try PreKeyBundle(
-                registrationId: peer.registrationId, deviceId: peer.deviceId,
-                signedPrekeyId: peer.signedPreKeyId, signedPrekey: spk, signedPrekeySignature: peer.signedPreKeySignature,
-                identity: ik,
-                kyberPrekeyId: peer.kyberPreKeyId, kyberPrekey: kyber, kyberPrekeySignature: peer.kyberPreKeySignature)
+            oneTime = nil
         }
+        let spent = oneTime != nil && (meta.usedPreKeys ?? []).contains(oneTime!.mark)
 
         let addr = try ProtocolAddress(name: fp, deviceId: 1)
         let myAddr = try ProtocolAddress(name: myFingerprint, deviceId: 1)
-        try withStoreLock {
-            try withConflictRetry {
-                try store.batch {
-                    try processPreKeyBundle(bundle, for: addr, ourAddress: myAddr, sessionStore: store, identityStore: store, context: ctx)
+        if !spent || !hasUsableSession(with: fp) {
+            let bundle: PreKeyBundle
+            if let oneTime, !spent {
+                meta.rememberUsedPreKey(oneTime.mark)
+                saveMeta()
+                bundle = try PreKeyBundle(
+                    registrationId: peer.registrationId, deviceId: peer.deviceId,
+                    prekeyId: oneTime.id, prekey: oneTime.key,
+                    signedPrekeyId: peer.signedPreKeyId, signedPrekey: spk, signedPrekeySignature: peer.signedPreKeySignature,
+                    identity: ik,
+                    kyberPrekeyId: peer.kyberPreKeyId, kyberPrekey: kyber, kyberPrekeySignature: peer.kyberPreKeySignature)
+            } else {
+                bundle = try PreKeyBundle(
+                    registrationId: peer.registrationId, deviceId: peer.deviceId,
+                    signedPrekeyId: peer.signedPreKeyId, signedPrekey: spk, signedPrekeySignature: peer.signedPreKeySignature,
+                    identity: ik,
+                    kyberPrekeyId: peer.kyberPreKeyId, kyberPrekey: kyber, kyberPrekeySignature: peer.kyberPreKeySignature)
+            }
+            try withStoreLock {
+                try withConflictRetry {
+                    try store.batch {
+                        try processPreKeyBundle(bundle, for: addr, ourAddress: myAddr, sessionStore: store, identityStore: store, context: ctx)
+                    }
                 }
             }
         }
@@ -759,20 +788,28 @@ final class SignalService: ObservableObject {
         let erased: Bool = withStoreLock {
             do {
                 try withConflictRetry { try store.removeSessionAndIdentity(forName: contact.fingerprint) }
-                reloadStoreFromDisk()
+                rebuildStore()
                 return true
             } catch {
-                reloadStoreFromDisk()
+                rebuildStore()
                 return false
             }
         }
         guard erased else { return false }
+        let dropped = (messages[contact.fingerprint] ?? []).map(\.text)
         contacts.removeAll { $0.fingerprint == contact.fingerprint }
         messages[contact.fingerprint] = nil
         meta.autoDelete?.removeValue(forKey: contact.fingerprint)
         autoDelete = meta.autoDelete ?? [:]
+        meta.pinned?.removeAll { $0 == contact.fingerprint }
+        if meta.pinned?.isEmpty == true { meta.pinned = nil }
+        pinned = Set(meta.pinned ?? [])
         meta.purgeDecryptCache(fingerprint: contact.fingerprint)
         saveMeta()
+        KeyboardSelection.forgetContact(contact.fingerprint, profileID: currentID)
+        OwnCipherMarker.clear()
+        DecryptPurgeMarker.bump()
+        Clipboard.clearIfHolds(dropped)
         return true
     }
 
@@ -798,10 +835,16 @@ final class SignalService: ObservableObject {
             lastMetaDigest = Data(SHA256.hash(data: dec))
             meta = m
             autoDelete = meta.autoDelete ?? [:]
+            pinned = Set(m.pinned ?? [])
             contacts = m.contacts
             messages = m.messages
         }
         purgeExpiredMessages()
+    }
+
+    private func rebuildStore() {
+        store = PersistentSignalStore(identity: identity, registrationId: meta.registrationId,
+                                      storageKey: StoreKey.store(currentID), cryptKey: cryptKey)
     }
 
     private func reloadStoreFromDisk() {
@@ -834,6 +877,12 @@ final class SignalService: ObservableObject {
         return ((try? store.loadSession(for: addr, context: ctx)) ?? nil) != nil
     }
 
+    private func hasUsableSession(with fingerprint: String) -> Bool {
+        guard let store, let addr = try? ProtocolAddress(name: fingerprint, deviceId: 1),
+              let record = (try? store.loadSession(for: addr, context: ctx)) ?? nil else { return false }
+        return record.hasCurrentState(requirePqRatio: 0)
+    }
+
     struct SentMessage: Sendable {
         let cipher: String
         let hidden: Bool
@@ -859,6 +908,7 @@ final class SignalService: ObservableObject {
             OwnCipherMarker.mark(cover.text)
             return cover
         }.value
+        TypingRollbackMarker.bump()
         append(ChatMessage(text: text, mine: true), to: contact.fingerprint)
         return SentMessage(cipher: produced.text, hidden: produced.hidden)
     }
@@ -883,8 +933,10 @@ final class SignalService: ObservableObject {
                     }
                 }
             }
-            meta.rememberDecrypt(armored: armored, fingerprint: contact.fingerprint, text: text, stego: .some(hidden))
-            append(ChatMessage(text: text, mine: false), to: contact.fingerprint)
+            append(ChatMessage(text: text, mine: false), to: contact.fingerprint) { [self] in
+                meta.rememberDecrypt(armored: armored, fingerprint: contact.fingerprint,
+                                     text: text, stego: .some(hidden))
+            }
             return text
         } catch {
             guard refreshOnFailure else { throw error }
@@ -899,6 +951,36 @@ final class SignalService: ObservableObject {
         }
     }
 
+    func decryptFromAnyContact(_ armored: String, stego: Data?? = nil,
+                               wireStego: Data?? = nil) -> (contact: Contact, text: String)? {
+        guard ensureLoaded() else { return nil }
+        let hidden = stego ?? DecryptCacheKey.stegoPayload(armored)
+        if let hit = cachedDecrypt(armored, stego: .some(hidden)) { return hit }
+        let wire: Data?? = wireStego ?? (hidden == nil ? nil : .some(hidden))
+        let candidates = contacts
+        let found: (contact: Contact, text: String)? = withStoreLock {
+            reloadStoreFromDisk()
+            for contact in candidates {
+                do {
+                    let text = try store.batch {
+                        try SignalWire.decrypt(armored, fromFingerprint: contact.fingerprint,
+                                               myFingerprint: myFingerprint, store: store, stego: wire)
+                    }
+                    return (contact, text)
+                } catch {
+                    if store.hadStaleConflict { reloadStoreFromDisk() }
+                }
+            }
+            return nil
+        }
+        guard let found else { return nil }
+        append(ChatMessage(text: found.text, mine: false), to: found.contact.fingerprint) { [self] in
+            meta.rememberDecrypt(armored: armored, fingerprint: found.contact.fingerprint,
+                                 text: found.text, stego: .some(hidden))
+        }
+        return found
+    }
+
     func cachedDecrypt(_ armored: String, stego: Data?? = nil) -> (contact: Contact, text: String)? {
         guard isLoaded, let hit = meta?.cachedDecrypt(for: armored, stego: stego) else { return nil }
         let contact = contacts.first { $0.fingerprint == hit.fingerprint }
@@ -906,15 +988,33 @@ final class SignalService: ObservableObject {
         return (contact, hit.text)
     }
 
-    private func append(_ message: ChatMessage, to fingerprint: String) {
+    private func append(_ message: ChatMessage, to fingerprint: String,
+                        remember: (() -> Void)? = nil) {
+        reloadCurrentFromDisk()
+        remember?()
         messages[fingerprint, default: []].append(message)
-        purgeExpired(for: fingerprint)
-        saveMeta()
+        if !purgeExpiredMessages() { saveMeta() }
     }
 
     func autoDeleteInterval(for fingerprint: String) -> TimeInterval? {
         guard let s = autoDelete[fingerprint], s > 0 else { return nil }
         return s
+    }
+
+    func setPinned(_ value: Bool, for contact: Contact) {
+        guard isLoaded, meta != nil else { return }
+        var list = meta.pinned ?? []
+        if value {
+            guard !list.contains(contact.fingerprint) else { return }
+            list.append(contact.fingerprint)
+        } else {
+            let before = list.count
+            list.removeAll { $0 == contact.fingerprint }
+            guard list.count != before else { return }
+        }
+        meta.pinned = list.isEmpty ? nil : list
+        pinned = Set(list)
+        saveMeta()
     }
 
     func setAutoDelete(_ seconds: TimeInterval?, for contact: Contact) {
@@ -923,36 +1023,31 @@ final class SignalService: ObservableObject {
         if let seconds, seconds > 0 { map[contact.fingerprint] = seconds } else { map.removeValue(forKey: contact.fingerprint) }
         meta.autoDelete = map
         autoDelete = map
-        purgeExpired(for: contact.fingerprint)
+        purgeExpiredMessages()
         saveMeta()
-    }
-
-    private func purgeExpired(for fingerprint: String) {
-        guard let secs = meta.autoDelete?[fingerprint], secs > 0 else { return }
-        meta.purgeDecryptCache(fingerprint: fingerprint, olderThan: secs)
-        guard var msgs = messages[fingerprint] else { return }
-        let now = Date()
-        let before = msgs.count
-        msgs.removeAll { now.timeIntervalSince($0.date) >= secs }
-        if msgs.count != before { messages[fingerprint] = msgs }
     }
 
     @discardableResult
     func purgeExpiredMessages() -> Bool {
-        guard isLoaded, let map = meta?.autoDelete, !map.isEmpty else { return false }
-        let now = Date()
-        var changed = false
-        let cacheBefore = meta.decryptCache?.count ?? 0
-        for (fp, secs) in map where secs > 0 {
-            meta.purgeDecryptCache(fingerprint: fp, olderThan: secs)
-            guard var msgs = messages[fp], !msgs.isEmpty else { continue }
-            let before = msgs.count
-            msgs.removeAll { now.timeIntervalSince($0.date) >= secs }
-            if msgs.count != before { messages[fp] = msgs; changed = true }
+        guard isLoaded, meta != nil else { return false }
+        let before = messages
+        meta.messages = before
+        guard meta.purgeExpired() else { return false }
+        messages = meta.messages
+        saveMeta()
+        DecryptPurgeMarker.bump()
+        Clipboard.clearIfHolds(SignalService.vanished(from: before, to: messages))
+        return true
+    }
+
+    private static func vanished(from before: [String: [ChatMessage]],
+                                 to after: [String: [ChatMessage]]) -> [String] {
+        var gone: [String] = []
+        for (fingerprint, list) in before {
+            let kept = Set((after[fingerprint] ?? []).map(\.id))
+            for message in list where !kept.contains(message.id) { gone.append(message.text) }
         }
-        if (meta.decryptCache?.count ?? 0) != cacheBefore { changed = true }
-        if changed { saveMeta() }
-        return changed
+        return gone
     }
 
     func deleteMessage(_ message: ChatMessage, from contact: Contact) {
@@ -963,20 +1058,29 @@ final class SignalService: ObservableObject {
         messages[contact.fingerprint] = list.isEmpty ? nil : list
         meta.purgeDecrypted(fingerprint: contact.fingerprint, text: message.text)
         saveMeta()
+        DecryptPurgeMarker.bump()
+        Clipboard.clearIfHolds([message.text])
     }
 
     func clearChat(_ contact: Contact) {
         guard isLoaded else { return }
+        let erased = (messages[contact.fingerprint] ?? []).map(\.text)
         messages[contact.fingerprint] = nil
         meta.purgeDecryptCache(fingerprint: contact.fingerprint)
         saveMeta()
+        DecryptPurgeMarker.bump()
+        Clipboard.clearIfHolds(erased)
     }
 
     func wipeAllChats() {
         guard isLoaded else { return }
+        let erased = messages.values.flatMap { $0 }.map(\.text)
         messages = [:]
         meta.purgeDecryptCache()
         saveMeta()
+        OwnCipherMarker.clear()
+        DecryptPurgeMarker.bump()
+        Clipboard.clearIfHolds(erased)
     }
 
     @discardableResult
@@ -986,17 +1090,23 @@ final class SignalService: ObservableObject {
             do {
                 try withConflictRetry { try store.removeAllSessionsAndPeerIdentities() }
             } catch {
-                reloadStoreFromDisk()
+                rebuildStore()
                 return false
             }
-            reloadStoreFromDisk()
+            rebuildStore()
             OwnCipherMarker.clear()
+            let dropped = messages.values.flatMap { $0 }.map(\.text)
             contacts = []
             messages = [:]
             meta.autoDelete = nil
             autoDelete = [:]
+            meta.pinned = nil
+            pinned = []
             meta.purgeDecryptCache()
             saveMeta()
+            KeyboardSelection.forgetContact(profileID: currentID)
+            DecryptPurgeMarker.bump()
+            Clipboard.clearIfHolds(dropped)
             return true
         }
     }

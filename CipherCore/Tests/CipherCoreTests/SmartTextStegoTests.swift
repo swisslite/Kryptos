@@ -118,7 +118,7 @@ final class SmartTextStegoTests: XCTestCase {
 
     func testCompactness() throws {
         let payload = randomBytes(96)
-        let limit: [StegoLanguage: Int] = [.english: 1100, .russian: 1100, .german: 1400, .chinese: 700]
+        let limit: [StegoLanguage: Int] = [.english: 1100, .russian: 1100, .german: 1400, .chinese: 700, .persian: 1100]
         for language in StegoLanguage.allCases {
             let text = try XCTUnwrap(SmartTextStego.encode(payload, language: language))
             XCTAssertLessThan(text.count, limit[language]!, "lang=\(language) count=\(text.count)")

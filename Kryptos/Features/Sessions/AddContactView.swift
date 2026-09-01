@@ -46,10 +46,13 @@ struct AddContactView: View {
                             .buttonStyle(SecondaryButtonStyle(accent: true))
 
                             Button {
-                                if let s = UIPasteboard.general.string {
-                                    keyText = s
-                                    scanned = nil
+                                errorText = nil
+                                guard let s = UIPasteboard.general.string, !s.isEmpty else {
+                                    errorText = String(localized: "Clipboard is empty.")
+                                    return
                                 }
+                                keyText = s
+                                scanned = nil
                             } label: {
                                 Label("Paste", systemImage: "doc.on.clipboard")
                             }

@@ -4,6 +4,7 @@ import java.util.Base64
 
 object KeyText {
     const val PREFIX = "KRYPTOS-KEY:"
+    const val MAX_BLOB_CHARS = 16 * 1024
 
     private fun isBase64Char(c: Char): Boolean =
         c.code < 128 && (c.isLetterOrDigit() || c == '+' || c == '/' || c == '=')
@@ -12,7 +13,8 @@ object KeyText {
         val trimmed = raw.trim()
         val idx = trimmed.indexOf(PREFIX)
         if (idx < 0) return emptyList()
-        val rest = trimmed.substring(idx + PREFIX.length)
+        val from = idx + PREFIX.length
+        val rest = trimmed.substring(from, minOf(trimmed.length, from + MAX_BLOB_CHARS))
         val direct = rest.takeWhile { !it.isWhitespace() }
         val joined = rest.takeWhile { it.isWhitespace() || isBase64Char(it) }.filterNot { it.isWhitespace() }
         val out = ArrayList<ByteArray>(2)

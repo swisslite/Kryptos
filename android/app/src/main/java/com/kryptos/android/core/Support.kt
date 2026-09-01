@@ -95,10 +95,13 @@ internal class WipingBuffer(initial: Int = 8192) : java.io.OutputStream() {
     private var size = 0
 
     private fun ensure(extra: Int) {
-        if (size + extra <= buf.size) return
-        var capacity = buf.size
-        while (capacity < size + extra) capacity *= 2
-        val grown = buf.copyOf(capacity)
+        if (extra < 0) throw CipherException(CipherException.Kind.INVALID_INPUT)
+        val needed = size.toLong() + extra
+        if (needed <= buf.size) return
+        if (needed > MAX_CAPACITY) throw CipherException(CipherException.Kind.INVALID_INPUT)
+        var capacity = buf.size.toLong()
+        while (capacity < needed) capacity = minOf(capacity * 2, MAX_CAPACITY)
+        val grown = buf.copyOf(capacity.toInt())
         buf.fill(0)
         buf = grown
     }
@@ -119,6 +122,21 @@ internal class WipingBuffer(initial: Int = 8192) : java.io.OutputStream() {
         buf.fill(0)
         size = 0
         return out
+    }
+
+    companion object {
+        const val MAX_CAPACITY = Int.MAX_VALUE - 8L
+    }
+}
+
+internal inline fun wipingBytes(write: (java.io.OutputStream) -> Unit): ByteArray {
+    val buffer = WipingBuffer()
+    return try {
+        write(buffer)
+        buffer.drain()
+    } catch (e: Throwable) {
+        buffer.drain().fill(0)
+        throw e
     }
 }
 
@@ -172,7 +190,7 @@ class TaskQueue(name: String) {
 
     fun execute(block: () -> Unit) {
         if (pool.isShutdown) return
-        runCatching { pool.execute(block) }
+        runCatching { pool.execute { runCatching(block) } }
     }
 
     fun shutdown() {

@@ -144,7 +144,7 @@ struct MyKeyView: View {
 
     private var actionButtons: some View {
         HStack(spacing: 12) {
-            Button { Clipboard.copy(key); flash() } label: {
+            Button { Clipboard.copyPublicKey(key); flash() } label: {
                 Label(copied ? "Copied" : "Copy key", systemImage: copied ? "checkmark" : "doc.on.doc")
             }.buttonStyle(SecondaryButtonStyle(accent: true))
             ShareLink(item: key) { Label("Share", systemImage: "square.and.arrow.up") }

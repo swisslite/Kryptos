@@ -38,7 +38,7 @@ struct PGPView: View {
                 if !output.isEmpty { outputCard }
             }
         }
-        .sheet(isPresented: $showMyKey) { MyPGPKeyView(armoredKey: pgp.myPublicKey, title: pgp.currentIdentity?.name ?? "My key") }
+        .sheet(isPresented: $showMyKey) { MyPGPKeyView(armoredKey: pgp.myPublicKey, title: pgp.currentIdentity?.name ?? String(localized: "My key")) }
         .sheet(isPresented: $showRecipients) { PGPRecipientsView().environmentObject(pgp) }
         .sheet(isPresented: $showKeys) { PGPKeysView().environmentObject(pgp) }
         .onChange(of: lock.isLocked) { _, locked in
@@ -71,14 +71,14 @@ struct PGPView: View {
                     .font(.system(size: 20, weight: .semibold)).foregroundStyle(KTheme.accent)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("YOUR KEY — TAP TO MANAGE").font(.kLabel()).foregroundStyle(KTheme.textSecondary)
-                    Text(pgp.currentIdentity?.name ?? "My key").font(.kHeadline()).foregroundStyle(KTheme.textPrimary)
+                    Text(pgp.currentIdentity?.name ?? String(localized: "My key")).font(.kHeadline()).foregroundStyle(KTheme.textPrimary)
                     Text(pgp.currentIdentity?.fingerprint ?? "").font(.kMono()).foregroundStyle(KTheme.textSecondary)
                         .lineLimit(1).minimumScaleFactor(0.5)
                 }
                 Spacer(minLength: 0)
                 HStack(spacing: 4) {
                     Text("Manage").font(.kBody())
-                    Image(systemName: "chevron.right").font(.footnote.weight(.bold))
+                    Image(systemName: "chevron.forward").font(.footnote.weight(.bold))
                 }.foregroundStyle(KTheme.accent)
             }
             .glassCard()
@@ -180,7 +180,7 @@ struct PGPView: View {
                 } label: {
                     Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
                 }.buttonStyle(SecondaryButtonStyle(accent: true))
-                ShareLink(item: output) { Label("Share", systemImage: "square.and.arrow.up") }
+                PlaintextShareButton(text: output, plaintext: mode == .decrypt)
                     .buttonStyle(PrimaryButtonStyle())
             }
         }
@@ -213,15 +213,15 @@ struct PGPView: View {
         let text = input
         working = true
         Task { @MainActor in
-            await Task.yield()
             do {
                 if current == .encrypt, let chosen {
-                    let cipher = try pgp.encrypt(text, to: chosen)
+                    let cipher = try await pgp.encrypt(text, to: chosen)
                     output = cipher
+                    TypingRollbackMarker.bump()
                     Clipboard.copyCipher(cipher)
                     autoCopied = true
                 } else if current == .decrypt {
-                    let result = try pgp.decrypt(text)
+                    let result = try await pgp.decrypt(text)
                     output = result.text
                     verification = result.verification
                 }
@@ -256,7 +256,7 @@ private struct MyPGPKeyView: View {
                             .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12).background(FieldBackground())
                         HStack(spacing: 12) {
-                            Button { Clipboard.copy(armoredKey); flash() } label: {
+                            Button { Clipboard.copyPublicKey(armoredKey); flash() } label: {
                                 Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
                             }.buttonStyle(SecondaryButtonStyle(accent: true))
                             ShareLink(item: armoredKey) { Label("Share", systemImage: "square.and.arrow.up") }

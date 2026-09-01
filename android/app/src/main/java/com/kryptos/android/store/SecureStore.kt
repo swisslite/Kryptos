@@ -154,18 +154,19 @@ object SecureStore {
             cipher.iv + cipher.doFinal(data)
         }
         val tmp = File(dir(), "$name.tmp")
-        java.io.FileOutputStream(tmp).use { out ->
-            out.write(blob)
-            out.fd.sync()
-        }
-        if (!tmp.renameTo(target)) {
-            java.io.FileOutputStream(target).use { out ->
+        try {
+            java.io.FileOutputStream(tmp).use { out ->
                 out.write(blob)
                 out.fd.sync()
             }
-            tmp.delete()
+            if (!tmp.renameTo(target)) throw java.io.IOException("SecureStore: cannot commit '$name'")
+        } finally {
+            if (tmp.exists()) tmp.delete()
         }
     }
+
+    @Synchronized
+    fun exists(name: String): Boolean = file(name).exists()
 
     @Synchronized
     fun delete(name: String) {
@@ -181,8 +182,8 @@ object SecureStore {
 
     @Synchronized
     fun deleteAll() {
-        destroyMasterKey()
         dir().listFiles()?.forEach { it.delete() }
+        destroyMasterKey()
     }
 
     fun prefs(): SharedPreferences = context.getSharedPreferences("kryptos.settings", Context.MODE_PRIVATE)

@@ -69,7 +69,9 @@ private fun LockScreen(activity: FragmentActivity) {
     var wrong by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) { AppLock.prompt(activity) }
+    val codeOnly = remember { AppSettingsStore.appLockCodeOnly }
+
+    LaunchedEffect(Unit) { if (!codeOnly) AppLock.prompt(activity) }
 
     Box(Modifier.fillMaxSize()) {
         ScreenBackground()
@@ -97,12 +99,14 @@ private fun LockScreen(activity: FragmentActivity) {
             }
             Spacer(Modifier.height(18.dp))
             Text("Kryptos", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = K.textPrimary)
-            Spacer(Modifier.height(28.dp))
-            PrimaryButton(
-                stringResource(R.string.lock_unlock),
-                Modifier.widthIn(min = 220.dp),
-                icon = Icons.Default.LockOpen,
-            ) { AppLock.prompt(activity) }
+            if (!codeOnly) {
+                Spacer(Modifier.height(28.dp))
+                PrimaryButton(
+                    stringResource(R.string.lock_unlock),
+                    Modifier.widthIn(min = 220.dp),
+                    icon = Icons.Default.LockOpen,
+                ) { AppLock.prompt(activity) }
+            }
 
             run {
                 Spacer(Modifier.height(28.dp))
@@ -133,7 +137,6 @@ private fun LockScreen(activity: FragmentActivity) {
                         wrong = false
                         checking = true
                         scope.launch {
-                            kotlinx.coroutines.delay(AppLock.codeThrottleMillis())
                             val outcome = withContext(Dispatchers.Default + NonCancellable) {
                                 AppLock.submitCode(activity.applicationContext, entered)
                             }

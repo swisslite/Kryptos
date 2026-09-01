@@ -3,6 +3,12 @@ import XCTest
 
 final class VectorGenTests: XCTestCase {
     func testPrintVectors() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["KRYPTOS_EMIT_VECTORS"] == "1",
+                          "set KRYPTOS_EMIT_VECTORS=1 to regenerate cross-platform vectors")
+        try emitVectors()
+    }
+
+    private func emitVectors() throws {
         let profileSalt = Data((0 ..< 16).map { UInt8($0) })
         let profile = try Argon2id.derive(password: Data("correct horse".utf8), salt: profileSalt, length: 44)
         print("VECTOR-ARGON2-PROFILE-BEGIN\n\(profile.map { String(format: "%02x", $0) }.joined())\nVECTOR-ARGON2-PROFILE-END")
@@ -37,6 +43,9 @@ final class VectorGenTests: XCTestCase {
         print("VECTOR-SMART-RU-BEGIN\n\(SmartTextStego.encode(letterProbe, language: .russian, seed: 0xB3))\nVECTOR-SMART-RU-END")
         print("VECTOR-SMART-ZH-BEGIN\n\(SmartTextStego.encode(letterProbe, language: .chinese, seed: 0x5C))\nVECTOR-SMART-ZH-END")
         print("VECTOR-LETTERS-ZH-BEGIN\n\(LetterStego.encode(letterProbe, language: .chinese, seed: 0x5C))\nVECTOR-LETTERS-ZH-END")
+        print("VECTOR-STEGO-FA-BEGIN\n\(TextStego.encode(payload, language: .persian, seed: 0x5C))\nVECTOR-STEGO-FA-END")
+        print("VECTOR-SMART-FA-BEGIN\n\(SmartTextStego.encode(letterProbe, language: .persian, seed: 0x5C))\nVECTOR-SMART-FA-END")
+        print("VECTOR-LETTERS-FA-BEGIN\n\(LetterStego.encode(letterProbe, language: .persian, seed: 0x5C))\nVECTOR-LETTERS-FA-END")
 
         let paddedCipher = Data((0 ..< 40).map { UInt8(($0 * 31) & 0xFF) })
         let paddedPayload = StegoWire.frame(paddedCipher, type: 2, deflate: false, padded: true)

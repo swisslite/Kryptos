@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.os.Build
 import com.kryptos.android.core.CachePurge
+import com.kryptos.android.keyboard.TypingMemory
 import com.kryptos.android.pgp.PgpService
 import com.kryptos.android.signal.SignalService
 import java.io.File
@@ -14,11 +15,13 @@ object DataWipe {
     fun wipe(context: Context) {
         val app = context.applicationContext
         CachePurge.purgeAll()
+        TypingMemory.forgetAll()
         clearClipboard(app)
         SignalService.eraseAndReinit {
             PgpService.eraseAllStorage()
             sweep(app)
             CachePurge.purgeAll()
+            TypingMemory.forgetAll()
         }
         runCatching { PgpService.ensureInitialized() }
     }

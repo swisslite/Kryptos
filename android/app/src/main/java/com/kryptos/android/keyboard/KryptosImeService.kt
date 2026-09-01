@@ -45,6 +45,7 @@ import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.customview.widget.ExploreByTouchHelper
 import com.kryptos.android.R
 import com.kryptos.android.core.CachePurge
+import com.kryptos.android.core.ExpiringCache
 import com.kryptos.android.core.LetterStego
 import com.kryptos.android.core.SmartTextStego
 import com.kryptos.android.core.TaskQueue
@@ -59,6 +60,7 @@ import com.kryptos.android.screen.ScreenDecryptService
 import com.kryptos.android.screen.SendOutcome
 import com.kryptos.android.signal.SignalService
 import com.kryptos.android.ui.clipboardText
+import com.kryptos.android.ui.copyCipher
 import kotlin.math.abs
 
 class KryptosImeService : InputMethodService() {
@@ -66,7 +68,7 @@ class KryptosImeService : InputMethodService() {
     override fun attachBaseContext(newBase: Context) {
         com.kryptos.android.store.SecureStore.init(newBase)
         super.attachBaseContext(
-            runCatching { com.kryptos.android.AppLanguage.wrap(newBase) }.getOrDefault(newBase),
+            runCatching { com.kryptos.android.AppLanguage.wrapLtr(newBase) }.getOrDefault(newBase),
         )
     }
 
@@ -76,16 +78,19 @@ class KryptosImeService : InputMethodService() {
     private var autoShifted = false
     private var lastShiftTap = 0L
     private var lastSpaceTap = 0L
+    private var lastPunctTap = 0L
     private var langCode = "en"
     private var enabledLangs = listOf("en")
-    private val langOrder = listOf("en", "ru", "de", "zh")
+    private val langOrder = listOf("en", "ru", "de", "zh", "fa")
     private var symbols = false
     private var symPage = 0
 
     private var pinyin = ""
     private var candidates: List<PinyinCandidate> = emptyList()
     private var composeOn = false
+    private var composeForced = false
     private var fieldSize = AppSettingsStore.FieldSize.SMALL
+    private lateinit var panelColumn: LinearLayout
     private var draft = ""
     private var caret = 0
 
@@ -96,7 +101,10 @@ class KryptosImeService : InputMethodService() {
     private var suggestionsOn = true
     private var autocorrectOn = true
     private var emojiOn = true
+    private var punctOn = true
+    private var punctDoubleOn = false
     private var sendAfterEncrypt = false
+    private var voiceOn = false
 
     private data class AutoFix(val original: String, val corrected: String, val separator: String, val at: Long)
     private var lastAutoFix: AutoFix? = null
@@ -108,11 +116,14 @@ class KryptosImeService : InputMethodService() {
     private var emojiOpen = false
     private var passwordField = false
     private var noLearningField = false
-    private val noLearning: Boolean get() = passwordField || noLearningField
+    private var noSuggestionsField = false
+    private val noLearning: Boolean get() = composeOn || passwordField || noLearningField || noSuggestionsField
+    private val typingAidsAllowed: Boolean get() = !passwordField && !noSuggestionsField
     private var returnAction: Int? = null
 
     private val handler = Handler(Looper.getMainLooper())
     private val crypto = TaskQueue("kryptos-ime-crypto")
+    private val suggest = TaskQueue("kryptos-ime-suggest")
     private var encryptInFlight = false
     private val contacts: List<Contact> get() = SignalService.contacts.value
 
@@ -121,7 +132,7 @@ class KryptosImeService : InputMethodService() {
     private lateinit var composeRow: LinearLayout
     private var composeToggle: FrameLayout? = null
     private var shieldMark: ImageView? = null
-    private lateinit var draftView: TextView
+    private lateinit var draftView: DraftTextView
     private var clearAction: TextView? = null
     private lateinit var profileChip: LinearLayout
     private lateinit var profileChipText: TextView
@@ -129,6 +140,18 @@ class KryptosImeService : InputMethodService() {
     private lateinit var contactChipText: TextView
     private lateinit var clipDot: View
     private var sendBadge: ImageView? = null
+    private var voiceButton: View? = null
+    private var voiceTarget: FieldToken? = null
+    private var voiceActive = false
+    private var voiceSupported = false
+    private var voiceStyled: Boolean? = null
+    private var micIdleBackground: StateListDrawable? = null
+    private var micActiveBackground: StateListDrawable? = null
+    private var voiceLead = ""
+    private var voiceDraftAt = 0
+    private var voiceDraftLen = 0
+    private var voice: VoiceInput? = null
+    private val voiceModelAsked = mutableSetOf<String>()
     private lateinit var keyGrid: KeyGridView
     private lateinit var keyArea: FrameLayout
     private lateinit var suggestionBar: LinearLayout
@@ -150,6 +173,15 @@ class KryptosImeService : InputMethodService() {
     private lateinit var revealText: TextView
     private var keyPopup: PopupWindow? = null
     private var keyPopupText: TextView? = null
+    private var altPopup: PopupWindow? = null
+    private var altRow: LinearLayout? = null
+    private var altItems: List<TextView> = emptyList()
+    private var altChars: List<String> = emptyList()
+    private var altTyped: String? = null
+    private var altPointer = -1
+    private var altIndex = -1
+    private var altLeft = 0f
+    private var altStep = 0f
 
     private val clipboardManager get() = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
     private val clipListener = ClipboardManager.OnPrimaryClipChangedListener {
@@ -208,15 +240,14 @@ class KryptosImeService : InputMethodService() {
         return face
     }
 
+    private class Revealed(val name: String, val text: String, val mine: Boolean)
+
     private object DecryptCache {
         private const val LIMIT = 40
         private const val TTL_MS = 5 * 60 * 1000L
 
-        private class Entry(val name: String, val text: String, val at: Long)
-
-        private val map = object : LinkedHashMap<String, Entry>(16, 0.75f, true) {
-            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Entry>) = size > LIMIT
-        }
+        private val cache =
+            ExpiringCache<Revealed>(LIMIT, TTL_MS, TTL_MS) { android.os.SystemClock.elapsedRealtime() }
 
         init {
             CachePurge.register { clear() }
@@ -225,22 +256,23 @@ class KryptosImeService : InputMethodService() {
 
         private fun key(cipher: String) = sha256Hex(cipher.toByteArray(Charsets.UTF_8))
 
-        @Synchronized
-        fun get(cipher: String): Pair<String, String>? {
-            val entry = map[key(cipher)] ?: return null
-            if (System.currentTimeMillis() - entry.at >= TTL_MS) return null
-            return entry.name to entry.text
+        fun get(cipher: String): Revealed? = cache.lookup(key(cipher))?.value
+
+        fun put(cipher: String, revealed: Revealed) {
+            cache.remember(key(cipher), revealed)
         }
 
-        @Synchronized
-        fun put(cipher: String, name: String, text: String) {
-            val now = System.currentTimeMillis()
-            map.entries.removeAll { now - it.value.at >= TTL_MS }
-            map[key(cipher)] = Entry(name, text, now)
-        }
+        fun clear() = cache.clear()
+    }
 
-        @Synchronized
-        fun clear() = map.clear()
+    override fun onCreate() {
+        super.onCreate()
+        crypto.execute {
+            runCatching { AppSettingsStore.composeAutoApps() }
+            runCatching { cryptoLocked() }
+            val supported = runCatching { VoiceInput.isSupported(this) }.getOrDefault(false)
+            handler.post { voiceSupported = supported }
+        }
     }
 
     override fun onCreateInputView(): View {
@@ -252,16 +284,29 @@ class KryptosImeService : InputMethodService() {
         if (!purgeHooked) {
             purgeHooked = true
             CachePurge.register { live?.let { service -> service.handler.post { service.dropSensitiveState() } } }
+            CachePurge.registerDecrypted { live?.let { service -> service.handler.post { service.hideReveal() } } }
         }
         warmSuggestions()
         if (AppSettingsStore.keyboardEmoji) EmojiData.prefetch()
         val night = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
         palette = Palette(dark = night == Configuration.UI_MODE_NIGHT_YES)
         applyNavigationBar()
+        hideAlternates()
+        altPopup = null
+        altRow = null
+        altItems = emptyList()
+        cancelVoice()
+        emojiPanel = null
+        emojiGrid = null
+        emojiEmpty = null
+        emojiTabs = null
+        emojiAbc = null
+        sendBadge = null
 
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(6f), dp(8f), dp(6f), dp(8f))
+            val vertical = dp(if (compactKeys) 4f else 8f)
+            setPadding(dp(2f), vertical, dp(2f), vertical)
         }
 
         status = TextView(this).apply {
@@ -282,15 +327,20 @@ class KryptosImeService : InputMethodService() {
         keyGrid.keys = buildKeys()
         keyArea = FrameLayout(this).apply {
             addView(keyGrid, FrameLayout.LayoutParams(MATCH, FrameLayout.LayoutParams.MATCH_PARENT))
+            addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fitComposeField() }
         }
         column.addView(
             keyArea,
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, keyRowsHeight + dp(6f)),
         )
+        panelColumn = column
 
         rootFrame = FrameLayout(this).apply {
             setBackgroundColor(palette.bg)
             filterTouchesWhenObscured = true
+            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                importantForContentCapture = View.IMPORTANT_FOR_CONTENT_CAPTURE_NO_EXCLUDE_DESCENDANTS
+            }
             addView(column)
             addView(buildRevealOverlay())
             addView(buildMenuOverlay())
@@ -305,8 +355,9 @@ class KryptosImeService : InputMethodService() {
             setTypeface(typeface, if (bold) Typeface.BOLD else Typeface.NORMAL)
             setTextColor(color)
             gravity = Gravity.CENTER_VERTICAL
-            minHeight = dp(COMPOSE_ACTION_HEIGHT_DP)
-            setPadding(dp(6f), dp(7f), dp(6f), dp(7f))
+            minHeight = dp(if (compactKeys) COMPOSE_ACTION_COMPACT_DP else COMPOSE_ACTION_HEIGHT_DP)
+            val vertical = dp(if (compactKeys) 4f else 7f)
+            setPadding(dp(6f), vertical, dp(6f), vertical)
             compoundDrawablePadding = dp(5f)
             val icon = ContextCompat.getDrawable(this@KryptosImeService, iconRes)?.mutate()?.apply {
                 setTint(color)
@@ -323,14 +374,26 @@ class KryptosImeService : InputMethodService() {
 
     private fun applyFieldSize() {
         val size = AppSettingsStore.keyboardFieldSize
-        if (size == fieldSize && draftView.layoutParams.height == dp(size.heightDp)) return
-        fieldSize = size
-        draftView.layoutParams = draftView.layoutParams.apply { height = dp(size.heightDp) }
+        val height = dp(size.heightDp)
+        if (size != fieldSize || draftView.layoutParams.height != height) {
+            fieldSize = size
+            draftView.layoutParams = draftView.layoutParams.apply { this.height = height }
+        }
+    }
+
+    private fun fitComposeField() {
+        if (!::panelColumn.isInitialized || !::keyArea.isInitialized) return
+        if (composeRow.visibility != View.VISIBLE || panelColumn.height <= 0) return
+        val overflow = keyArea.bottom + panelColumn.paddingBottom - panelColumn.height
+        if (overflow <= 0) return
+        val height = (draftView.height - overflow).coerceAtLeast(dp(FIELD_MIN_DP))
+        if (height >= draftView.height) return
+        draftView.layoutParams = draftView.layoutParams.apply { this.height = height }
     }
 
     private fun buildComposeRow(): LinearLayout {
         fieldSize = AppSettingsStore.keyboardFieldSize
-        draftView = TextView(this).apply {
+        draftView = DraftTextView(this).apply {
             textSize = 15f
             setTextColor(palette.text)
             setPadding(dp(6f), 0, dp(6f), 0)
@@ -340,11 +403,13 @@ class KryptosImeService : InputMethodService() {
         }
 
         val paste = composeAction(R.string.paste, R.drawable.ic_kb_paste, palette.accent, bold = true) {
+            settleVoice()
             val clip = clipboardText(this)
             if (clip.isEmpty()) flash(getString(R.string.clipboard_empty), error = true) else insertDraft(clip)
         }
 
         val clear = composeAction(R.string.kb_clear, R.drawable.ic_kb_clear, palette.textSecondary, bold = false) {
+            cancelVoice()
             draft = ""
             caret = 0
             renderDraft()
@@ -365,7 +430,7 @@ class KryptosImeService : InputMethodService() {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = rounded(palette.fieldFill, 10f)
-            setPadding(dp(5f), dp(9f), dp(5f), dp(2f))
+            setPadding(dp(5f), dp(if (compactKeys) 5f else 9f), dp(5f), dp(2f))
             addView(draftView, LinearLayout.LayoutParams(MATCH, dp(fieldSize.heightDp)))
             addView(actions, LinearLayout.LayoutParams(MATCH, WRAP))
         }
@@ -373,7 +438,7 @@ class KryptosImeService : InputMethodService() {
         composeRow = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
-            setPadding(dp(4f), 0, dp(4f), dp(8f))
+            setPadding(dp(4f), 0, dp(4f), dp(if (compactKeys) 4f else 8f))
             addView(card, LinearLayout.LayoutParams(MATCH, WRAP))
         }
         return composeRow
@@ -384,10 +449,13 @@ class KryptosImeService : InputMethodService() {
         caret = caret.coerceIn(0, draft.length)
         if (draft.isEmpty()) {
             draftView.setTextColor(palette.textSecondary)
+            draftView.caretOffset = -1
             draftView.text = getString(R.string.message)
         } else {
             draftView.setTextColor(palette.text)
-            draftView.text = draft.substring(0, caret) + "▏" + draft.substring(caret)
+            draftView.caretColor = palette.text
+            draftView.text = draft
+            draftView.caretOffset = caret
             val pos = caret
             draftView.post { runCatching { draftView.bringPointIntoView(pos) } }
         }
@@ -450,6 +518,20 @@ class KryptosImeService : InputMethodService() {
             setOnClickListener { showContactMenu() }
         }
 
+        val mic = barIconButton(
+            R.drawable.ic_kb_mic,
+            bg = palette.accentSoft,
+            tint = palette.accent,
+            iconDp = BAR_MIC_ICON_DP,
+            radiusDp = BAR_MIC_RADIUS_DP,
+            iconId = VOICE_ICON_ID,
+        ) { haptic(); voiceTapped() }
+        mic.contentDescription = getString(R.string.kb_voice_section)
+        voiceButton = mic
+        micIdleBackground = micBackground(palette.accentSoft)
+        micActiveBackground = micBackground(palette.accent)
+        voiceStyled = null
+
         val decrypt = barIconButton(R.drawable.ic_kb_lock_open, bg = palette.accentSoft, tint = palette.accent) {
             haptic(); manualDecrypt()
         }
@@ -474,16 +556,17 @@ class KryptosImeService : InputMethodService() {
                 shape = GradientDrawable.OVAL
                 setColor(Color.WHITE)
             }
-            setPadding(dp(3f), dp(3f), dp(3f), dp(3f))
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             visibility = View.GONE
         }
         sendBadge = badge
         (encrypt as FrameLayout).addView(
             badge,
-            FrameLayout.LayoutParams(dp(13f), dp(13f), Gravity.BOTTOM or Gravity.END).apply {
-                bottomMargin = dp(3f); rightMargin = dp(3f)
-            },
+            FrameLayout.LayoutParams(
+                dp(BAR_SEND_BADGE_DP),
+                dp(BAR_SEND_BADGE_DP),
+                Gravity.BOTTOM or Gravity.END,
+            ).apply { bottomMargin = dp(2.5f); rightMargin = dp(2.5f) },
         )
         styleSendBadge()
 
@@ -505,8 +588,13 @@ class KryptosImeService : InputMethodService() {
         bar.addView(profileChip, LinearLayout.LayoutParams(WRAP, dp(CHIP_HEIGHT_DP)))
         bar.addView(contactChip, LinearLayout.LayoutParams(WRAP, dp(CHIP_HEIGHT_DP)).apply { leftMargin = dp(2f) })
         bar.addView(View(this), LinearLayout.LayoutParams(0, 0, 1f))
-        bar.addView(decrypt, LinearLayout.LayoutParams(dp(56f), dp(40f)).apply { rightMargin = dp(8f) })
-        bar.addView(encrypt, LinearLayout.LayoutParams(dp(56f), dp(40f)))
+        bar.addView(
+            mic,
+            LinearLayout.LayoutParams(dp(BAR_MIC_DP), dp(BAR_MIC_HEIGHT_DP)).apply { rightMargin = dp(8f) },
+        )
+        bar.addView(decrypt, LinearLayout.LayoutParams(dp(BAR_BUTTON_DP), dp(40f)).apply { rightMargin = dp(8f) })
+        bar.addView(encrypt, LinearLayout.LayoutParams(dp(BAR_BUTTON_DP), dp(40f)))
+        styleVoiceButton()
         updateChips()
         return bar
     }
@@ -526,7 +614,8 @@ class KryptosImeService : InputMethodService() {
         var fixed = dp(6f) * 2 + dp(4f) * 2
         if (AppSettingsStore.keyboardShield) fixed += dp(18f) + dp(8f)
         if (AppSettingsStore.keyboardComposeToggle) fixed += dp(34f) + dp(8f)
-        fixed += dp(56f) + dp(8f) + dp(56f)
+        if (voiceButtonVisible()) fixed += dp(BAR_MIC_DP) + dp(8f)
+        fixed += dp(BAR_BUTTON_DP) + dp(8f) + dp(BAR_BUTTON_DP)
         fixed += dp(2f)
         fixed += dp(9f) * 2 + dp(13f) + dp(4f) + dp(9f) + dp(4f)
         fixed += dp(6f) * 2 + dp(9f) + dp(4f)
@@ -592,9 +681,30 @@ class KryptosImeService : InputMethodService() {
         sendBadge?.visibility = if (on) View.VISIBLE else View.GONE
     }
 
+    private fun voiceButtonVisible(): Boolean = voiceOn && !passwordField
+
+    private fun micBackground(bg: Int): StateListDrawable = StateListDrawable().apply {
+        addState(
+            intArrayOf(android.R.attr.state_pressed),
+            rounded(ColorUtils.blendARGB(bg, Color.BLACK, 0.12f), BAR_MIC_RADIUS_DP),
+        )
+        addState(intArrayOf(), rounded(bg, BAR_MIC_RADIUS_DP))
+    }
+
+    private fun styleVoiceButton() {
+        voiceOn = AppSettingsStore.keyboardVoice
+        val button = voiceButton ?: return
+        button.visibility = if (voiceButtonVisible()) View.VISIBLE else View.GONE
+        if (voiceStyled == voiceActive) return
+        voiceStyled = voiceActive
+        button.background = if (voiceActive) micActiveBackground else micIdleBackground
+        button.findViewById<ImageView>(VOICE_ICON_ID)
+            ?.setColorFilter(if (voiceActive) Color.WHITE else palette.accent)
+    }
+
     private fun toggleComposeMode() {
         composeOn = !composeOn
-        AppSettingsStore.keyboardCompose = composeOn
+        if (!composeForced) AppSettingsStore.keyboardCompose = composeOn
         applyFieldSize()
         composeRow.visibility = if (composeOn) View.VISIBLE else View.GONE
         styleComposeToggle()
@@ -603,14 +713,22 @@ class KryptosImeService : InputMethodService() {
         updateSuggestions()
     }
 
-    private fun barIconButton(iconRes: Int, bg: Int, tint: Int, onClick: () -> Unit): View {
+    private fun barIconButton(
+        iconRes: Int,
+        bg: Int,
+        tint: Int,
+        iconDp: Float = BAR_ICON_DP,
+        radiusDp: Float = BAR_BUTTON_RADIUS_DP,
+        iconId: Int = View.NO_ID,
+        onClick: () -> Unit,
+    ): View {
         val wrap = FrameLayout(this).apply {
             background = StateListDrawable().apply {
                 addState(
                     intArrayOf(android.R.attr.state_pressed),
-                    rounded(ColorUtils.blendARGB(bg, Color.BLACK, 0.12f), 12f),
+                    rounded(ColorUtils.blendARGB(bg, Color.BLACK, 0.12f), radiusDp),
                 )
-                addState(intArrayOf(), rounded(bg, 12f))
+                addState(intArrayOf(), rounded(bg, radiusDp))
             }
             isClickable = true
             setOnClickListener { onClick() }
@@ -618,8 +736,9 @@ class KryptosImeService : InputMethodService() {
         val icon = ImageView(this).apply {
             setImageResource(iconRes)
             setColorFilter(tint)
+            id = iconId
         }
-        wrap.addView(icon, FrameLayout.LayoutParams(dp(21f), dp(21f), Gravity.CENTER))
+        wrap.addView(icon, FrameLayout.LayoutParams(dp(iconDp), dp(iconDp), Gravity.CENTER))
         return wrap
     }
 
@@ -769,6 +888,8 @@ class KryptosImeService : InputMethodService() {
 
     private val isChinese: Boolean get() = langCode == "zh"
 
+    private val isPersian: Boolean get() = langCode == "fa"
+
     private fun buildPinyinBar(): LinearLayout {
         pinyinPreedit = TextView(this).apply {
             textSize = 14f
@@ -836,6 +957,7 @@ class KryptosImeService : InputMethodService() {
     }
 
     private fun commitCandidate(candidate: PinyinCandidate) {
+        settleVoice()
         if (composeOn) insertDraft(candidate.text)
         else currentInputConnection?.commitText(candidate.text, 1)
         if (!noLearning) PinyinEngine.note(candidate.text)
@@ -852,32 +974,67 @@ class KryptosImeService : InputMethodService() {
         renderCandidates()
     }
 
+    private class SuggestionSet(val words: List<String>, val typed: String, val corrected: String?)
+
+    private var suggestionsJob = 0
+
+    private fun cancelSuggestions() {
+        suggestionsJob++
+        suggestionsStamp = null
+        pendingFixTyped = null
+        suggestionSlots.forEach { it?.text = ""; it?.tag = null }
+        suggestionDividers.forEach { it?.visibility = View.INVISIBLE }
+    }
+
     private fun updateSuggestions() {
         if (!::suggestionBar.isInitialized) return
         if (isChinese) {
             suggestionBar.visibility = View.GONE
-            suggestionsStamp = null
+            cancelSuggestions()
             renderCandidates()
             return
         }
         if (::pinyinBar.isInitialized) pinyinBar.visibility = View.GONE
-        val show = suggestionsOn && !passwordField && !emojiOpen
+        val show = suggestionsOn && typingAidsAllowed && !emojiOpen
         suggestionBar.visibility = if (show) View.VISIBLE else View.GONE
-        if (!show) { suggestionsStamp = null; return }
+        if (!show) { cancelSuggestions(); return }
         val (prefix, previous) = wordContext()
         val stamp = listOf(prefix, previous, langCode, autocorrectOn)
         if (stamp == suggestionsStamp) return
         suggestionsStamp = stamp
-        var list = SuggestionEngine.suggest(prefix, previous, language = langCode).toMutableList()
+        val job = ++suggestionsJob
+        val lang = langCode
+        val correct = autocorrectOn
+        suggest.execute {
+            val set = runCatching { computeSuggestions(prefix, previous, lang, correct) }.getOrNull() ?: return@execute
+            handler.post { if (job == suggestionsJob) renderSuggestions(set) }
+        }
+    }
+
+    private fun computeSuggestions(
+        prefix: String,
+        previous: String?,
+        lang: String,
+        correct: Boolean,
+    ): SuggestionSet {
+        var list = SuggestionEngine.suggest(prefix, previous, language = lang).toMutableList()
         var pending: String? = null
-        if (autocorrectOn && prefix.length >= 3) {
-            pending = SuggestionEngine.autocorrect(prefix, previous, langCode, deep = false)
+        if (correct && prefix.length >= 3) {
+            pending = SuggestionEngine.autocorrect(prefix, previous, lang, deep = false)
             if (pending != null) {
                 val alt = list.firstOrNull { it != pending && it != prefix }
                 list = mutableListOf(pending, prefix)
                 if (alt != null) list.add(alt)
             }
         }
+        return SuggestionSet(list, prefix, pending)
+    }
+
+    private fun renderSuggestions(set: SuggestionSet) {
+        if (!::suggestionBar.isInitialized) return
+        val list = set.words
+        val pending = set.corrected
+        val prefix = set.typed
         pendingFixTyped = if (pending != null) prefix else null
         val order = intArrayOf(1, 0, 2)
         for (i in 0 until 3) {
@@ -918,6 +1075,7 @@ class KryptosImeService : InputMethodService() {
     }
 
     private fun applySuggestion(word: String) {
+        settleVoice()
         lastAutoFix = null
         val (prefix, previous) = wordContext()
         if (!noLearning && word == prefix && word == pendingFixTyped) {
@@ -952,7 +1110,7 @@ class KryptosImeService : InputMethodService() {
     private fun commitWordBeforeSeparator(separator: String) {
         lastAutoFix = null
         if (passwordField) return
-        if (autocorrectOn) {
+        if (autocorrectOn && typingAidsAllowed) {
             val (word, previous) = wordContext()
             if (word.isNotEmpty()) {
                 val fixed = SuggestionEngine.autocorrect(word, previous, langCode)
@@ -996,7 +1154,7 @@ class KryptosImeService : InputMethodService() {
             ic.commitText(restored, 1)
             ic.endBatchEdit()
         }
-        SuggestionEngine.noteUndoneCorrection(fix.original)
+        if (!noLearning) SuggestionEngine.noteUndoneCorrection(fix.original)
         return true
     }
 
@@ -1041,7 +1199,7 @@ class KryptosImeService : InputMethodService() {
             setTextColor(palette.textSecondary)
             gravity = Gravity.CENTER
             setPadding(dp(10f), dp(2f), dp(2f), dp(2f))
-            setOnClickListener { revealOverlay.visibility = View.GONE }
+            setOnClickListener { hideReveal() }
         }
         revealText = TextView(this).apply {
             textSize = 16f
@@ -1088,17 +1246,21 @@ class KryptosImeService : InputMethodService() {
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
             isClickable = true
             setPadding(dp(10f), dp(10f), dp(10f), dp(10f))
-            setOnClickListener { visibility = View.GONE }
+            setOnClickListener { hideReveal() }
             addView(revealCard, FrameLayout.LayoutParams(MATCH, WRAP, Gravity.CENTER))
         }
         return revealOverlay
     }
 
-    private val keyRowsHeight: Int get() = dp(4 * 46f + 3 * 6f)
+    private val compactKeys: Boolean get() = resources.configuration.screenHeightDp < 500
+    private val keyHeightDp: Float get() = if (compactKeys) 37f else 48.5f
+    private val keyGapDp: Float get() = if (compactKeys) 6f else 10.5f
+    private val keyRowsHeight: Int get() = dp(4 * keyHeightDp + 3 * keyGapDp)
 
-    private fun showReveal(name: String, text: String) {
-        revealTitle.text = getString(R.string.decrypted) + " · " + name
-        revealText.text = text
+    private fun showReveal(revealed: Revealed) {
+        val who = if (revealed.mine) getString(R.string.screen_you_to, revealed.name) else revealed.name
+        revealTitle.text = getString(R.string.decrypted) + " · " + who
+        revealText.text = revealed.text
         revealText.scrollTo(0, 0)
         revealOverlay.visibility = View.VISIBLE
     }
@@ -1107,9 +1269,11 @@ class KryptosImeService : InputMethodService() {
         super.onStartInputView(info, restarting)
         crypto.execute {
             runCatching { SignalService.ensureInitialized() }
+            runCatching { SignalService.purgeExpiredMessages() }
             handler.post { restoreContactSelection(); updateChips() }
         }
         restoreContactSelection()
+        com.kryptos.android.security.ClipboardGuard.flushPending(this)
         secureKb = AppSettingsStore.secureKeyboard
         window?.window?.let { w ->
             if (secureKb) {
@@ -1122,31 +1286,40 @@ class KryptosImeService : InputMethodService() {
         sounds = AppSettingsStore.keyboardSounds
         autoDecrypt = AppSettingsStore.keyboardAutoDecrypt
         composeOn = AppSettingsStore.keyboardCompose
+        composeForced = AppSettingsStore.keyboardComposeAuto &&
+            info?.packageName?.let { it in AppSettingsStore.composeAutoApps() } == true
+        if (composeForced) composeOn = true
         suggestionsOn = AppSettingsStore.keyboardSuggestions
         autocorrectOn = AppSettingsStore.keyboardAutocorrect
         emojiOn = AppSettingsStore.keyboardEmoji
+        punctOn = AppSettingsStore.keyboardPunctKey
+        punctDoubleOn = AppSettingsStore.keyboardPunctDouble
         enabledLangs = enabledLanguages()
         langCode = (AppSettingsStore.keyboardLastLang ?: AppSettingsStore.systemKeyboardLang)
             .takeIf { it in enabledLangs } ?: enabledLangs[0]
         lastAutoFix = null
-        suggestionsStamp = null
+        lastPunctTap = 0L
+        cancelSuggestions()
         clearPinyin()
+        cancelVoice()
         passwordField = isPasswordField(info)
         noLearningField =
-            ((info?.imeOptions ?: 0) and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0 &&
-                info?.packageName != packageName
+            ((info?.imeOptions ?: 0) and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0
+        noSuggestionsField =
+            ((info?.inputType ?: 0) and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0
         returnAction = computeReturnAction(info)
         warmSuggestions()
 
         status.text = ""
         status.visibility = View.GONE
-        revealOverlay.visibility = View.GONE
+        hideReveal()
         composeRow.visibility = if (composeOn) View.VISIBLE else View.GONE
         applyFieldSize()
         applyNavigationBar()
         styleShieldMark()
         styleComposeToggle()
         styleSendBadge()
+        styleVoiceButton()
         renderDraft()
         hideChipMenu()
         closeEmojiPanel()
@@ -1173,13 +1346,17 @@ class KryptosImeService : InputMethodService() {
     }
 
     override fun onFinishInput() {
+        cancelVoice()
         cancelAssistedSend()
+        TypingMemory.beginSession()
         super.onFinishInput()
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
         clipboardManager.removePrimaryClipChangedListener(clipListener)
+        cancelVoice()
+        voice?.release()
         hideKeyPopup()
         keyGrid.cancelTouches()
         SuggestionEngine.persistAsync()
@@ -1214,27 +1391,34 @@ class KryptosImeService : InputMethodService() {
     override fun onDestroy() {
         clipboardManager.removePrimaryClipChangedListener(clipListener)
         cancelAssistedSend()
+        voice?.release()
+        voice = null
         handler.removeCallbacksAndMessages(null)
         hideKeyPopup()
         if (live === this) live = null
         super.onDestroy()
         crypto.shutdown()
+        suggest.shutdown()
+    }
+
+    private fun hideReveal() {
+        if (::revealOverlay.isInitialized) revealOverlay.visibility = View.GONE
+        if (::revealText.isInitialized) revealText.text = ""
+        if (::revealTitle.isInitialized) revealTitle.text = ""
     }
 
     private fun dropSensitiveState() {
         cancelAssistedSend()
+        cancelVoice()
         clearPinyin()
         draft = ""
         caret = 0
         lastAutoFix = null
         selectedFingerprint = null
         selectedProfileId = null
-        pendingFixTyped = null
-        suggestionsStamp = null
+        cancelSuggestions()
         hideChipMenu()
-        if (::revealOverlay.isInitialized) revealOverlay.visibility = View.GONE
-        if (::revealText.isInitialized) revealText.text = ""
-        if (::revealTitle.isInitialized) revealTitle.text = ""
+        hideReveal()
         if (::status.isInitialized) {
             status.text = ""
             status.visibility = View.GONE
@@ -1316,8 +1500,42 @@ class KryptosImeService : InputMethodService() {
     private fun cryptoLocked(): Boolean =
         com.kryptos.android.security.AppLock.isCryptoSessionLocked(this)
 
+    private class FieldToken(val pkg: String?, val fieldId: Int)
+
+    private fun fieldToken(): FieldToken? =
+        currentInputEditorInfo?.let { FieldToken(it.packageName?.toString(), it.fieldId) }
+
+    private fun sameField(token: FieldToken?): Boolean {
+        if (token == null) return false
+        val now = fieldToken() ?: return false
+        return now.pkg == token.pkg && now.fieldId == token.fieldId
+    }
+
+    private fun keepInDraft(text: String) {
+        draft = text
+        caret = text.length
+        if (!composeOn) {
+            composeOn = true
+            applyFieldSize()
+            if (::composeRow.isInitialized) composeRow.visibility = View.VISIBLE
+            styleComposeToggle()
+        }
+        renderDraft()
+        updateAutoShift()
+        refreshKeys()
+        updateSuggestions()
+    }
+
+    private fun cryptoFailureMessage(e: Throwable): String = when (e) {
+        is com.kryptos.android.signal.NoSessionForContactException -> getString(R.string.session_lost)
+        is com.kryptos.android.signal.StorageUnavailableException -> getString(R.string.storage_unavailable)
+        else -> getString(R.string.encrypt_failed)
+    }
+
     private fun encryptTapped() {
+        if (voiceActive) return
         if (cryptoLocked()) { flash(getString(R.string.kb_locked), error = true); return }
+        if (passwordField) { flash(getString(R.string.kb_password_field), error = true); return }
         val contact = currentContact() ?: run { flash(getString(R.string.kb_no_contacts), error = true); return }
         if (encryptInFlight) return
         val intoDraft = composeOn
@@ -1331,23 +1549,41 @@ class KryptosImeService : InputMethodService() {
             if (harvested.isBlank()) { flash(getString(R.string.kb_nothing_to_encrypt), error = true); return }
             plain = harvested
         }
+        val target = fieldToken()
+        val stegoWanted = AppSettingsStore.resolvedStegoLanguage() != null
         encryptInFlight = true
         crypto.execute {
             val outcome = runCatching { SignalService.encrypt(plain, contact) }
+            val plainToken = stegoWanted && outcome.getOrNull()?.hidden == false
             handler.post {
                 encryptInFlight = false
-                outcome.onSuccess { armored ->
+                outcome.onSuccess { sealed ->
+                    val armored = sealed.armored
+                    TypingMemory.forgetSession()
+                    SuggestionEngine.persistAsync()
+                    crypto.execute { runCatching { PinyinEngine.persist() } }
                     if (intoDraft) {
                         draft = ""
                         caret = 0
                         renderDraft()
                     }
-                    currentInputConnection?.commitText(armored, 1)
-                    sendEncrypted(armored)
-                    flash(getString(R.string.kb_encrypted), error = false)
+                    if (sameField(target)) {
+                        currentInputConnection?.commitText(armored, 1)
+                        sendEncrypted(armored)
+                        flash(
+                            getString(if (plainToken) R.string.kb_stego_unavailable else R.string.kb_encrypted),
+                            error = plainToken,
+                        )
+                    } else {
+                        copyCipher(this, armored)
+                        flash(getString(R.string.kb_field_changed), error = true)
+                    }
                 }.onFailure { e ->
-                    if (!intoDraft) currentInputConnection?.commitText(plain, 1)
-                    flash(e.message ?: "error", error = true)
+                    if (!intoDraft) {
+                        if (sameField(target)) currentInputConnection?.commitText(plain, 1)
+                        else keepInDraft(plain)
+                    }
+                    flash(cryptoFailureMessage(e), error = true)
                 }
             }
         }
@@ -1422,19 +1658,21 @@ class KryptosImeService : InputMethodService() {
         val wanted = candidates.filter { it.isNotBlank() }
         if (wanted.isEmpty()) { onMiss?.invoke(); return }
         for (candidate in wanted) {
-            DecryptCache.get(candidate)?.let { (name, text) -> showReveal(name, text); return }
+            DecryptCache.get(candidate)?.let { showReveal(it); return }
         }
         crypto.execute {
             for (candidate in wanted) {
-                runCatching { SignalService.cachedDecrypt(candidate) }.getOrNull()?.let { (contact, text) ->
-                    DecryptCache.put(candidate, contact.displayName, text)
-                    handler.post { showReveal(contact.displayName, text) }
+                runCatching { SignalService.cachedDecryptHit(candidate) }.getOrNull()?.let { hit ->
+                    val revealed = Revealed(hit.contact.displayName, hit.text, hit.mine)
+                    DecryptCache.put(candidate, revealed)
+                    handler.post { showReveal(revealed) }
                     return@execute
                 }
                 for (contact in contacts) {
                     val plain = runCatching { SignalService.decrypt(candidate, contact) }.getOrNull() ?: continue
-                    DecryptCache.put(candidate, contact.displayName, plain)
-                    handler.post { showReveal(contact.displayName, plain) }
+                    val revealed = Revealed(contact.displayName, plain, mine = false)
+                    DecryptCache.put(candidate, revealed)
+                    handler.post { showReveal(revealed) }
                     return@execute
                 }
             }
@@ -1443,11 +1681,13 @@ class KryptosImeService : InputMethodService() {
     }
 
     private fun manualDecrypt() {
+        if (voiceActive) return
         if (cryptoLocked()) { flash(getString(R.string.kb_locked), error = true); return }
+        if (passwordField) { flash(getString(R.string.kb_password_field), error = true); return }
         val clip = clipboardText(this)
         for (candidate in listOf(clip, if (composeOn) draft else "")) {
             if (candidate.isBlank()) continue
-            DecryptCache.get(candidate)?.let { (name, text) -> showReveal(name, text); return }
+            DecryptCache.get(candidate)?.let { showReveal(it); return }
         }
         val candidates = buildList {
             add(clip)
@@ -1458,8 +1698,9 @@ class KryptosImeService : InputMethodService() {
     }
 
     private fun autoDecryptClipboard(freshCopy: Boolean = false) {
+        if (passwordField) return
         if (revealOverlay.visibility == View.VISIBLE) return
-        if (cryptoLocked()) return
+        if (cryptoLocked()) { DecryptCache.clear(); return }
         val clip = clipboardText(this)
         if (clip.isBlank()) return
         crypto.execute {
@@ -1501,10 +1742,13 @@ class KryptosImeService : InputMethodService() {
     }
 
     private fun rows(): List<String> = when {
+        symbols && symPage == 1 && isPersian -> listOf("1234567890", "#%*+=_\\|«»", ".،؟!'")
         symbols && symPage == 1 -> listOf("[]{}#%^*+=", "_\\|~<>€£₽•", ".,?!'")
+        isPersian && symbols -> listOf("۱۲۳۴۵۶۷۸۹۰", "-/:؛()﷼&@\"", ".،؟!'ءئؤ")
         symbols -> listOf("1234567890", "-/:;()$&@\"", ".,?!'")
         langCode == "ru" -> listOf("йцукенгшщзх", "фывапролджэ", "ячсмитьбю")
         langCode == "de" -> listOf("qwertzuiopü", "asdfghjklöä", "yxcvbnmß")
+        langCode == "fa" -> listOf("ضصثقفغعهخحجچ", "شسیبلاتنمکگ", "ظطژزرذدپوآ")
         else -> listOf("qwertyuiop", "asdfghjkl", "zxcvbnm")
     }
 
@@ -1517,7 +1761,9 @@ class KryptosImeService : InputMethodService() {
             if (sidePad > 0) line.add(Key("pad", "", sidePad))
             if (i == 2) {
                 if (symbols) {
-                    line.add(Key("symtoggle", if (symPage == 0) "#+=" else "?123", 1.4f))
+                    line.add(Key("symtoggle", if (symPage == 0) "#+=" else numbersLabel(), 1.4f))
+                } else if (isPersian) {
+                    line.add(Key("zwnj", ZWNJ_LABEL, 1.4f))
                 } else {
                     val icon = when (shiftState) {
                         2 -> KeyIcon.CAPS
@@ -1528,7 +1774,8 @@ class KryptosImeService : InputMethodService() {
                 }
             }
             row.forEach { ch ->
-                val label = if (shiftState > 0 && !symbols) ch.uppercaseChar().toString() else ch.toString()
+                val label =
+                    if (shiftState > 0 && !symbols && !isPersian) ch.uppercaseChar().toString() else ch.toString()
                 line.add(Key("char", label, 1f))
             }
             if (i == 2) line.add(Key("bs", "", 1.4f, KeyIcon.BACKSPACE))
@@ -1547,13 +1794,16 @@ class KryptosImeService : InputMethodService() {
         val twoLangs = enabledLangs.size > 1
         out.add(
             buildList {
-                add(Key("sym", if (symbols) modeLabel() else "?123", 1.4f))
-                if (twoLangs) add(Key("lang", shortLabel(nextLang()), 1.1f))
-                if (emojiOn) add(Key("emoji", "", 1.1f, KeyIcon.EMOJI))
-                var spaceWeight = if (emojiOn) 3.3f else 4.4f
-                if (!twoLangs) spaceWeight += 1.1f
+                add(Key("sym", if (symbols) modeLabel() else numbersLabel(), 1.15f))
+                if (twoLangs) add(Key("lang", shortLabel(nextLang()), 0.85f))
+                if (emojiOn) add(Key("emoji", "", 0.85f, KeyIcon.EMOJI))
+                var spaceWeight = 3.35f
+                if (!twoLangs) spaceWeight += 0.85f
+                if (!emojiOn) spaceWeight += 0.85f
+                if (!punctOn) spaceWeight += 0.85f
                 add(Key("space", languageName(langCode), spaceWeight))
-                add(Key("ret", "", 1.4f, returnIcon))
+                if (punctOn) add(Key("punct", if (isChinese) "\u3002" else ".", 0.85f))
+                add(Key("ret", "", 1.25f, returnIcon))
             }
         )
         return out
@@ -1563,7 +1813,7 @@ class KryptosImeService : InputMethodService() {
 
     private fun refreshKeys() {
         if (!::keyGrid.isInitialized) return
-        val stamp = listOf(shiftState, langCode, symbols, symPage, returnAction, emojiOn, enabledLangs)
+        val stamp = listOf(shiftState, langCode, symbols, symPage, returnAction, emojiOn, punctOn, enabledLangs)
         if (stamp == keysStamp) return
         keysStamp = stamp
         keyGrid.keys = buildKeys()
@@ -1645,6 +1895,12 @@ class KryptosImeService : InputMethodService() {
         updateSuggestions()
     }
 
+    private fun replaceTypedChar(s: String) {
+        lastAutoFix = null
+        backspace()
+        typeChar(s)
+    }
+
     private fun graphemeBack(text: String, at: Int): Int {
         if (at <= 0) return 0
         var i = at
@@ -1708,6 +1964,24 @@ class KryptosImeService : InputMethodService() {
         updateSuggestions()
     }
 
+    private fun punctTapped(label: String) {
+        val now = System.currentTimeMillis()
+        if (PunctDoubleTap.replacesPeriod(
+                punctDoubleOn,
+                passwordField,
+                now - lastPunctTap,
+                textBeforeCaret(1),
+                label,
+            )
+        ) {
+            lastPunctTap = 0L
+            replaceTypedChar(punctAlternates().first())
+            return
+        }
+        lastPunctTap = now
+        typeChar(label)
+    }
+
     private fun returnTapped() {
         if (isChinese && pinyin.isNotEmpty()) {
             val raw = pinyin
@@ -1755,12 +2029,19 @@ class KryptosImeService : InputMethodService() {
         return enabledLangs[(i + 1) % enabledLangs.size]
     }
 
-    private fun modeLabel() = if (langCode == "ru") "АБВ" else "ABC"
+    private fun modeLabel() = when (langCode) {
+        "ru" -> "АБВ"
+        "fa" -> "ابپ"
+        else -> "ABC"
+    }
+
+    private fun numbersLabel() = if (isPersian) "۱۲۳؟" else "?123"
 
     private fun shortLabel(code: String) = when (code) {
         "ru" -> "РУ"
         "de" -> "DE"
         "zh" -> "中"
+        "fa" -> "فا"
         else -> "EN"
     }
 
@@ -1768,18 +2049,32 @@ class KryptosImeService : InputMethodService() {
         "ru" -> "Русский"
         "de" -> "Deutsch"
         "zh" -> "中文"
+        "fa" -> "فارسی"
         else -> "English"
     }
 
     private fun langTapped() {
         if (enabledLangs.size < 2) return
+        selectLanguage(nextLang())
+    }
+
+    private fun selectLanguage(code: String) {
+        if (code == langCode || code !in enabledLangs) return
         clearPinyin()
-        langCode = nextLang()
-        AppSettingsStore.keyboardLastLang = langCode
+        langCode = code
+        AppSettingsStore.keyboardLastLang = code
         symbols = false
         updateAutoShift()
         refreshKeys()
         updateSuggestions()
+    }
+
+    private fun showLanguageMenu() {
+        if (enabledLangs.size < 2) return
+        val labels = enabledLangs.map { languageName(it) }
+        showChipMenu(labels, enabledLangs.indexOf(langCode)) { index ->
+            enabledLangs.getOrNull(index)?.let { selectLanguage(it) }
+        }
     }
 
     private fun insertDraft(s: String) {
@@ -1822,6 +2117,7 @@ class KryptosImeService : InputMethodService() {
 
     private fun moveCaretH(chars: Int) {
         if (chars == 0) return
+        settleVoice()
         lastAutoFix = null
         if (composeOn) {
             caret = (caret + chars).coerceIn(0, draft.length)
@@ -1840,6 +2136,7 @@ class KryptosImeService : InputMethodService() {
 
     private fun moveCaretV(lines: Int) {
         if (lines == 0) return
+        settleVoice()
         lastAutoFix = null
         if (composeOn) {
             var pos = caret.coerceIn(0, draft.length)
@@ -1881,6 +2178,29 @@ class KryptosImeService : InputMethodService() {
     }
     private val iconFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val iconPath = Path()
+
+    private val glyphBounds = Rect()
+
+    private fun drawGlyph(canvas: Canvas, text: String, cx: Float, cy: Float, paint: Paint) {
+        paint.getTextBounds(text, 0, text.length, glyphBounds)
+        val dx = (glyphBounds.left + glyphBounds.right) / 2f - paint.measureText(text) / 2f
+        val dy = (glyphBounds.top + glyphBounds.bottom) / 2f
+        canvas.drawText(text, cx - dx, cy - dy, paint)
+    }
+
+    private fun drawHoldMark(canvas: Canvas, key: RectF, color: Int) {
+        val cx = key.right - dp(9f)
+        val cy = key.top + dp(9f)
+        val w = dp(3f).toFloat()
+        val h = dp(1.8f).toFloat()
+        iconPath.reset()
+        iconPath.moveTo(cx - w, cy - h)
+        iconPath.lineTo(cx, cy + h)
+        iconPath.lineTo(cx + w, cy - h)
+        iconStroke.color = color
+        iconStroke.strokeWidth = dp(1.4f).toFloat()
+        canvas.drawPath(iconPath, iconStroke)
+    }
 
     private fun drawKeyIcon(canvas: Canvas, icon: KeyIcon, cx: Float, cy: Float, size: Float, color: Int) {
         fun x(u: Float) = cx + (u - 0.5f) * size
@@ -2063,13 +2383,149 @@ class KryptosImeService : InputMethodService() {
     }
 
     private fun fadeOutKeyPopup() {
-        val text = keyPopupText ?: return hideKeyPopup()
-        text.animate().alpha(0f).setDuration(100).withEndAction { hideKeyPopup() }.start()
+        val text = keyPopupText ?: return dismissKeyPopup()
+        text.animate().alpha(0f).setDuration(100).withEndAction { dismissKeyPopup() }.start()
+    }
+
+    private fun dismissKeyPopup() {
+        keyPopupText?.animate()?.cancel()
+        keyPopup?.dismiss()
     }
 
     private fun hideKeyPopup() {
-        keyPopupText?.animate()?.cancel()
-        keyPopup?.dismiss()
+        dismissKeyPopup()
+        hideAlternates()
+    }
+
+    private fun punctHint(): String = when {
+        isChinese -> "\uFF0C"
+        isPersian -> "\u060C"
+        else -> ","
+    }
+
+    private fun punctAlternates(): List<String> = PUNCT_ALTERNATES.map {
+        when {
+            isChinese -> FULL_WIDTH[it] ?: it
+            isPersian -> PERSIAN_PUNCT[it] ?: it
+            else -> it
+        }
+    }
+
+    private fun letterAlternates(label: String): List<String> {
+        if (passwordField || isChinese) return emptyList()
+        return LetterAlternates.forLabel(label)
+    }
+
+    private fun alternatesOpen(): Boolean = altIndex >= 0
+
+    private fun showAlternates(
+        anchor: RectF,
+        viewOffsetX: Float,
+        chars: List<String>,
+        typed: String?,
+        pointerId: Int,
+    ) {
+        if (passwordField || chars.size < 2) return
+        val itemW = dp(46f)
+        val itemH = dp(52f)
+        val pad = dp(6f)
+        val row = altRow ?: LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(pad, pad, pad, pad)
+            background = rounded(palette.panel, 14f)
+            elevation = dp(6f).toFloat()
+        }.also { altRow = it }
+        if (altItems.size != chars.size) {
+            row.removeAllViews()
+            altItems = chars.map {
+                TextView(this).apply {
+                    textSize = 22f
+                    gravity = Gravity.CENTER
+                    setTextColor(palette.text)
+                    row.addView(this, LinearLayout.LayoutParams(itemW, itemH))
+                }
+            }
+        }
+        val width = chars.size * itemW + pad * 2
+        val height = itemH + pad * 2
+        val edge = dp(4f)
+        val screen = resources.displayMetrics.widthPixels
+        val rightward = anchor.centerX() + itemW / 2f + (chars.size - 1) * itemW + pad <= screen - edge
+        val ordered = if (rightward) chars else chars.reversed()
+        altItems.forEachIndexed { i, view -> view.text = ordered[i] }
+
+        val anchored = if (rightward) {
+            anchor.centerX() - itemW / 2f - pad
+        } else {
+            anchor.centerX() + itemW / 2f + pad - width
+        }
+        val x = anchored.toInt().coerceIn(edge, (screen - width - edge).coerceAtLeast(edge))
+        val y = anchor.top.toInt() - height - dp(6f)
+
+        val popup = altPopup ?: PopupWindow(row, width, height).apply {
+            isClippingEnabled = false
+            isTouchable = false
+            isFocusable = false
+        }.also { altPopup = it }
+        popup.contentView = row
+        if (popup.isShowing) {
+            popup.update(x, y, width, height)
+        } else {
+            popup.width = width
+            popup.height = height
+            popup.showAtLocation(rootFrame, Gravity.NO_GRAVITY, x, y)
+            applyPopupSecure(popup)
+        }
+        altLeft = x - viewOffsetX + pad
+        altStep = itemW.toFloat()
+        altChars = ordered
+        altTyped = typed
+        altPointer = pointerId
+        altIndex = -1
+        selectAlternate(if (rightward) 0 else altChars.lastIndex)
+        haptic()
+    }
+
+    private fun selectAlternate(index: Int) {
+        if (index == altIndex) return
+        altIndex = index
+        altItems.forEachIndexed { i, view ->
+            view.background = if (i == index) rounded(palette.accentSoft, 10f) else null
+            view.setTextColor(if (i == index) palette.accent else palette.text)
+        }
+    }
+
+    private fun moveAlternates(x: Float) {
+        if (!alternatesOpen() || altStep <= 0f) return
+        val index = ((x - altLeft) / altStep).toInt().coerceIn(0, altChars.lastIndex)
+        if (index != altIndex) {
+            selectAlternate(index)
+            haptic()
+        }
+    }
+
+    private fun commitAlternate(): Boolean {
+        val index = altIndex
+        if (index < 0) return false
+        val char = altChars.getOrNull(index)
+        val typed = altTyped
+        hideAlternates()
+        if (char.isNullOrEmpty()) return false
+        when {
+            typed == null -> typeChar(char)
+            char != typed -> replaceTypedChar(char)
+        }
+        return true
+    }
+
+    private fun hideAlternates() {
+        if (altIndex < 0 && altPopup?.isShowing != true) return
+        altIndex = -1
+        altChars = emptyList()
+        altTyped = null
+        altPointer = -1
+        altPopup?.dismiss()
     }
 
     private fun openEmojiPanel() {
@@ -2095,6 +2551,176 @@ class KryptosImeService : InputMethodService() {
         if (::keyGrid.isInitialized) keyGrid.visibility = View.VISIBLE
         updateSuggestions()
     }
+
+    private fun voiceTapped() {
+        if (voiceActive) { voice?.stop(); return }
+        if (encryptInFlight) return
+        if (passwordField) { flash(getString(R.string.kb_password_field), error = true); return }
+        if (!voiceSupported) {
+            voiceSupported = VoiceInput.isSupported(this)
+            if (!voiceSupported) { flash(getString(R.string.kb_voice_unavailable), error = true); return }
+        }
+        if (!VoiceInput.hasPermission(this)) { flash(getString(R.string.kb_voice_permission), error = true); return }
+        beginVoice()
+        val engine = voice ?: VoiceInput(this, voiceListener).also { voice = it }
+        engine.start(VoiceInput.languageTag(langCode))
+    }
+
+    private fun beginVoice() {
+        keyGrid.cancelTouches()
+        hideKeyPopup()
+        hideAlternates()
+        hideChipMenu()
+        voiceActive = true
+        voiceTarget = fieldToken()
+        voiceDraftAt = caret.coerceIn(0, draft.length)
+        voiceDraftLen = 0
+        val before = if (composeOn) draft.getOrNull(voiceDraftAt - 1)?.toString().orEmpty() else textBeforeCaret(1)
+        voiceLead = if (VoiceInput.needsLeadingSpace(before, isChinese)) " " else ""
+        styleVoiceButton()
+        pulseVoice(up = true)
+        handler.removeCallbacks(voiceTimeout)
+        handler.removeCallbacks(voiceCutoff)
+        handler.postDelayed(voiceTimeout, VOICE_MAX_MS)
+        handler.postDelayed(voiceCutoff, VOICE_MAX_MS + VOICE_FINISH_MS)
+    }
+
+    private fun endVoice() {
+        if (!voiceActive) return
+        voiceActive = false
+        voiceTarget = null
+        voiceDraftLen = 0
+        voiceLead = ""
+        handler.removeCallbacks(voiceTimeout)
+        handler.removeCallbacks(voiceCutoff)
+        voiceButton?.let { button ->
+            button.animate().cancel()
+            button.scaleX = 1f
+            button.scaleY = 1f
+        }
+        styleVoiceButton()
+        updateAutoShift()
+        refreshKeys()
+        updateSuggestions()
+    }
+
+    private fun discardVoiceText() {
+        if (composeOn) {
+            val at = voiceDraftAt.coerceIn(0, draft.length)
+            val end = (at + voiceDraftLen).coerceIn(at, draft.length)
+            if (end > at) {
+                draft = draft.removeRange(at, end)
+                caret = at
+                renderDraft()
+            }
+            return
+        }
+        if (!sameField(voiceTarget)) return
+        val ic = currentInputConnection ?: return
+        ic.setComposingText("", 1)
+        ic.finishComposingText()
+    }
+
+    private fun cancelVoice() {
+        voice?.cancel()
+        if (!voiceActive) return
+        discardVoiceText()
+        endVoice()
+    }
+
+    private fun settleVoice() {
+        if (!voiceActive) return
+        voice?.cancel()
+        if (!composeOn) currentInputConnection?.finishComposingText()
+        endVoice()
+    }
+
+    private fun pulseVoice(up: Boolean) {
+        val button = voiceButton ?: return
+        val scale = if (up) VOICE_PULSE_SCALE else 1f
+        button.animate()
+            .scaleX(scale)
+            .scaleY(scale)
+            .setDuration(VOICE_PULSE_MS)
+            .withEndAction { if (voiceActive) pulseVoice(!up) }
+            .start()
+    }
+
+    private fun voiceFieldLost(): Boolean = !composeOn && !sameField(voiceTarget)
+
+    private fun showVoiceText(text: String, done: Boolean) {
+        val shown = if (text.isEmpty()) "" else voiceLead + text
+        if (composeOn) {
+            val at = voiceDraftAt.coerceIn(0, draft.length)
+            val end = (at + voiceDraftLen).coerceIn(at, draft.length)
+            draft = draft.substring(0, at) + shown + draft.substring(end)
+            voiceDraftLen = shown.length
+            caret = at + shown.length
+            renderDraft()
+            updateAutoShift()
+            refreshKeys()
+            return
+        }
+        val ic = currentInputConnection ?: return
+        if (!done) {
+            ic.setComposingText(shown, 1)
+            return
+        }
+        if (shown.isEmpty()) ic.finishComposingText() else ic.commitText(shown, 1)
+    }
+
+    private val voiceListener = object : VoiceInput.Listener {
+        override fun onVoicePartial(text: String) {
+            if (!voiceActive) return
+            if (voiceFieldLost()) { cancelVoice(); return }
+            showVoiceText(text, done = false)
+        }
+
+        override fun onVoiceResult(text: String) {
+            if (!voiceActive) return
+            val spoken = text.trim()
+            if (voiceFieldLost()) {
+                cancelVoice()
+                if (spoken.isNotEmpty()) {
+                    keepInDraft(spoken)
+                    flash(getString(R.string.kb_voice_field_changed), error = true)
+                }
+                return
+            }
+            showVoiceText(spoken, done = true)
+            val empty = spoken.isEmpty()
+            endVoice()
+            if (empty) flash(getString(R.string.kb_voice_empty), error = true)
+        }
+
+        override fun onVoiceFailure(failure: VoiceInput.Failure) {
+            if (voiceActive && !composeOn) currentInputConnection?.finishComposingText()
+            endVoice()
+            if (failure == VoiceInput.Failure.LANGUAGE) requestVoiceModel()
+            flash(voiceFailureMessage(failure), error = true)
+        }
+    }
+
+    private fun requestVoiceModel() {
+        val tag = VoiceInput.languageTag(langCode)
+        if (!voiceModelAsked.add(tag)) return
+        VoiceInput.requestModel(this, tag)
+    }
+
+    private fun voiceFailureMessage(failure: VoiceInput.Failure): String = getString(
+        when (failure) {
+            VoiceInput.Failure.PERMISSION -> R.string.kb_voice_permission
+            VoiceInput.Failure.LANGUAGE -> R.string.kb_voice_language
+            VoiceInput.Failure.NO_SPEECH -> R.string.kb_voice_empty
+            VoiceInput.Failure.BUSY -> R.string.kb_voice_busy
+            VoiceInput.Failure.UNAVAILABLE -> R.string.kb_voice_unavailable
+            VoiceInput.Failure.OTHER -> R.string.kb_voice_failed
+        },
+    )
+
+    private val voiceTimeout = Runnable { if (voiceActive) voice?.stop() }
+
+    private val voiceCutoff = Runnable { settleVoice() }
 
     private fun buildEmojiPanel(): LinearLayout {
         val grid = LinearLayout(this).apply {
@@ -2180,9 +2806,10 @@ class KryptosImeService : InputMethodService() {
         setOnClickListener {
             val emoji = text.toString()
             if (emoji.isEmpty()) return@setOnClickListener
+            settleVoice()
             haptic(); sound("char")
             typeChar(emoji)
-            EmojiData.addRecent(emoji)
+            if (!noLearning) EmojiData.addRecent(emoji)
         }
     }
 
@@ -2290,11 +2917,47 @@ class KryptosImeService : InputMethodService() {
     }
 
     @SuppressLint("ViewConstructor")
+    private inner class DraftTextView(context: Context) : TextView(context) {
+        private val caretPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+        private val caretThickness = dp(1.5f).toFloat()
+
+        var caretOffset = -1
+            set(value) {
+                if (field != value) {
+                    field = value
+                    invalidate()
+                }
+            }
+
+        var caretColor = 0
+            set(value) {
+                if (field != value) {
+                    field = value
+                    caretPaint.color = value
+                    invalidate()
+                }
+            }
+
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val offset = caretOffset
+            if (offset < 0 || offset > text.length) return
+            val l = layout ?: return
+            val line = l.getLineForOffset(offset)
+            val x = l.getPrimaryHorizontal(offset) + totalPaddingLeft - scrollX
+            val top = (l.getLineTop(line) + totalPaddingTop - scrollY).toFloat()
+            val bottom = (l.getLineBottom(line) + totalPaddingTop - scrollY).toFloat()
+            canvas.drawRect(x, top, x + caretThickness, bottom, caretPaint)
+        }
+    }
+
+    @SuppressLint("ViewConstructor")
     private inner class KeyGridView(context: Context) : View(context) {
         var keys: List<List<Key>> = emptyList()
 
-        private val keyH = dp(46f).toFloat()
-        private val rowGap = dp(6f).toFloat()
+        private val keyH = dp(keyHeightDp).toFloat()
+        private val rowGap = dp(keyGapDp).toFloat()
+        private val labelScale = keyH / dp(48.5f).toFloat()
         private val hGap = dp(5f).toFloat()
         private val radius = dp(9f).toFloat()
         private val edge = dp(1.5f).toFloat()
@@ -2312,6 +2975,7 @@ class KryptosImeService : InputMethodService() {
             var stepsX = 0
             var stepsY = 0
             var moved = false
+            var committed = false
             var holdRunnable: Runnable? = null
         }
 
@@ -2420,7 +3084,15 @@ class KryptosImeService : InputMethodService() {
                         else -> palette.text
                     }
                     if (key.icon != null) {
-                        drawKeyIcon(canvas, key.icon, r.centerX(), r.centerY(), dp(19f).toFloat(), faded(iconColor))
+                        drawKeyIcon(canvas, key.icon, r.centerX(), r.centerY(), keyH * 0.41f, faded(iconColor))
+                    } else if (key.id == "punct") {
+                        labelPaint.typeface = Typeface.DEFAULT
+                        labelPaint.textSize = sp(21f * labelScale)
+                        labelPaint.color = faded(palette.textSecondary)
+                        drawGlyph(canvas, punctHint(), r.centerX(), r.top + keyH * 0.35f, labelPaint)
+                        labelPaint.textSize = sp(30f * labelScale)
+                        labelPaint.color = faded(palette.text)
+                        drawGlyph(canvas, key.label, r.centerX(), r.top + keyH * 0.67f, labelPaint)
                     } else {
                         labelPaint.color = faded(when (key.id) {
                             "ret" -> Color.WHITE
@@ -2428,15 +3100,16 @@ class KryptosImeService : InputMethodService() {
                             else -> palette.text
                         })
                         labelPaint.textSize = when (key.id) {
-                            "char" -> sp(20f)
-                            "space" -> sp(14f)
-                            "sym", "lang", "symtoggle" -> sp(13f)
-                            else -> sp(18f)
+                            "char" -> sp(26.4f * labelScale)
+                            "space" -> sp(14f * labelScale)
+                            "sym", "lang", "symtoggle" -> sp(13f * labelScale)
+                            else -> sp(18f * labelScale)
                         }
                         labelPaint.typeface =
                             if (key.id == "sym" || key.id == "lang" || key.id == "symtoggle") Typeface.DEFAULT_BOLD else Typeface.DEFAULT
                         val cy = r.centerY() - (labelPaint.ascent() + labelPaint.descent()) / 2
                         canvas.drawText(key.label, r.centerX(), cy, labelPaint)
+                        if (key.id == "lang") drawHoldMark(canvas, r, faded(palette.textSecondary))
                     }
                 }
             }
@@ -2451,8 +3124,11 @@ class KryptosImeService : InputMethodService() {
         }
 
         private fun dispatchKey(key: Key, fromTouch: Boolean) {
+            settleVoice()
             when (key.id) {
                 "char" -> typeChar(key.label)
+                "punct" -> punctTapped(key.label)
+                "zwnj" -> typeChar(ZWNJ)
                 "bs" -> {
                     backspace()
                     if (fromTouch) startRepeat()
@@ -2468,11 +3144,12 @@ class KryptosImeService : InputMethodService() {
         }
 
         private fun keyDescription(key: Key): String = when (key.id) {
-            "char" -> if (passwordField) getString(R.string.kb_a11y_hidden) else key.label
+            "char", "punct" -> if (passwordField) getString(R.string.kb_a11y_hidden) else key.label
             "space" -> getString(R.string.kb_a11y_space)
             "bs" -> getString(R.string.kb_a11y_backspace)
             "ret" -> getString(R.string.kb_a11y_enter)
             "shift" -> getString(R.string.kb_a11y_shift)
+            "zwnj" -> getString(R.string.kb_a11y_zwnj)
             "emoji" -> getString(R.string.kb_a11y_emoji)
             else -> key.label
         }
@@ -2527,6 +3204,11 @@ class KryptosImeService : InputMethodService() {
                 node.contentDescription = keyDescription(key)
                 node.className = "android.widget.Button"
                 node.addAction(AccessibilityNodeInfoCompat.ACTION_CLICK)
+                if (key.id == "punct" || key.id == "lang" ||
+                    (key.id == "char" && letterAlternates(key.label).size > 1)
+                ) {
+                    node.addAction(AccessibilityNodeInfoCompat.ACTION_LONG_CLICK)
+                }
                 val r = Rect()
                 key.visual.round(r)
                 if (r.isEmpty) r.set(0, 0, 1, 1)
@@ -2534,8 +3216,25 @@ class KryptosImeService : InputMethodService() {
             }
 
             override fun onPerformActionForVirtualView(id: Int, action: Int, arguments: Bundle?): Boolean {
-                if (action != AccessibilityNodeInfoCompat.ACTION_CLICK) return false
                 val key = keyByIndex(id) ?: return false
+                if (action == AccessibilityNodeInfoCompat.ACTION_LONG_CLICK) {
+                    haptic()
+                    when (key.id) {
+                        "punct" -> {
+                            sound(key.id)
+                            typeChar(punctAlternates().first())
+                        }
+                        "char" -> {
+                            val alt = letterAlternates(key.label).getOrNull(1) ?: return false
+                            sound(key.id)
+                            typeChar(alt)
+                        }
+                        "lang" -> showLanguageMenu()
+                        else -> return false
+                    }
+                    return true
+                }
+                if (action != AccessibilityNodeInfoCompat.ACTION_CLICK) return false
                 haptic()
                 sound(key.id)
                 dispatchKey(key, fromTouch = false)
@@ -2565,6 +3264,7 @@ class KryptosImeService : InputMethodService() {
 
         fun cancelTouches() {
             active.values.forEach { t -> t.holdRunnable?.let { handler.removeCallbacks(it) } }
+            hideAlternates()
             active.clear()
             pressed.clear()
             stopRepeat()
@@ -2595,9 +3295,11 @@ class KryptosImeService : InputMethodService() {
                 MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
                     val idx = e.actionIndex
                     val key = keyAt(e.getX(idx), e.getY(idx) - yBias) ?: return true
+                    flushPendingPunct()
                     val (row, col) = positionOf(key)
+                    val pointerId = e.getPointerId(idx)
                     val touch = Touch(key, row, col, e.getX(idx), e.getY(idx))
-                    active[e.getPointerId(idx)] = touch
+                    active[pointerId] = touch
                     pressed.add(key)
                     haptic()
                     sound(key.id)
@@ -2606,14 +3308,49 @@ class KryptosImeService : InputMethodService() {
                         touch.holdRunnable = r
                         handler.postDelayed(r, 400)
                     }
-                    if (key.id == "char") showKeyPopup(key.label, rectInWindow(key))
-                    dispatchKey(key, fromTouch = true)
+                    if (key.id == "lang") {
+                        val r = Runnable { if (isAttachedToWindow && active.containsValue(touch)) showLanguageMenu() }
+                        touch.holdRunnable = r
+                        handler.postDelayed(r, ALT_HOLD_MS)
+                    }
+                    if (key.id == "char" || key.id == "punct") {
+                        val anchor = rectInWindow(key)
+                        showKeyPopup(key.label, anchor)
+                        val typed = if (key.id == "char") key.label else null
+                        val chars =
+                            if (key.id == "char") letterAlternates(key.label) else punctAlternates()
+                        if (chars.size > 1) {
+                            val r = Runnable {
+                                if (isAttachedToWindow && active.containsValue(touch)) {
+                                    openAlternates(anchor, chars, typed, pointerId)
+                                }
+                            }
+                            touch.holdRunnable = r
+                            handler.postDelayed(r, ALT_HOLD_MS)
+                        }
+                    }
+                    if (key.id != "punct" && key.id != "lang") dispatchKey(key, fromTouch = true)
                     invalidate()
                 }
 
                 MotionEvent.ACTION_MOVE -> {
                     for (i in 0 until e.pointerCount) {
-                        val t = active[e.getPointerId(i)] ?: continue
+                        val id = e.getPointerId(i)
+                        val t = active[id] ?: continue
+                        if (id == altPointer) {
+                            moveAlternates(e.getX(i))
+                            continue
+                        }
+                        if (t.key.id == "char") {
+                            val hold = t.holdRunnable
+                            if (hold != null &&
+                                (abs(e.getX(i) - t.downX) > slop * 2 || abs(e.getY(i) - t.downY) > slop * 2)
+                            ) {
+                                handler.removeCallbacks(hold)
+                                t.holdRunnable = null
+                            }
+                            continue
+                        }
                         if (t.key.id != "space") continue
                         val dx = e.getX(i) - t.downX
                         val dy = e.getY(i) - t.downY
@@ -2626,17 +3363,33 @@ class KryptosImeService : InputMethodService() {
                 }
 
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
-                    val t = active.remove(e.getPointerId(e.actionIndex))
+                    val pointerId = e.getPointerId(e.actionIndex)
+                    val t = active.remove(pointerId)
                     if (t != null) {
                         pressed.remove(t.key)
                         t.holdRunnable?.let { handler.removeCallbacks(it) }
+                        val ownsAlternates = pointerId == altPointer
                         when (t.key.id) {
                             "space" -> {
                                 if (!t.moved) spaceTapped()
                                 if (active.values.none { it.key.id == "space" }) setTrackpad(false)
                             }
                             "bs" -> stopRepeat()
-                            "char" -> if (active.values.none { it.key.id == "char" }) fadeOutKeyPopup()
+                            "lang" -> dispatchKey(t.key, fromTouch = true)
+                            "punct" -> {
+                                if (!t.committed && !(ownsAlternates && commitAlternate())) {
+                                    dispatchKey(t.key, fromTouch = true)
+                                }
+                                if (active.values.none { it.key.id == "char" || it.key.id == "punct" }) {
+                                    fadeOutKeyPopup()
+                                }
+                            }
+                            "char" -> {
+                                if (ownsAlternates) commitAlternate()
+                                if (active.values.none { it.key.id == "char" || it.key.id == "punct" }) {
+                                    fadeOutKeyPopup()
+                                }
+                            }
                         }
                         invalidate()
                     }
@@ -2648,6 +3401,24 @@ class KryptosImeService : InputMethodService() {
                 }
             }
             return true
+        }
+
+        private fun flushPendingPunct() {
+            if (alternatesOpen()) return
+            for (t in active.values) {
+                if (t.key.id != "punct" || t.committed) continue
+                t.committed = true
+                t.holdRunnable?.let { handler.removeCallbacks(it) }
+                t.holdRunnable = null
+                dispatchKey(t.key, fromTouch = true)
+            }
+        }
+
+        private fun openAlternates(anchor: RectF, chars: List<String>, typed: String?, pointerId: Int) {
+            val loc = IntArray(2)
+            getLocationInWindow(loc)
+            hideKeyPopup()
+            showAlternates(anchor, loc[0].toFloat(), chars, typed, pointerId)
         }
 
         private fun rectInWindow(key: Key): RectF {
@@ -2670,11 +3441,34 @@ class KryptosImeService : InputMethodService() {
             "~" to "\uFF5E", "_" to "\u2014\u2014", "^" to "\u2026\u2026",
         )
 
+        private val PERSIAN_PUNCT = mapOf("," to "\u060C", "?" to "\u061F", ";" to "\u061B")
+
+        private val PUNCT_ALTERNATES = listOf(",", "?", "!", ":", ";", "-")
+
+        const val ZWNJ = "\u200C"
+        const val ZWNJ_LABEL = "\u0640 \u0640"
+        const val ALT_HOLD_MS = 300L
+
         const val WRAP = LinearLayout.LayoutParams.WRAP_CONTENT
         const val MATCH = LinearLayout.LayoutParams.MATCH_PARENT
         const val COMPOSE_ICON_ID = 0x4B430001
+        const val VOICE_ICON_ID = 0x4B430002
         const val CHIP_HEIGHT_DP = 30f
         const val COMPOSE_ACTION_HEIGHT_DP = 34f
+        const val COMPOSE_ACTION_COMPACT_DP = 26f
+        const val FIELD_MIN_DP = 24f
+        const val BAR_BUTTON_DP = 56f
+        const val BAR_BUTTON_RADIUS_DP = 12f
+        const val BAR_ICON_DP = 21f
+        const val BAR_SEND_BADGE_DP = 16f
+        const val BAR_MIC_DP = 44f
+        const val BAR_MIC_HEIGHT_DP = 36f
+        const val BAR_MIC_RADIUS_DP = 16f
+        const val BAR_MIC_ICON_DP = 18f
+        const val VOICE_MAX_MS = 120_000L
+        const val VOICE_FINISH_MS = 5_000L
+        const val VOICE_PULSE_SCALE = 1.09f
+        const val VOICE_PULSE_MS = 520L
         const val SEND_ASSIST_ATTEMPTS = 7
         const val SEND_ASSIST_FIRST_MS = 250L
         const val SEND_ASSIST_RETRY_MS = 250L

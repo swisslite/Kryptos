@@ -29,11 +29,15 @@ object B64 : KSerializer<ByteArray> {
 typealias Blob = @Serializable(with = B64::class) ByteArray
 
 @Serializable
-data class Profile(var id: String = UUID.randomUUID().toString(), var name: String)
+data class Profile(var id: String = UUID.randomUUID().toString(), var name: String) {
+    override fun toString(): String = "Profile(id=$id)"
+}
 
 @Serializable
 data class Contact(val fingerprint: String, var displayName: String) {
     val safetyNumber: String get() = SignalFormat.safetyNumber(fingerprint)
+
+    override fun toString(): String = "Contact(fingerprint=${fingerprint.take(8)})"
 }
 
 @Serializable
@@ -121,6 +125,15 @@ object OwnCipherMarker {
         runCatching { SecureStore.write(STORE_KEY, key.toByteArray(Charsets.UTF_8)) }
     }
 
+    fun clear() {
+        synchronized(this) {
+            hash = null
+            loaded = true
+            lastMarked = null
+        }
+        runCatching { SecureStore.delete(STORE_KEY) }
+    }
+
     fun matches(text: String): Boolean {
         val stored = stored() ?: return false
         return stored == DecryptCacheKey.of(text)
@@ -132,6 +145,15 @@ object OwnCipherMarker {
             loaded = true
         }
         hash
+    }
+}
+
+object PreKeyMark {
+    const val LENGTH = 32
+
+    fun of(identityKey: ByteArray, oneTimePreKey: ByteArray): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        return sha256Hex(digest.digest(identityKey) + oneTimePreKey).take(LENGTH)
     }
 }
 
@@ -156,8 +178,17 @@ data class Meta(
     var nextOneTimePreKeyId: Long = 1,
     var oneTimePreKeyIds: List<Long> = emptyList(),
     var autoDelete: Map<String, Double> = emptyMap(),
+    var pinned: List<String> = emptyList(),
     var decryptCache: Map<String, CachedDecrypt> = emptyMap(),
+    var usedPreKeys: List<String> = emptyList(),
 ) {
+    fun rememberUsedPreKey(mark: String) {
+        if (mark in usedPreKeys) return
+        val cap = 512
+        val next = usedPreKeys + mark
+        usedPreKeys = if (next.size > cap) next.takeLast(cap) else next
+    }
+
     fun rememberDecrypt(armored: String, fingerprint: String, text: String, mine: Boolean = false) {
         var cache = decryptCache + (DecryptCacheKey.of(armored) to CachedDecrypt(fingerprint, text, mine = mine))
         val cap = 300
@@ -185,6 +216,25 @@ data class Meta(
         }
     }
 
+    fun purgeExpired(): Boolean {
+        if (autoDelete.isEmpty()) return false
+        val now = System.currentTimeMillis()
+        val cacheBefore = decryptCache.size
+        var changed = false
+        for ((fingerprint, seconds) in autoDelete) {
+            if (seconds <= 0) continue
+            val maxAgeMs = (seconds * 1000).toLong()
+            purgeDecryptCache(fingerprint, maxAgeMs)
+            val list = messages[fingerprint] ?: continue
+            if (list.isEmpty()) continue
+            val kept = list.filter { now - it.date < maxAgeMs }
+            if (kept.size == list.size) continue
+            messages = if (kept.isEmpty()) messages - fingerprint else messages + (fingerprint to kept)
+            changed = true
+        }
+        return changed || decryptCache.size != cacheBefore
+    }
+
     override fun toString(): String =
         "Meta(registrationId=$registrationId, contacts=${contacts.size}, chats=${messages.size})"
 }
@@ -197,5 +247,7 @@ class BadKeyStringException : Exception("This is not a valid Kryptos key.")
 class OwnKeyException : Exception("This is your own key.")
 
 class NoSessionForContactException : Exception("No Signal session with this contact.")
+
+class PreKeyUnavailableException : Exception("The key material for this message is no longer available.")
 
 class StorageUnavailableException(cause: Throwable?) : Exception("Secure storage is unavailable.", cause)

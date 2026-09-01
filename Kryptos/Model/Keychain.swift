@@ -56,7 +56,7 @@ enum Keychain {
             AppGroup.container.appendingPathComponent("kcfallback-\(account).bin")
         }
         static func save(_ data: Data, account: String) -> Bool {
-            (try? data.write(to: url(account), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])) != nil
+            SharedStore.writeFile(data, to: url(account), keyMaterial: true)
         }
         static func load(_ account: String) -> Data? { try? Data(contentsOf: url(account)) }
         static func loadStrict(_ account: String) -> ReadResult {

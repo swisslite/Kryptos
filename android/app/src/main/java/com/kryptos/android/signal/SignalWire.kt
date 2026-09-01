@@ -1,5 +1,6 @@
 package com.kryptos.android.signal
 
+import com.kryptos.android.core.CachePurge
 import com.kryptos.android.core.CipherException
 import com.kryptos.android.core.Deflate
 import com.kryptos.android.core.LetterStego
@@ -9,6 +10,7 @@ import com.kryptos.android.core.StegoWire
 import com.kryptos.android.core.StegoLanguage
 import com.kryptos.android.core.TextStego
 import com.kryptos.android.core.WireFormat
+import com.kryptos.android.core.sha256Hex
 import org.signal.libsignal.protocol.SessionCipher
 import org.signal.libsignal.protocol.SignalProtocolAddress
 import org.signal.libsignal.protocol.message.CiphertextMessage
@@ -17,6 +19,14 @@ import org.signal.libsignal.protocol.message.SignalMessage
 import org.signal.libsignal.protocol.state.SignalProtocolStore
 
 object SignalWire {
+
+    class Sealed(val armored: String, val hidden: Boolean) {
+        override fun toString(): String = "Sealed(hidden=$hidden, chars=${armored.length})"
+    }
+
+    init {
+        CachePurge.register { forgetStegoMemo() }
+    }
 
     fun pairKey(a: String, b: String): ByteArray =
         (if (a <= b) a + b else b + a).toByteArray(Charsets.UTF_8)
@@ -29,7 +39,7 @@ object SignalWire {
         stego: StegoLanguage? = null,
         mode: StegoMode = StegoMode.WORDS,
         pad: Boolean = false,
-    ): String {
+    ): Sealed {
         val addr = SignalProtocolAddress(toFingerprint, 1)
         val myAddr = SignalProtocolAddress(myFingerprint, 1)
         val cipher = SessionCipher(store, myAddr, addr)
@@ -48,16 +58,22 @@ object SignalWire {
                     StegoMode.SMART -> SmartTextStego.encode(payload, stego)
                     StegoMode.LETTERS -> LetterStego.encode(payload, stego)
                 }
-                if (cover != null) return cover
+                if (cover != null) return Sealed(cover, true)
             }
-            return WireFormat.wrap(serialized, ct.type, deflate, pad, pairKey(myFingerprint, toFingerprint))
+            return Sealed(
+                WireFormat.wrap(serialized, ct.type, deflate, pad, pairKey(myFingerprint, toFingerprint)),
+                false,
+            )
         }
 
         val plaintext = text.toByteArray(Charsets.UTF_8)
         val compressed = Deflate.compress(plaintext)
         val deflate = compressed != null
         val ct = cipher.encrypt(if (deflate) compressed!! else plaintext)
-        return WireFormat.wrap(ct.serialize(), ct.type, deflate, pad, pairKey(myFingerprint, toFingerprint))
+        return Sealed(
+            WireFormat.wrap(ct.serialize(), ct.type, deflate, pad, pairKey(myFingerprint, toFingerprint)),
+            false,
+        )
     }
 
     fun decrypt(armored: String, fromFingerprint: String, myFingerprint: String, store: SignalProtocolStore): String {
@@ -82,9 +98,27 @@ object SignalWire {
 
     private const val MAX_STEGO_INPUT_CHARS = 1_000_000
 
+    private val memoLock = Any()
+    private var memoKey: String? = null
+    private var memoPayload: ByteArray? = null
+
+    private fun forgetStegoMemo() = synchronized(memoLock) {
+        memoKey = null
+        memoPayload = null
+    }
+
     private fun stegoPayload(armored: String): ByteArray? {
         if (armored.length > MAX_STEGO_INPUT_CHARS) return null
-        return TextStego.decode(armored) ?: SmartTextStego.decode(armored) ?: LetterStego.decode(armored)
+        val key = sha256Hex(armored.toByteArray(Charsets.UTF_8))
+        synchronized(memoLock) {
+            if (key == memoKey) return memoPayload?.copyOf()
+        }
+        val payload = TextStego.decode(armored) ?: SmartTextStego.decode(armored) ?: LetterStego.decode(armored)
+        synchronized(memoLock) {
+            memoKey = key
+            memoPayload = payload?.copyOf()
+        }
+        return payload
     }
 
     private fun decryptStego(cipher: SessionCipher, payload: ByteArray): String {

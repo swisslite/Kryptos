@@ -23,6 +23,7 @@ struct QuickEncryptView: View {
     @State private var copied = false
     @State private var autoCopied = false
     @State private var busy = false
+    @State private var detect: Task<Void, Never>?
 
     var body: some View {
         ScreenScaffold("Password",
@@ -48,6 +49,7 @@ struct QuickEncryptView: View {
             errorText = nil
             copied = false
             autoCopied = false
+            detect?.cancel()
         }
         .animation(.easeInOut(duration: 0.25), value: output)
         .animation(.easeInOut(duration: 0.25), value: errorText)
@@ -106,7 +108,7 @@ struct QuickEncryptView: View {
                 }
                 .buttonStyle(SecondaryButtonStyle(accent: true))
 
-                ShareLink(item: output) { Label("Share", systemImage: "square.and.arrow.up") }
+                PlaintextShareButton(text: output, plaintext: mode == .decrypt)
                     .buttonStyle(PrimaryButtonStyle())
             }
         }
@@ -161,6 +163,7 @@ struct QuickEncryptView: View {
             case .done(let value):
                 output = value
                 if current == .encrypt {
+                    TypingRollbackMarker.bump()
                     Clipboard.copyCipher(value)
                     autoCopied = true
                 }
@@ -185,7 +188,13 @@ struct QuickEncryptView: View {
 
     private func autoDetect(_ text: String) {
         autoCopied = false
-        if mode == .encrypt, Kryptos.containsMessage(text) {
+        detect?.cancel()
+        guard mode == .encrypt, !text.isEmpty else { return }
+        detect = Task { @MainActor in
+            let encrypted = await Task.detached(priority: .userInitiated) {
+                Kryptos.containsMessage(text)
+            }.value
+            guard !Task.isCancelled, encrypted, mode == .encrypt, input == text else { return }
             withAnimation { mode = .decrypt }
         }
     }

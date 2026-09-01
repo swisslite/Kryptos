@@ -9,7 +9,7 @@ object SmartTextStego {
     private const val RESYNC_STARTS = 3
     private const val HAN_RESYNC_STARTS = 8
 
-    private val commaBefore = setOf("but", "so", "yet", "then", "while", "because", "though", "aber", "denn", "sondern", "и", "но", "а", "затем", "потом", "пока", "когда", "поэтому", "\u800C\u4E14", "\u4F46\u662F", "\u7136\u540E", "\u56E0\u6B64")
+    private val commaBefore = setOf("but", "so", "yet", "then", "while", "because", "though", "aber", "denn", "sondern", "и", "но", "а", "затем", "потом", "пока", "когда", "поэтому", "\u800C\u4E14", "\u4F46\u662F", "\u7136\u540E", "\u56E0\u6B64", "\u0627\u0645\u0627", "\u0648\u0644\u06CC", "\u067E\u0633")
 
     private class Style(
         val unit: Int,
@@ -21,6 +21,7 @@ object SmartTextStego {
         companion object {
             val LATIN = Style(1, " ", ",", ".", "!")
             val HAN = Style(2, "", "\uFF0C", "\u3002", "\uFF01")
+            val PERSIAN = Style(1, " ", "\u060C", ".", "!")
         }
     }
 
@@ -223,13 +224,17 @@ object SmartTextStego {
     private val russianGrammar by lazy { Grammar(SmartStegoData.russian, Style.LATIN) }
     private val germanGrammar by lazy { Grammar(SmartStegoData.german, Style.LATIN) }
     private val chineseGrammar by lazy { Grammar(SmartStegoData.chinese, Style.HAN) }
-    private val grammars by lazy { listOf(englishGrammar, russianGrammar, germanGrammar, chineseGrammar) }
+    private val persianGrammar by lazy { Grammar(SmartStegoData.persian, Style.PERSIAN) }
+    private val grammars by lazy {
+        listOf(englishGrammar, russianGrammar, germanGrammar, chineseGrammar, persianGrammar)
+    }
 
     private fun grammar(language: StegoLanguage): Grammar =
         when (language) {
             StegoLanguage.RUSSIAN -> russianGrammar
             StegoLanguage.GERMAN -> germanGrammar
             StegoLanguage.CHINESE -> chineseGrammar
+            StegoLanguage.PERSIAN -> persianGrammar
             StegoLanguage.ENGLISH -> englishGrammar
         }
 

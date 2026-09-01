@@ -100,4 +100,12 @@ final class CompatibilityTests: XCTestCase {
         XCTAssertTrue(KeyText.blobs(in: "just an ordinary sentence").isEmpty)
         XCTAssertTrue(KeyText.blobs(in: keyText("!!!!")).isEmpty)
     }
+
+    func testKeyTextStopsScanningAfterTheBlobCap() {
+        let blob = Data((0 ..< 120).map { UInt8(($0 * 13 + 5) & 0xFF) })
+        let encoded = blob.base64EncodedString()
+        XCTAssertEqual(KeyText.blobs(in: keyText(encoded)).first, blob)
+        let padded = String(repeating: "A", count: KeyText.maxBlobChars) + encoded
+        XCTAssertFalse(KeyText.blobs(in: keyText(padded)).contains(blob))
+    }
 }

@@ -47,6 +47,8 @@
     <string name="new_profile">Neues Profil</string>
     <string name="profile_name">Profilname</string>
     <string name="rename">Umbenennen</string>
+    <string name="pin_chat">Chat anheften</string>
+    <string name="unpin_chat">Chat lösen</string>
     <string name="rename_profile">Profil umbenennen</string>
     <string name="rename_contact">Kontakt umbenennen</string>
     <string name="save">Speichern</string>
@@ -94,6 +96,7 @@
     <string name="lang_ru">Russisch</string>
     <string name="lang_de">Deutsch</string>
     <string name="lang_zh">Chinesisch</string>
+    <string name="lang_fa">Persisch</string>
     <string name="settings_keyboard">Tastatur</string>
     <string name="settings_enable_keyboard">Kryptos-Tastatur aktivieren</string>
     <string name="settings_kb_autodecrypt">Zwischenablage in der Tastatur automatisch entschlüsseln</string>
@@ -135,7 +138,7 @@
     <string name="about_offline">Vollständig offline: keine Server, Konten, Analysen. Schlüssel verlassen das Gerät nie.</string>
     <string name="about_under_hood">Unter der Haube</string>
     <string name="about_signal_t">Signal-Protokoll — offizielles libsignal</string>
-    <string name="about_signal_d">Genau die Bibliothek, die auch die Signal-App verwendet: post-quantensicherer Schlüsselaustausch (PQXDH mit Kyber) und die Double Ratchet — ein frischer Schlüssel für jede Nachricht.</string>
+    <string name="about_signal_d">Genau die Bibliothek, die auch die Signal-App verwendet: post-quantensicherer Schlüsselaustausch (PQXDH mit Kyber) und die Triple Ratchet — ein frischer Schlüssel für jede Nachricht.</string>
     <string name="about_pgp_t">OpenPGP — PGPainless / Bouncy Castle</string>
     <string name="about_pgp_d">Klassische asymmetrische Verschlüsselung mit Signaturen, kompatibel mit anderen PGP-Programmen.</string>
     <string name="about_pw_t">Passwort-Modus</string>
@@ -157,6 +160,7 @@
     <string name="screen_block_screenshots_desc">Während die Entschlüsselung am Bildschirm läuft, sind Screenshots und Bildschirmaufnahmen auf dem gesamten Gerät blockiert, damit entschlüsselter Text nie in einer Aufnahme landet.</string>
     <string name="screen_decrypt_footer">Zeigt den entschlüsselten Text über dem Geheimtext in anderen Apps.</string>
     <string name="screen_decrypt_enable_service">Bedienungshilfe einschalten</string>
+    <string name="screen_decrypt_keep_running">App nicht pausieren</string>
     <string name="screen_decrypt_service_off">Der Bedienungshilfen-Dienst wird benötigt — tippe, um die Einstellungen zu öffnen.</string>
 
     <string name="kb_select_contact">Kontakt</string>
@@ -167,8 +171,13 @@
     <string name="kb_locked">Entsperre zuerst die Kryptos-App</string>
 
     <string name="sec_section">Sicherheit</string>
-    <string name="sec_app_lock">App-Sperre (Biometrie / PIN)</string>
-    <string name="sec_app_lock_unavailable">Richte zuerst eine Displaysperre in den Android-Einstellungen ein.</string>
+    <string name="sec_app_lock">App-Sperre</string>
+    <string name="sec_lock_method_code">App-Code</string>
+    <string name="sec_lock_method_no_system">Biometrie und PIN sind nicht verfügbar: Dieses Gerät hat keine Displaysperre.</string>
+    <string name="sec_lock_method_no_code">Um nur mit einem Code zu entsperren, lege unten einen App-Code fest.</string>
+    <string name="sec_lock_method_system">Biometrie oder PIN</string>
+    <string name="sec_lock_method">Entsperren mit</string>
+    <string name="sec_app_lock_unavailable">Richte eine Displaysperre ein oder lege einen App-Code fest.</string>
     <string name="sec_autolock">Automatische Sperre</string>
     <string name="sec_autolock_immediate">Sofort</string>
     <string name="sec_autolock_10s">Nach 10 Sekunden</string>
@@ -229,13 +238,15 @@
 
     <string name="manage_profiles">Profile verwalten …</string>
     <string name="empty_title">Noch keine Unterhaltungen</string>
-    <string name="empty_hint">Tauscht zuerst eure Schlüssel aus: Tippe oben rechts auf das QR-Symbol, um „Mein Schlüssel“ anzuzeigen, und lass deinen Kontakt ihn scannen. Tippe dann daneben auf +, um seinen Schlüssel hinzuzufügen. Ihr fügt euch beide einmal gegenseitig hinzu. Eine Schritt-für-Schritt-Anleitung mit Screenshots findest du unter „Einstellungen → So funktioniert es“.</string>
+    <string name="empty_hint">Tauscht zuerst eure Schlüssel aus: Tippe oben rechts auf das QR-Symbol, um „Mein Schlüssel“ anzuzeigen, und lass deinen Kontakt ihn scannen. Tippe dann daneben auf +, um seinen Schlüssel hinzuzufügen. Ihr fügt euch beide einmal gegenseitig hinzu. Eine Schritt-für-Schritt-Anleitung mit Screenshots findest du unter „%1$s“.</string>
     <string name="chat_hint">Verschlüssle eine Nachricht, sende das Ergebnis über einen beliebigen Messenger und füge die Antwort hier zum Entschlüsseln ein.</string>
+    <string name="chat_scroll_bottom">Zur neuesten Nachricht</string>
     <string name="auto_delete_hint">Nachrichten verschwinden nach %1$s.</string>
     <string name="sent_banner">Verschlüsselt &amp; kopiert — füge es bei deinem Kontakt ein.</string>
     <string name="sent_banner_stego">Im Text versteckt &amp; kopiert — füge es bei deinem Kontakt ein.</string>
     <string name="clipboard_empty">Die Zwischenablage ist leer.</string>
     <string name="decrypt_failed">Entschlüsseln fehlgeschlagen — falscher Kontakt, oder die Nachricht wurde bereits einmal gelesen. Wenn jede NEUE Nachricht dieses Kontakts fehlschlägt, schicke ihm deinen Schlüssel erneut und lass ihn dich neu hinzufügen.</string>
+    <string name="decrypt_prekey_used">Diese Nachricht wurde mit einem Schlüssel verschlüsselt, der bereits benutzt wurde oder abgelaufen ist. Schicke deinen Schlüssel erneut und bitte deinen Kontakt, dich noch einmal hinzuzufügen.</string>
     <string name="decrypted_other_contact">Diese Nachricht stammt von einem anderen Kontakt: %1$s.</string>
     <string name="encrypt_failed">Die Nachricht konnte nicht verschlüsselt werden.</string>
     <string name="key_for_profile">Schlüssel für Profil</string>
@@ -251,7 +262,7 @@
     <string name="confirm_delete_contact_title">Kontakt &amp; Chat löschen?</string>
     <string name="confirm_delete_contact_text">Sein Schlüssel und die Sitzung werden zusammen mit der gesamten Unterhaltung von diesem Gerät gelöscht; dein eigener Schlüssel bleibt erhalten. Das lässt sich nicht rückgängig machen.</string>
     <string name="confirm_clear_chat_title">Diesen Chat leeren?</string>
-    <string name="confirm_clear_chat_text">Löscht diese Unterhaltung sicher. Das lässt sich nicht rückgängig machen.</string>
+    <string name="confirm_clear_chat_text">Die Unterhaltung wird gelöscht. Das lässt sich nicht rückgängig machen.</string>
     <string name="confirm_delete_profile_title">Profil löschen?</string>
     <string name="confirm_delete_profile_text">Damit wird dieses Profil endgültig entfernt — samt seinen Schlüsseln, Kontakten und Nachrichten. Das lässt sich nicht rückgängig machen.</string>
     <string name="confirm_wipe_chats_text">Der Nachrichtenverlauf in allen Chats wird gelöscht. Die Kontakte bleiben erhalten. Das lässt sich nicht rückgängig machen.</string>
@@ -275,9 +286,32 @@
     <string name="settings_kb_compose_desc">Das Feld lässt dich außerhalb des Messengers tippen, er behält also keinen Entwurf. Die Taste schaltet es direkt auf der Tastatur um.</string>
 
     <string name="kb_typing">Texteingabe</string>
+    <string name="kb_field_section">Nachrichtenfeld</string>
     <string name="settings_kb_suggestions">Wortvorschläge</string>
     <string name="settings_kb_autocorrect">Autokorrektur</string>
     <string name="settings_kb_emoji">Emoji-Taste</string>
+    <string name="settings_kb_punct">Taste für Punkt und Komma</string>
+    <string name="settings_kb_punct_double">Doppeltippen für ein Komma</string>
+    <string name="kb_voice_section">Spracheingabe</string>
+    <string name="settings_kb_voice">Mikrofontaste</string>
+    <string name="settings_kb_voice_engine">Engine</string>
+    <string name="kb_voice_engine_system">Integriert (Android)</string>
+    <string name="settings_kb_voice_footer">Integrierte Diktierfunktion von Android. Ohne Google-Dienste nicht verfügbar.</string>
+    <string name="settings_kb_voice_unsupported">Dieses Gerät hat keine integrierte Diktierfunktion.</string>
+    <string name="settings_kb_voice_permission">Mikrofonzugriff erlauben</string>
+    <string name="settings_kb_voice_download_footer">Android installiert die Sprache über das Internet. Kryptos selbst bleibt offline.</string>
+    <string name="kb_voice_empty">Nichts erkannt</string>
+    <string name="kb_voice_permission">Kein Mikrofonzugriff</string>
+    <string name="kb_voice_language">Die Diktatsprache ist nicht installiert</string>
+    <string name="kb_voice_busy">Erkennung ist belegt</string>
+    <string name="kb_voice_unavailable">Diktat ist nicht verfügbar</string>
+    <string name="kb_voice_failed">Diktat fehlgeschlagen</string>
+    <string name="kb_voice_field_changed">Feld gewechselt — Text bleibt im Tastaturfeld</string>
+    <string name="settings_kb_composeapps">Feld je App</string>
+    <string name="settings_kb_composeapps_enable">Feld automatisch einschalten</string>
+    <string name="settings_kb_composeapps_footer">Das Nachrichtenfeld öffnet sich in den gewählten Apps von selbst.</string>
+    <string name="settings_kb_composeapps_add">Apps hinzufügen</string>
+    <string name="settings_kb_composeapps_empty">Noch keine Apps gewählt.</string>
     <string name="settings_kb_suggestions_desc">Vorschläge und Autokorrektur aus Offline-Wörterbüchern. In Passwortfeldern aus.</string>
     <string name="kb_forget_words">Gelernte Wörter vergessen</string>
     <string name="confirm_forget_words_title">Gelernte Wörter vergessen?</string>
@@ -290,8 +324,8 @@
     <string name="panic_status_on">Festgelegt</string>
     <string name="panic_status_off">Nicht festgelegt</string>
     <string name="panic_desc">Gib ihn im Sperrbildschirm ein — Kryptos löscht sofort und endgültig alles und startet leer wie nach der Installation.</string>
-    <string name="panic_enable_lock">App-Sperre einschalten</string>
     <string name="panic_set_header">Passwort festlegen</string>
+    <string name="panic_change_header">Passwort ändern</string>
     <string name="panic_new">Neues Passwort</string>
     <string name="panic_repeat">Passwort wiederholen</string>
     <string name="panic_save">Passwort speichern</string>
@@ -308,16 +342,18 @@
     <string name="codes_section">Codes für den Sperrbildschirm</string>
     <string name="codes_row_footer">Der App-Code öffnet Kryptos, das Panik-Passwort löscht alles.</string>
     <string name="appcode_title">App-Code</string>
-    <string name="appcode_desc">Ein gewöhnlicher Code, der Kryptos ohne Biometrie öffnet. Optional.</string>
+    <string name="appcode_desc">Öffnet Kryptos auf dem Sperrbildschirm. Damit kommst du auch ohne Biometrie und PIN hinein.</string>
+    <string name="appcode_set_header">Code festlegen</string>
+    <string name="appcode_change_header">Code ändern</string>
     <string name="appcode_new">Neuer Code</string>
     <string name="appcode_repeat">Code wiederholen</string>
     <string name="appcode_save">Code speichern</string>
     <string name="appcode_set_footer">Mindestens 4 Zeichen. Er muss sich vom Panik-Passwort unterscheiden.</string>
     <string name="appcode_remove">App-Code entfernen</string>
-    <string name="appcode_remove_confirm">Du kannst weiterhin mit Biometrie oder deiner Geräte-PIN entsperren.</string>
+    <string name="appcode_remove_confirm">Entsperrt wird dann wieder mit Biometrie oder Geräte-PIN; fehlen beide, schaltet sich die App-Sperre ab.</string>
     <string name="appcode_saved">App-Code gespeichert.</string>
     <string name="appcode_removed">App-Code entfernt.</string>
-    <string name="code_needs_lock">Die Codes werden auf dem Sperrbildschirm eingegeben. Schalte die App-Sperre ein, damit sie verwendet werden können.</string>
+    <string name="code_needs_lock">Die Codes werden auf dem Sperrbildschirm eingegeben. Ohne App-Sperre erscheint er nicht.</string>
     <string name="code_duplicate">Das wird bereits als der andere Code verwendet. Wähle einen anderen.</string>
     <string name="code_save_failed">Der Code konnte nicht gespeichert werden.</string>
     <string name="backup_title">Schlüssel-Backup</string>
@@ -376,7 +412,7 @@
     <string name="howto_setup_title">Kryptos in anderen Apps</string>
     <string name="howto_setup_intro">Kryptos kann direkt in anderen Apps arbeiten, sodass du nicht hin- und herwechseln musst. Zwei Funktionen leisten das: die Entschlüsselung am Bildschirm, die den entschlüsselten Text über den Geheimtext legt, und die Kryptos-Tastatur, die direkt im Textfeld verschlüsselt.</string>
     <string name="howto_setup_s1_title">„Privatsphäre“ öffnen</string>
-    <string name="howto_setup_s1_text">Öffne in Kryptos „Einstellungen → Privatsphäre“.</string>
+    <string name="howto_setup_s1_text">Öffne in Kryptos „Einstellungen — Privatsphäre“.</string>
     <string name="howto_setup_s2_title">„Am Bildschirm entschlüsseln“ einschalten</string>
     <string name="howto_setup_s2_text">Schalte im Abschnitt „Am Bildschirm“ die Option „Am Bildschirm entschlüsseln“ ein. Kryptos findet dann seinen eigenen Geheimtext in jeder App und legt den entschlüsselten Text darüber — nur für Kontakte aus den Chats und nie, solange Kryptos gesperrt ist.</string>
     <string name="howto_setup_s3_title">In den Bedienungshilfen finden</string>
@@ -384,7 +420,7 @@
     <string name="howto_setup_s4_title">Den Dienst einschalten</string>
     <string name="howto_setup_s4_text">Schalte den Schalter oben auf der Seite ein. Der Dienst liest ausschließlich Text, der ohnehin schon auf dem Bildschirm sichtbar ist — keine Tastenanschläge und kein Netzwerk.</string>
     <string name="howto_setup_s5_title">Die Tastatureinstellungen öffnen</string>
-    <string name="howto_setup_s5_text">Gehe zurück zu Kryptos und öffne „Einstellungen → Tastatur“.</string>
+    <string name="howto_setup_s5_text">Gehe zurück zu Kryptos und öffne „Einstellungen — Tastatur“.</string>
     <string name="howto_setup_s6_title">Die Kryptos-Tastatur aktivieren</string>
     <string name="howto_setup_s6_text">Tippe auf „Kryptos-Tastatur aktivieren“ — die Systemliste der Tastaturen öffnet sich. Lass „Zwischenablage in der Tastatur automatisch entschlüsseln“ ebenfalls eingeschaltet: Liegt eine verschlüsselte Nachricht in der Zwischenablage, entschlüsselt die Tastatur sie, sobald sie sich öffnet.</string>
     <string name="howto_setup_s7_title">In der Liste einschalten</string>
@@ -392,9 +428,13 @@
     <string name="faq_q1">Wird eine Internetverbindung benötigt?</string>
     <string name="faq_a1">Nein. Kryptos hat keine Server und keine Konten, und die App fordert nicht einmal die Berechtigung an, das Netzwerk zu erreichen. Die Verschlüsselung geschieht vollständig auf dem Gerät, und um die Zustellung kümmert sich der Messenger, den du ohnehin schon verwendest.</string>
     <string name="faq_q2">Kann der Messenger meine Nachrichten lesen?</string>
-    <string name="faq_a2">Nein — er bekommt immer nur Text, der bereits verschlüsselt ist. Er sieht allerdings weiterhin, dass du etwas gesendet hast, an wen und ungefähr wie viel. Das sind Metadaten, und Kryptos verbirgt sie nicht; zumindest die Länge kannst du unter „Einstellungen → Privatsphäre“ verschleiern.</string>
+    <string name="faq_a2">Nein — er bekommt immer nur Text, der bereits verschlüsselt ist. Er sieht allerdings weiterhin, dass du etwas gesendet hast, an wen und ungefähr wie viel. Das sind Metadaten, und Kryptos verbirgt sie nicht; zumindest die Länge kannst du unter „Einstellungen — Privatsphäre“ verschleiern.</string>
     <string name="faq_q3">Warum ist die erste Nachricht so lang?</string>
     <string name="faq_a3">Sie enthält den post-quantensicheren Handshake (PQXDH mit Kyber), der etwa zwei Kilobyte groß ist. Er wird nur einmal gesendet; sobald dein Kontakt antwortet, werden die Nachrichten um ein Vielfaches kürzer.</string>
+    <string name="faq_q22">Gilt der Post-Quanten-Schutz für jede Nachricht?</string>
+    <string name="faq_a22">Ja. Kryptos baut auf libsignal auf, wo der Post-Quanten-Ratchet SPQR seit Version 0.83.0 dauerhaft aktiv ist: Der Schlüssel jeder Nachricht wird mit Post-Quanten-Material abgeleitet, nicht nur der Handshake. Ein- oder ausschalten lässt er sich nicht — weder in Kryptos noch in der Bibliothek.</string>
+    <string name="faq_q23">Die Entschlüsselung am Bildschirm hat von selbst aufgehört</string>
+    <string name="faq_a23">Das Telefon kann eine App pausieren, die es für ungenutzt hält. Android schaltet dann die Bedienungshilfe von Kryptos ab und stellt die Systemtastatur wieder her. Schalten Sie den Dienst hier wieder ein und wählen Sie die Kryptos-Tastatur in den System-Eingabeeinstellungen erneut aus. Damit es sich nicht wiederholt, öffnen Sie die App-Info und deaktivieren Sie das Pausieren bei Nichtnutzung; auf Samsung nehmen Sie Kryptos zusätzlich aus der Liste der schlafenden Apps in der Gerätewartung heraus.</string>
     <string name="faq_q4">Warum lässt sich eine Nachricht kein zweites Mal entschlüsseln?</string>
     <string name="faq_a4">Das ist kein Fehler, sondern Forward Secrecy: Der Schlüssel jeder Nachricht wird in dem Moment zerstört, in dem sie gelesen wird, damit alte Korrespondenz selbst dann nicht wiederherstellbar ist, wenn jemand dein Telefon an sich nimmt. Bereits geöffnete Nachrichten bleiben im Chatverlauf.</string>
     <string name="faq_q5">Es heißt, das Entschlüsseln sei fehlgeschlagen. Was nun?</string>
@@ -406,7 +446,7 @@
     <string name="faq_q8">Ich habe eine Nachricht in einem Foto versteckt, und sie lässt sich nicht öffnen</string>
     <string name="faq_a8">Das Foto muss als Datei (als Dokument) gesendet werden. Als gewöhnliches Bild verschickt, wird es vom Messenger neu komprimiert, und die Neukomprimierung zerstört die versteckten Daten.</string>
     <string name="faq_q9">Was ist das Panik-Passwort?</string>
-    <string name="faq_a9">Es ist ein zweites Passwort für den Sperrbildschirm. Gib es statt deines normalen Codes ein, und die App zerstört lautlos und unwiderruflich jeden Schlüssel, jede Nachricht und jede Einstellung und öffnet sich anschließend, als wäre sie gerade erst installiert worden. Eingerichtet wird es unter „Einstellungen → Privatsphäre“.</string>
+    <string name="faq_a9">Es ist ein zweites Passwort für den Sperrbildschirm. Gib es statt deines normalen Codes ein, und die App zerstört lautlos und unwiderruflich jeden Schlüssel, jede Nachricht und jede Einstellung und öffnet sich anschließend, als wäre sie gerade erst installiert worden. Eingerichtet wird es unter „Einstellungen — Privatsphäre“.</string>
     <string name="faq_q10">Ich habe das Passwort meines Schlüssel-Backups vergessen</string>
     <string name="faq_a10">Es gibt keine Möglichkeit, es wiederherzustellen. Die Datei ist mit diesem Passwort verschlüsselt, und Kryptos bewahrt nirgends eine Kopie davon auf. Erstelle ein neues Backup mit einem Passwort, das du nicht vergisst.</string>
     <string name="faq_q11">Wozu sind Profile da?</string>
@@ -443,6 +483,7 @@
     <string name="kb_a11y_backspace">Rücktaste</string>
     <string name="kb_a11y_enter">Eingabetaste</string>
     <string name="kb_a11y_shift">Umschalttaste</string>
+    <string name="kb_a11y_zwnj">Halbes Leerzeichen</string>
     <string name="kb_a11y_emoji">Emoji</string>
     <string name="kb_a11y_hidden">Verstecktes Zeichen</string>
     <string name="scan_captured">Schlüssel gescannt</string>
@@ -462,4 +503,9 @@
     <string name="profiles_intro">Ein Profil ist ein eigenes Schlüsselpaar mit eigenen Kontakten. Lege mehrere an, um Dinge getrennt zu halten. Deine „Sicherheitsnummer“ ist öffentlich (du kannst sie weitergeben, sie dient nur zum Überprüfen eines Kontakts); dein privater Schlüssel verlässt dieses Gerät nie.</string>
     <string name="current_profile">AKTUELLES PROFIL</string>
     <string name="safety_number_label">SICHERHEITSNUMMER</string>
+    <string name="kb_field_changed">Feld gewechselt — verschlüsselter Text kopiert</string>
+    <string name="kb_password_field">Im Passwortfeld nicht verfügbar</string>
+    <string name="kb_stego_unavailable">Verschlüsselt, aber kein Tarntext möglich</string>
+    <string name="share_plain_title">Klartext teilen?</string>
+    <string name="share_plain_text">Der entschlüsselte Text geht an die gewählte App, und die Systemauswahl zeigt eine Vorschau davon.</string>
 </resources>

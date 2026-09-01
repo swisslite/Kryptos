@@ -29,6 +29,12 @@ class SuggestionEngineTests {
                 read("bigrams-de.txt"),
                 File(assets, "vocab-de.txt").readText(),
             )
+            SuggestionEngine.loadLanguageForTest(
+                "fa",
+                read("fa.txt"),
+                read("bigrams-fa.txt"),
+                File(assets, "vocab-fa.txt").readText(),
+            )
         }
     }
 
@@ -256,5 +262,53 @@ class SuggestionEngineTests {
     fun germanUmlautStartRoutesToGermanEvenOnEnglishLayout() {
         val out = SuggestionEngine.suggest("über", previous = null, language = "en")
         assertTrue("got $out", out.isEmpty() || out.any { it.lowercase().startsWith("über") })
+    }
+
+    @Test
+    fun persianCompletesByFrequency() {
+        val fa = SuggestionEngine.suggest("سل", previous = null, language = "fa")
+        assertEquals("got $fa", "سلام", fa.first())
+    }
+
+    @Test
+    fun persianPredictsNextWordFromBigrams() {
+        val fa = SuggestionEngine.suggest("", previous = "سلام", language = "fa")
+        assertTrue("got $fa", fa.contains("خوبی"))
+    }
+
+    @Test
+    fun persianContextBeatsRawFrequency() {
+        val fa = SuggestionEngine.suggest("خو", previous = "سلام", language = "fa")
+        assertEquals("got $fa", "خوبی", fa.first())
+    }
+
+    @Test
+    fun persianFixesAdjacentKeySlip() {
+        assertEquals("ممنون", SuggestionEngine.autocorrect("ممنوت", previous = null, language = "fa"))
+        assertEquals("چطوری", SuggestionEngine.autocorrect("چطوزی", previous = null, language = "fa"))
+    }
+
+    @Test
+    fun persianFixesSoundAlikeLetter() {
+        assertEquals("سلام", SuggestionEngine.autocorrect("صلام", previous = null, language = "fa"))
+        assertEquals("مرسی", SuggestionEngine.autocorrect("مرصی", previous = null, language = "fa"))
+    }
+
+    @Test
+    fun persianReachesHamzaSpellings() {
+        assertEquals("تئوری", SuggestionEngine.autocorrect("تیوری", previous = null, language = "fa"))
+        assertTrue(SuggestionEngine.suggest("مطم", previous = null, language = "fa").contains("مطمئن"))
+    }
+
+    @Test
+    fun persianKeepsRealWordsUntouched() {
+        assertNull(SuggestionEngine.autocorrect("سلام", previous = null, language = "fa"))
+        assertNull(SuggestionEngine.autocorrect("ممنون", previous = null, language = "fa"))
+    }
+
+    @Test
+    fun persianIsPickedByScriptNotByActiveLayout() {
+        val fa = SuggestionEngine.suggest("ممن", previous = null, language = "en")
+        assertTrue("got $fa", fa.contains("ممنون"))
     }
 }

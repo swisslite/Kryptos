@@ -173,3 +173,27 @@ struct ScreenScaffold<Content: View>: View {
         }
     }
 }
+
+struct PlaintextShareButton: View {
+    let text: String
+    let plaintext: Bool
+    @State private var confirming = false
+
+    var body: some View {
+        Group {
+            if plaintext {
+                Button { confirming = true } label: {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                }
+            } else {
+                ShareLink(item: text) { Label("Share", systemImage: "square.and.arrow.up") }
+            }
+        }
+        .confirmationDialog("Share the decrypted text?", isPresented: $confirming, titleVisibility: .visible) {
+            ShareLink(item: text) { Text("Share") }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("It will be handed to the app you pick, and the system share sheet shows a preview of it.")
+        }
+    }
+}

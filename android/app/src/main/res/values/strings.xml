@@ -47,6 +47,8 @@
     <string name="new_profile">New profile</string>
     <string name="profile_name">Profile name</string>
     <string name="rename">Rename</string>
+    <string name="pin_chat">Pin chat</string>
+    <string name="unpin_chat">Unpin chat</string>
     <string name="rename_profile">Rename profile</string>
     <string name="rename_contact">Rename contact</string>
     <string name="save">Save</string>
@@ -94,6 +96,7 @@
     <string name="lang_ru">Russian</string>
     <string name="lang_de">German</string>
     <string name="lang_zh">Chinese</string>
+    <string name="lang_fa">Persian</string>
     <string name="settings_keyboard">Keyboard</string>
     <string name="settings_enable_keyboard">Enable Kryptos keyboard</string>
     <string name="settings_kb_autodecrypt">Auto-decrypt clipboard in keyboard</string>
@@ -135,7 +138,7 @@
     <string name="about_offline">Fully offline: no servers, no accounts, no analytics. Keys never leave the device.</string>
     <string name="about_under_hood">Under the hood</string>
     <string name="about_signal_t">Signal Protocol — official libsignal</string>
-    <string name="about_signal_d">The very library the Signal app uses: post-quantum key agreement (PQXDH with Kyber) and the Double Ratchet — a fresh key for every message.</string>
+    <string name="about_signal_d">The very library the Signal app uses: post-quantum key agreement (PQXDH with Kyber) and the Triple Ratchet — a fresh key for every message.</string>
     <string name="about_pgp_t">OpenPGP — PGPainless / Bouncy Castle</string>
     <string name="about_pgp_d">Classic asymmetric encryption with signatures, compatible with other PGP tools.</string>
     <string name="about_pw_t">Password mode</string>
@@ -157,6 +160,7 @@
     <string name="screen_block_screenshots_desc">While on-screen decryption is running, screenshots and screen recording are blocked on the whole device so decrypted text never ends up in a capture.</string>
     <string name="screen_decrypt_footer">Shows the decrypted text over the ciphertext in other apps.</string>
     <string name="screen_decrypt_enable_service">Turn on the accessibility service</string>
+    <string name="screen_decrypt_keep_running">Do not pause the app</string>
     <string name="screen_decrypt_service_off">The accessibility service is needed — tap to open the Android settings.</string>
 
     <string name="kb_select_contact">Contact</string>
@@ -167,8 +171,13 @@
     <string name="kb_locked">Unlock the Kryptos app first</string>
 
     <string name="sec_section">Security</string>
-    <string name="sec_app_lock">App lock (biometrics / PIN)</string>
-    <string name="sec_app_lock_unavailable">Set a screen lock in Android settings first.</string>
+    <string name="sec_app_lock">App lock</string>
+    <string name="sec_lock_method_code">App code</string>
+    <string name="sec_lock_method_no_system">Biometrics and PIN are unavailable: this device has no screen lock.</string>
+    <string name="sec_lock_method_no_code">To unlock with a code only, create an app code below.</string>
+    <string name="sec_lock_method_system">Biometrics or PIN</string>
+    <string name="sec_lock_method">Unlock with</string>
+    <string name="sec_app_lock_unavailable">Set a screen lock on the device or create an app code.</string>
     <string name="sec_autolock">Auto-lock</string>
     <string name="sec_autolock_immediate">Immediately</string>
     <string name="sec_autolock_10s">After 10 seconds</string>
@@ -229,13 +238,15 @@
 
     <string name="manage_profiles">Manage profiles…</string>
     <string name="empty_title">No conversations yet</string>
-    <string name="empty_hint">Exchange keys to start: tap the QR icon (top right) to show My key and let your contact scan it. Then tap + beside it to add their key. Both of you add each other once. A step-by-step guide with screenshots is in Settings → How to use.</string>
+    <string name="empty_hint">Exchange keys to start: tap the QR icon (top right) to show My key and let your contact scan it. Then tap + beside it to add their key. Both of you add each other once. A step-by-step guide with screenshots is in “%1$s”.</string>
     <string name="chat_hint">Encrypt a message, send the result through any messenger, and paste the reply here to decrypt.</string>
+    <string name="chat_scroll_bottom">Scroll to the latest message</string>
     <string name="auto_delete_hint">Messages disappear after %1$s.</string>
     <string name="sent_banner">Encrypted &amp; copied — paste it to your contact.</string>
     <string name="sent_banner_stego">Hidden in text &amp; copied — paste it to your contact.</string>
     <string name="clipboard_empty">Clipboard is empty.</string>
     <string name="decrypt_failed">Could not decrypt — wrong contact, or the message was already read once. If every NEW message from this contact fails, share your key with them again and have them re-add you.</string>
+    <string name="decrypt_prekey_used">This message was encrypted with a key that was already used or has expired. Share your key again and ask your contact to add you once more.</string>
     <string name="decrypted_other_contact">This message is from another contact: %1$s.</string>
     <string name="encrypt_failed">Could not encrypt the message.</string>
     <string name="key_for_profile">Key for profile</string>
@@ -251,7 +262,7 @@
     <string name="confirm_delete_contact_title">Delete contact &amp; chat?</string>
     <string name="confirm_delete_contact_text">Their key and session are erased from this device together with the whole conversation; your own key stays. This cannot be undone.</string>
     <string name="confirm_clear_chat_title">Clear this chat?</string>
-    <string name="confirm_clear_chat_text">Securely erases this conversation. This cannot be undone.</string>
+    <string name="confirm_clear_chat_text">The conversation will be deleted. This cannot be undone.</string>
     <string name="confirm_delete_profile_title">Delete profile?</string>
     <string name="confirm_delete_profile_text">This permanently removes this profile — its keys, contacts and messages. This cannot be undone.</string>
     <string name="confirm_wipe_chats_text">Message history in all chats is wiped. Contacts stay. This cannot be undone.</string>
@@ -275,9 +286,32 @@
     <string name="settings_kb_compose_desc">The field lets you type outside the messenger, so it cannot keep a draft. The button toggles that field from the keyboard.</string>
 
     <string name="kb_typing">Typing</string>
+    <string name="kb_field_section">Message field</string>
     <string name="settings_kb_suggestions">Word suggestions</string>
     <string name="settings_kb_autocorrect">Auto-correction</string>
     <string name="settings_kb_emoji">Emoji key</string>
+    <string name="settings_kb_punct">Period and comma key</string>
+    <string name="settings_kb_punct_double">Double tap for a comma</string>
+    <string name="kb_voice_section">Voice input</string>
+    <string name="settings_kb_voice">Microphone key</string>
+    <string name="settings_kb_voice_engine">Engine</string>
+    <string name="kb_voice_engine_system">Built-in (Android)</string>
+    <string name="settings_kb_voice_footer">Android\'s built-in dictation. Not available without Google services.</string>
+    <string name="settings_kb_voice_unsupported">This device has no built-in dictation.</string>
+    <string name="settings_kb_voice_permission">Allow microphone access</string>
+    <string name="settings_kb_voice_download_footer">Android installs the language over the internet. Kryptos itself stays offline.</string>
+    <string name="kb_voice_empty">Nothing recognised</string>
+    <string name="kb_voice_permission">No microphone access</string>
+    <string name="kb_voice_language">The dictation language is not installed</string>
+    <string name="kb_voice_busy">Recogniser is busy</string>
+    <string name="kb_voice_unavailable">Dictation is unavailable</string>
+    <string name="kb_voice_failed">Dictation failed</string>
+    <string name="kb_voice_field_changed">Field changed — text kept in the keyboard field</string>
+    <string name="settings_kb_composeapps">Field per app</string>
+    <string name="settings_kb_composeapps_enable">Turn the field on automatically</string>
+    <string name="settings_kb_composeapps_footer">The message field opens by itself in the apps you pick.</string>
+    <string name="settings_kb_composeapps_add">Add apps</string>
+    <string name="settings_kb_composeapps_empty">No apps chosen yet.</string>
     <string name="settings_kb_suggestions_desc">Completions and auto-correction from offline dictionaries. Off in password fields.</string>
     <string name="kb_forget_words">Forget learned words</string>
     <string name="confirm_forget_words_title">Forget learned words?</string>
@@ -290,8 +324,8 @@
     <string name="panic_status_on">Set</string>
     <string name="panic_status_off">Not set</string>
     <string name="panic_desc">Type it on the lock screen and Kryptos immediately and permanently erases everything, then opens empty like a fresh install.</string>
-    <string name="panic_enable_lock">Turn on app lock</string>
     <string name="panic_set_header">Set a password</string>
+    <string name="panic_change_header">Change the password</string>
     <string name="panic_new">New password</string>
     <string name="panic_repeat">Repeat password</string>
     <string name="panic_save">Save password</string>
@@ -308,16 +342,18 @@
     <string name="codes_section">Lock screen codes</string>
     <string name="codes_row_footer">The app passcode opens Kryptos; the panic password erases everything.</string>
     <string name="appcode_title">App passcode</string>
-    <string name="appcode_desc">An ordinary passcode that opens Kryptos when you do not want to use biometrics. Optional.</string>
+    <string name="appcode_desc">Opens Kryptos on the lock screen. You can unlock with it alone, without biometrics or a PIN.</string>
+    <string name="appcode_set_header">Set a passcode</string>
+    <string name="appcode_change_header">Change the passcode</string>
     <string name="appcode_new">New passcode</string>
     <string name="appcode_repeat">Repeat passcode</string>
     <string name="appcode_save">Save passcode</string>
     <string name="appcode_set_footer">At least 4 characters. It must be different from the panic password.</string>
     <string name="appcode_remove">Remove app passcode</string>
-    <string name="appcode_remove_confirm">You will still be able to unlock with biometrics or your device PIN.</string>
+    <string name="appcode_remove_confirm">Unlocking goes back to biometrics or the device PIN; without them the app lock turns off.</string>
     <string name="appcode_saved">App passcode saved.</string>
     <string name="appcode_removed">App passcode removed.</string>
-    <string name="code_needs_lock">Codes are typed on the lock screen. Turn on the app lock so they can be used.</string>
+    <string name="code_needs_lock">Codes are typed on the lock screen. Without the app lock it never appears.</string>
     <string name="code_duplicate">This is already used as the other code. Choose a different one.</string>
     <string name="code_save_failed">Could not save the code.</string>
     <string name="backup_title">Key backup</string>
@@ -376,7 +412,7 @@
     <string name="howto_setup_title">Kryptos in other apps</string>
     <string name="howto_setup_intro">Kryptos can work right inside other apps, so you do not have to switch back and forth. Two features do that: on-screen decryption, which shows the decrypted text on top of the ciphertext, and the Kryptos keyboard, which encrypts straight in the text field.</string>
     <string name="howto_setup_s1_title">Open Privacy</string>
-    <string name="howto_setup_s1_text">In Kryptos open Settings → Privacy.</string>
+    <string name="howto_setup_s1_text">In Kryptos open Settings — Privacy.</string>
     <string name="howto_setup_s2_title">Turn on Decrypt on screen</string>
     <string name="howto_setup_s2_text">In the On screen section, turn on “Decrypt on screen”. Kryptos then finds its own ciphertext in any app and lays the decrypted text over it — only for contacts from Chats, and never while Kryptos is locked.</string>
     <string name="howto_setup_s3_title">Find it in Accessibility</string>
@@ -384,7 +420,7 @@
     <string name="howto_setup_s4_title">Switch the service on</string>
     <string name="howto_setup_s4_text">Turn on the switch at the top of the page. The service only reads text that is already visible on the screen — no keystrokes and no network.</string>
     <string name="howto_setup_s5_title">Open the keyboard settings</string>
-    <string name="howto_setup_s5_text">Go back to Kryptos and open Settings → Keyboard.</string>
+    <string name="howto_setup_s5_text">Go back to Kryptos and open Settings — Keyboard.</string>
     <string name="howto_setup_s6_title">Enable the Kryptos keyboard</string>
     <string name="howto_setup_s6_text">Tap “Enable Kryptos keyboard” — the system list of keyboards opens. Leave “Auto-decrypt clipboard in keyboard” on as well: if an encrypted message is on the clipboard, the keyboard decrypts it as soon as it opens.</string>
     <string name="howto_setup_s7_title">Turn it on in the list</string>
@@ -392,9 +428,13 @@
     <string name="faq_q1">Does it need an internet connection?</string>
     <string name="faq_a1">No. Kryptos has no servers and no accounts, and the app does not even request permission to reach the network. Encryption happens entirely on the device, and delivery is handled by whatever messenger you already use.</string>
     <string name="faq_q2">Can the messenger read my messages?</string>
-    <string name="faq_a2">No — it only ever gets text that is already encrypted. It does still see that you sent something, to whom, and roughly how much. That is metadata, and Kryptos does not hide it; you can at least mask the length in Settings → Privacy.</string>
+    <string name="faq_a2">No — it only ever gets text that is already encrypted. It does still see that you sent something, to whom, and roughly how much. That is metadata, and Kryptos does not hide it; you can at least mask the length in Settings — Privacy.</string>
     <string name="faq_q3">Why is the first message so long?</string>
     <string name="faq_a3">It carries the post-quantum handshake (PQXDH with Kyber), which is about two kilobytes. It is sent once; as soon as your contact replies, messages become many times shorter.</string>
+    <string name="faq_q22">Is the post-quantum protection on every message?</string>
+    <string name="faq_a22">Yes. Kryptos is built on libsignal, where the SPQR post-quantum ratchet has been permanently on since version 0.83.0: the key of every message is derived with post-quantum material, not just the handshake. There is no switch for it, in Kryptos or in the library itself.</string>
+    <string name="faq_q23">On-screen decryption stopped working by itself</string>
+    <string name="faq_a23">The phone can pause an app it decides you no longer use. Android then switches the Kryptos accessibility service off and puts the system keyboard back. Turn the service on again here, and pick the Kryptos keyboard again in the system input settings. To stop it repeating, open the app details and turn off pausing the app while it is unused; on Samsung also take Kryptos out of the sleeping apps list under device care.</string>
     <string name="faq_q4">Why will a message not decrypt a second time?</string>
     <string name="faq_a4">That is not a fault but forward secrecy: the key for each message is destroyed the moment it is read, so old correspondence cannot be recovered even by someone who takes your phone. Messages you have already opened remain in the chat history.</string>
     <string name="faq_q5">It says it could not decrypt. What now?</string>
@@ -406,7 +446,7 @@
     <string name="faq_q8">I hid a message in a photo and it will not open</string>
     <string name="faq_a8">The photo has to be sent as a file (a document). Sent as an ordinary picture it is recompressed by the messenger, and recompression destroys the hidden data.</string>
     <string name="faq_q9">What is the panic password?</string>
-    <string name="faq_a9">It is a second password for the lock screen. Type it instead of your normal passcode and the app silently and irreversibly destroys every key, message and setting, then opens as if it had just been installed. You set it up in Settings → Privacy.</string>
+    <string name="faq_a9">It is a second password for the lock screen. Type it instead of your normal passcode and the app silently and irreversibly destroys every key, message and setting, then opens as if it had just been installed. You set it up in Settings — Privacy.</string>
     <string name="faq_q10">I forgot the password to my key backup</string>
     <string name="faq_a10">There is no way to recover it. The file is encrypted with that password and Kryptos keeps no copy of it anywhere. Make a fresh backup with a password you will not forget.</string>
     <string name="faq_q11">What are profiles for?</string>
@@ -443,6 +483,7 @@
     <string name="kb_a11y_backspace">Backspace</string>
     <string name="kb_a11y_enter">Enter</string>
     <string name="kb_a11y_shift">Shift</string>
+    <string name="kb_a11y_zwnj">Half space</string>
     <string name="kb_a11y_emoji">Emoji</string>
     <string name="kb_a11y_hidden">Hidden character</string>
     <string name="scan_captured">Key scanned</string>
@@ -462,4 +503,9 @@
     <string name="profiles_intro">A profile is a separate keypair with its own contacts. Create several to keep things apart. Your safety number is public (safe to share, used only to verify a contact); your private key never leaves this device.</string>
     <string name="current_profile">CURRENT PROFILE</string>
     <string name="safety_number_label">SAFETY NUMBER</string>
+    <string name="kb_field_changed">Field changed — encrypted text copied</string>
+    <string name="kb_password_field">Not available in a password field</string>
+    <string name="kb_stego_unavailable">Encrypted, but the cover text could not be built</string>
+    <string name="share_plain_title">Share plain text?</string>
+    <string name="share_plain_text">The decrypted text will be handed to the app you pick, and the system share sheet shows a preview of it.</string>
 </resources>

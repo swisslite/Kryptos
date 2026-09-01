@@ -22,6 +22,30 @@ struct ChatView: View {
     @State private var renaming = false
     @State private var renameText = ""
     @State private var purgeTimer = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
+    @State private var atBottom = true
+    @State private var didSettle = false
+
+    private static let bottomAnchor = "chat.bottom"
+
+    private func scrollToBottom(_ proxy: ScrollViewProxy) {
+        withAnimation { proxy.scrollTo(Self.bottomAnchor, anchor: .bottom) }
+    }
+
+    private func scrollDownButton(_ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: "chevron.down")
+                .font(.system(size: 15, weight: .semibold)).foregroundStyle(KTheme.accent)
+                .frame(width: 40, height: 40)
+        }
+        .glassSurface(Circle())
+        .padding(.trailing, 14)
+        .padding(.bottom, 10)
+        .opacity(atBottom ? 0 : 1)
+        .scaleEffect(atBottom ? 0.8 : 1)
+        .allowsHitTesting(!atBottom)
+        .animation(.easeOut(duration: 0.16), value: atBottom)
+        .accessibilityLabel("Scroll to the latest message")
+    }
 
     private var live: Contact { signal.contacts.first { $0.fingerprint == contact.fingerprint } ?? contact }
     private var msgs: [ChatMessage] { signal.messages[contact.fingerprint] ?? [] }
@@ -37,11 +61,24 @@ struct ChatView: View {
                             hint
                             if currentPreset != .off { autoDeleteHint }
                             ForEach(msgs) { bubble($0).id($0.id) }
+                            Color.clear
+                                .frame(height: 1)
+                                .id(Self.bottomAnchor)
+                                .onAppear { atBottom = true }
+                                .onDisappear { atBottom = false }
                         }
                         .padding(16)
                     }
                     .onChange(of: msgs.count) { _, _ in
-                        if let last = msgs.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } }
+                        scrollToBottom(proxy)
+                    }
+                    .onAppear {
+                        guard !didSettle else { return }
+                        didSettle = true
+                        proxy.scrollTo(Self.bottomAnchor, anchor: .bottom)
+                    }
+                    .overlay(alignment: .bottomTrailing) {
+                        scrollDownButton { scrollToBottom(proxy) }
                     }
                 }
                 if let errorText {
@@ -56,6 +93,20 @@ struct ChatView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                VStack(spacing: 1) {
+                    Text(live.displayName)
+                        .font(.kHeadline())
+                        .foregroundStyle(KTheme.textPrimary)
+                        .lineLimit(1)
+                    Text(live.safetyNumber)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(KTheme.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                .accessibilityElement(children: .combine)
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Menu {
@@ -75,7 +126,7 @@ struct ChatView: View {
                         Label("Delete contact & chat", systemImage: "person.badge.minus")
                     }
                 } label: { Image(systemName: "ellipsis.circle") }
-                .confirmationDialog("Securely erase this conversation? This can't be undone.",
+                .confirmationDialog("Delete this conversation? This can't be undone.",
                                     isPresented: $confirmClear, titleVisibility: .visible) {
                     Button("Clear chat", role: .destructive) { signal.clearChat(contact) }
                 }
@@ -218,6 +269,11 @@ struct ChatView: View {
             return String(localized: "This message is from another contact: \(name).")
         case SignalError.duplicatedMessage:
             return String(localized: "This message was already decrypted once — for security it can't be opened again.")
+        case SignalError.invalidKeyIdentifier:
+            return String(localized: """
+            This message was encrypted with a key that was already used or has expired. Share your key again \
+            and ask your contact to add you once more.
+            """)
         default:
             return String(localized: """
             Could not decrypt. If every NEW message from this contact now fails, the session is out of \
@@ -232,6 +288,7 @@ private struct ChatInputBar: View {
     let onPaste: () async -> Void
     let onSend: (String) async -> Bool
 
+    @EnvironmentObject private var lock: LockGate
     @State private var draft = ""
     @State private var busy = false
 
@@ -269,6 +326,7 @@ private struct ChatInputBar: View {
                     .frame(width: 48, height: 48)
             }
             .glassSurface(Circle(), tint: KTheme.accent)
+            .onChange(of: lock.isLocked) { _, locked in if locked { draft = "" } }
             .shadow(color: KTheme.accent.opacity(empty ? 0 : 0.35), radius: 10, y: 3)
             .opacity(empty ? 0.55 : 1)
             .disabled(empty || busy)

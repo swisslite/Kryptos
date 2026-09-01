@@ -31,6 +31,8 @@ data class ArchivedProfile(
     val oneTimePreKeyIds: List<Long> = emptyList(),
     val retired: List<ArchivedRetired> = emptyList(),
     val autoDelete: Map<String, Double> = emptyMap(),
+    val pinned: List<String> = emptyList(),
+    val usedPreKeys: List<String> = emptyList(),
     val contacts: List<ArchivedContact> = emptyList(),
     val preKeys: Map<String, String> = emptyMap(),
     val signedPreKeys: Map<String, String> = emptyMap(),
@@ -83,14 +85,7 @@ data class KeyArchive(
         fun seal(archive: KeyArchive, password: String): String {
             if (password.length < MIN_PASSWORD_LENGTH) throw ArchiveException(ArchiveException.Kind.PASSWORD_TOO_SHORT)
             if (archive.isEmpty) throw ArchiveException(ArchiveException.Kind.NOTHING_TO_EXPORT)
-            val buffer = WipingBuffer()
-            val plain = try {
-                json.encodeToStream(serializer(), archive, buffer)
-                buffer.drain()
-            } catch (e: Exception) {
-                buffer.drain().fill(0)
-                throw e
-            }
+            val plain = wipingBytes { json.encodeToStream(serializer(), archive, it) }
             try {
                 return WireFormat.token(PasswordCipher.encrypt(plain, password))
             } finally {

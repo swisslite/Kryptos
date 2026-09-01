@@ -16,20 +16,21 @@ final class ConfigCache<T>: @unchecked Sendable {
 
     init(ttl: TimeInterval = 0.5) { self.ttl = ttl }
 
-    func get(_ make: () -> T) -> T {
+    func get(fresh make: () -> T?, fallback: () -> T) -> T {
         let now = ProcessInfo.processInfo.systemUptime
         lock.lock()
         if let stored, now - at < ttl {
             lock.unlock()
             return stored
         }
+        let remembered = stored
         lock.unlock()
-        let fresh = make()
+        guard let value = make() else { return remembered ?? fallback() }
         lock.lock()
-        stored = fresh
+        stored = value
         at = now
         lock.unlock()
-        return fresh
+        return value
     }
 
     func invalidate() {
@@ -39,6 +40,16 @@ final class ConfigCache<T>: @unchecked Sendable {
         lock.unlock()
     }
 }
+
+private func storedConfig<T: Decodable>(_ key: String) -> T? where T: DefaultConstructible {
+    switch SharedStore.readStrict(key) {
+    case .found(let data): return (try? JSONDecoder().decode(T.self, from: data)) ?? T()
+    case .absent: return T()
+    case .unavailable: return nil
+    }
+}
+
+protocol DefaultConstructible { init() }
 
 enum ConfigCaches {
     static func invalidateAll() {
@@ -128,7 +139,7 @@ enum AppGroup {
 
 enum ChatStego {
     private static let key = "stego"
-    private struct Config: Codable {
+    private struct Config: Codable, DefaultConstructible {
         var enabled = false
         var lang = "auto"
         var smart: Bool? = false
@@ -140,10 +151,7 @@ enum ChatStego {
     static func invalidateCache() { cache.invalidate() }
 
     private static func config() -> Config {
-        cache.get {
-            guard let d = SharedStore.read(key), let c = try? JSONDecoder().decode(Config.self, from: d) else { return Config() }
-            return c
-        }
+        cache.get(fresh: { storedConfig(key) }, fallback: { Config() })
     }
 
     private static func mode(of c: Config) -> StegoMode {
@@ -165,6 +173,7 @@ enum ChatStego {
         case "russian": language = .russian
         case "german": language = .german
         case "chinese": language = .chinese
+        case "persian": language = .persian
         default: language = .forSystem()
         }
         return (language, mode(of: c))
@@ -177,13 +186,14 @@ enum ChatStego {
 
 enum PrivacyConfig {
     private static let key = "privacy"
-    private struct Config: Codable {
+    private struct Config: Codable, DefaultConstructible {
         var appLock = false
         var shield = true
         var clipboardLocalOnly = true
-        var clipboardExpiry: Double = 0
+        var clipboardExpiry: Double = 60
         var clipboardAutoDecrypt: Bool? = true
         var lengthPadding: Bool? = false
+        var codeOnly: Bool? = false
     }
 
     private static let cache = ConfigCache<Config>()
@@ -191,16 +201,15 @@ enum PrivacyConfig {
     static func invalidateCache() { cache.invalidate() }
 
     private static func config() -> Config {
-        cache.get {
-            guard let d = SharedStore.read(key), let c = try? JSONDecoder().decode(Config.self, from: d) else { return Config() }
-            return c
-        }
+        cache.get(fresh: { storedConfig(key) }, fallback: { Config() })
     }
 
-    static func save(appLock: Bool, shield: Bool, clipboardLocalOnly: Bool, clipboardExpiry: Double, clipboardAutoDecrypt: Bool, lengthPadding: Bool) {
+    static func save(appLock: Bool, shield: Bool, clipboardLocalOnly: Bool, clipboardExpiry: Double,
+                     clipboardAutoDecrypt: Bool, lengthPadding: Bool, codeOnly: Bool) {
         if let d = try? JSONEncoder().encode(Config(appLock: appLock, shield: shield,
                                                     clipboardLocalOnly: clipboardLocalOnly, clipboardExpiry: clipboardExpiry,
-                                                    clipboardAutoDecrypt: clipboardAutoDecrypt, lengthPadding: lengthPadding)) {
+                                                    clipboardAutoDecrypt: clipboardAutoDecrypt, lengthPadding: lengthPadding,
+                                                    codeOnly: codeOnly)) {
             SharedStore.write(key, d)
         }
         cache.invalidate()
@@ -222,13 +231,36 @@ enum PrivacyConfig {
     static var clipboardExpiry: Double { config().clipboardExpiry }
     static var clipboardAutoDecrypt: Bool { config().clipboardAutoDecrypt ?? true }
     static var lengthPadding: Bool { config().lengthPadding ?? false }
+    static var appLockCodeOnly: Bool { config().codeOnly ?? false }
+}
+
+enum LockSession {
+    private static let storeKey = "lock.session"
+    static let ttl: TimeInterval = 5 * 60
+
+    static func open() {
+        guard PrivacyConfig.appLock else { return }
+        let stamp = UInt64(max(0, Date().timeIntervalSince1970)).bigEndian
+        SharedStore.write(storeKey, withUnsafeBytes(of: stamp) { Data($0) })
+    }
+
+    static func close() {
+        SharedStore.delete(storeKey)
+    }
+
+    static var isOpen: Bool {
+        guard let data = SharedStore.read(storeKey), data.count == 8 else { return false }
+        let stamp = data.withUnsafeBytes { UInt64(bigEndian: $0.loadUnaligned(as: UInt64.self)) }
+        let age = Date().timeIntervalSince1970 - TimeInterval(stamp)
+        return age >= 0 && age <= ttl
+    }
 }
 
 enum InterfaceConfig {
-    static let supportedLanguages = ["en", "ru", "de", "zh-Hans"]
+    static let supportedLanguages = ["en", "ru", "de", "zh-Hans", "fa"]
 
     private static let key = "interface"
-    private struct Config: Codable {
+    private struct Config: Codable, DefaultConstructible {
         var theme = "auto"
         var language = "auto"
         var hiddenTabs: [String] = []
@@ -239,10 +271,7 @@ enum InterfaceConfig {
     static func invalidateCache() { cache.invalidate() }
 
     private static func config() -> Config {
-        cache.get {
-            guard let d = SharedStore.read(key), let c = try? JSONDecoder().decode(Config.self, from: d) else { return Config() }
-            return c
-        }
+        cache.get(fresh: { storedConfig(key) }, fallback: { Config() })
     }
 
     private static func save(_ c: Config) {
@@ -278,7 +307,7 @@ enum KeyboardConfig {
     }
 
     private static let key = "kbconfig"
-    private struct Config: Codable {
+    private struct Config: Codable, DefaultConstructible {
         var haptics = true
         var compose = false
         var sounds = true
@@ -297,10 +326,7 @@ enum KeyboardConfig {
     static func invalidateCache() { cache.invalidate() }
 
     private static func config() -> Config {
-        cache.get {
-            guard let d = SharedStore.read(key), let c = try? JSONDecoder().decode(Config.self, from: d) else { return Config() }
-            return c
-        }
+        cache.get(fresh: { storedConfig(key) }, fallback: { Config() })
     }
 
     static func save(haptics: Bool, compose: Bool, sounds: Bool, autoDecrypt: Bool, suggestions: Bool,
@@ -372,7 +398,7 @@ enum KeyboardConfig {
         return langs.isEmpty ? nil : langs
     }
 
-    private static let nonLatinLanguages: Set<String> = ["ru", "zh"]
+    private static let nonLatinLanguages: Set<String> = ["ru", "zh", "fa"]
 
     static var defaultLanguages: [String] {
         let sys = systemLanguage
@@ -385,10 +411,11 @@ enum KeyboardConfig {
         if code.hasPrefix("ru") { return "ru" }
         if code.hasPrefix("de") { return "de" }
         if code.hasPrefix("zh") { return "zh" }
+        if code.hasPrefix("fa") { return "fa" }
         return "en"
     }
 
-    static let supported = ["en", "ru", "de", "zh"]
+    static let supported = ["en", "ru", "de", "zh", "fa"]
 
     private static func cleaned(_ raw: [String]) -> [String] { supported.filter(raw.contains) }
 }

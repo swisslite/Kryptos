@@ -67,13 +67,63 @@ enum SharedStore {
         return fresh
     }
 
+    static var isShared: Bool {
+        switch backend {
+        case .keychain(let group): return group.hasSuffix(sharedGroupSuffix)
+        case .appGroupFile: return true
+        case .localFile: return false
+        }
+    }
+
     static func revalidateBackend() {
         backendLock.lock()
         defer { backendLock.unlock() }
         if let resolved = resolvedBackend, case .keychain = resolved { return }
         let fresh = resolveBackend()
-        guard case .keychain = fresh else { return }
+        guard case .keychain(let group) = fresh else { return }
+        adoptFallbackFiles(group: group)
         resolvedBackend = fresh
+    }
+
+    private static let profilesIndexKey = "index"
+
+    private static func fileKeyName(_ url: URL) -> String? {
+        let name = url.lastPathComponent
+        guard name.hasPrefix(filePrefix), name.hasSuffix(fileSuffix) else { return nil }
+        let key = name.dropFirst(filePrefix.count).dropLast(fileSuffix.count)
+        return key.isEmpty ? nil : String(key)
+    }
+
+    private static func adoptFallbackFiles(group: String) {
+        guard case .absent = kcLoadStrict(profilesIndexKey, group: group) else { return }
+        let fm = FileManager.default
+        var moved: [URL] = []
+        var index: Data?
+        var indexFile: URL?
+        var complete = true
+        for base in [AppGroup.container, localBase] {
+            guard let files = try? fm.contentsOfDirectory(at: base, includingPropertiesForKeys: nil) else { continue }
+            for url in files {
+                guard let key = fileKeyName(url) else { continue }
+                guard let data = try? Data(contentsOf: url) else { complete = false; continue }
+                if key == profilesIndexKey {
+                    index = data
+                    indexFile = url
+                    continue
+                }
+                switch kcLoadStrict(key, group: group) {
+                case .absent: if kcSave(data, name: key, group: group) { moved.append(url) } else { complete = false }
+                case .found: moved.append(url)
+                case .unavailable: complete = false
+                }
+            }
+        }
+        guard complete else { return }
+        if let index {
+            guard kcSave(index, name: profilesIndexKey, group: group) else { return }
+            if let indexFile { moved.append(indexFile) }
+        }
+        for url in moved { try? fm.removeItem(at: url) }
     }
 
     private static func resolveBackend() -> Backend {
@@ -108,14 +158,39 @@ enum SharedStore {
     }
 
     @discardableResult
-    static func write(_ name: String, _ data: Data) -> Bool {
+    static func write(_ name: String, _ data: Data, keyMaterial: Bool = false) -> Bool {
         switch backend {
         case .keychain(let group): return kcSave(data, name: name, group: group)
-        case .appGroupFile:        return (try? data.write(to: fileURL(name, base: AppGroup.container),
-                                                            options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])) != nil
-        case .localFile:           return (try? data.write(to: fileURL(name, base: localBase),
-                                                            options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])) != nil
+        case .appGroupFile:        return writeFile(data, to: fileURL(name, base: AppGroup.container), keyMaterial: keyMaterial)
+        case .localFile:           return writeFile(data, to: fileURL(name, base: localBase), keyMaterial: keyMaterial)
         }
+    }
+
+    static func writeFile(_ data: Data, to url: URL, keyMaterial: Bool = false) -> Bool {
+        let protection: Data.WritingOptions = keyMaterial
+            ? .completeFileProtection
+            : .completeFileProtectionUntilFirstUserAuthentication
+        guard (try? data.write(to: url, options: [.atomic, protection])) != nil else { return false }
+        excludeFromBackup(url)
+        return true
+    }
+
+    static func excludeStoredFilesFromBackup() {
+        let fm = FileManager.default
+        let prefixes = ["kryptos-", "kcfallback-", "signal-"]
+        for base in [AppGroup.container, localBase] {
+            guard let files = try? fm.contentsOfDirectory(at: base, includingPropertiesForKeys: nil) else { continue }
+            for url in files where prefixes.contains(where: { url.lastPathComponent.hasPrefix($0) }) {
+                excludeFromBackup(url)
+            }
+        }
+    }
+
+    static func excludeFromBackup(_ url: URL) {
+        var target = url
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? target.setResourceValues(values)
     }
 
     static func delete(_ name: String) {
@@ -141,9 +216,14 @@ enum SharedStore {
             SecItemDelete(q as CFDictionary)
         }
         let fm = FileManager.default
+        let keyMaterial = ["kryptos-filekey.", "kryptos-identity."]
         for base in [AppGroup.container, localBase] {
             guard let files = try? fm.contentsOfDirectory(at: base, includingPropertiesForKeys: nil) else { continue }
-            for f in files where f.lastPathComponent.hasPrefix("kryptos-") { try? fm.removeItem(at: f) }
+            let ours = files.filter { $0.lastPathComponent.hasPrefix("kryptos-") }
+            for f in ours where keyMaterial.contains(where: { f.lastPathComponent.hasPrefix($0) }) {
+                try? fm.removeItem(at: f)
+            }
+            for f in ours { try? fm.removeItem(at: f) }
         }
     }
 
@@ -159,8 +239,9 @@ enum SharedStore {
         groupLock.unlock()
         guard let def = KeychainProbe.defaultAccessGroup() else { return nil }
         var resolved = def
-        if let team = def.split(separator: ".").first, keychainUsable(group: "\(team).*") {
-            resolved = "\(team).*"
+        if let team = def.split(separator: ".").first,
+           keychainUsable(group: "\(team)\(sharedGroupSuffix)") {
+            resolved = "\(team)\(sharedGroupSuffix)"
         }
         groupLock.lock()
         cachedKeychainGroup = resolved
@@ -177,6 +258,7 @@ enum SharedStore {
         return ok
     }
 
+    private static let sharedGroupSuffix = ".*"
     private static let kcService = "com.kryptos.shared"
 
     private static func kcBase(_ name: String, group: String) -> [String: Any] {
@@ -234,7 +316,10 @@ enum SharedStore {
             ?? FileManager.default.temporaryDirectory
     }()
 
+    private static let filePrefix = "kryptos-"
+    private static let fileSuffix = ".blob"
+
     private static func fileURL(_ name: String, base: URL) -> URL {
-        base.appendingPathComponent("kryptos-\(name).blob")
+        base.appendingPathComponent(filePrefix + name + fileSuffix)
     }
 }

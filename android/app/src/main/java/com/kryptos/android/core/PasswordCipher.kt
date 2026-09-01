@@ -8,7 +8,6 @@ object PasswordCipher {
     const val SALT_LEN = 16
     const val TAG_LEN = 16
     const val KEY_LEN = 32
-    const val NONCE_LEN = 12
     const val DERIVED_LEN = 44
 
     private const val TAG_BITS = 128

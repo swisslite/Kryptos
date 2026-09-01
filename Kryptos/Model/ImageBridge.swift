@@ -1,10 +1,16 @@
 import UIKit
 import ImageIO
+import os
+import CipherCore
 
 enum ImageBridge {
     private static let bitmapInfo = CGImageAlphaInfo.noneSkipLast.rawValue
-    static let maxPixels = 50_000_000
+    static let maxPixels = ImageStego.maxPixelBudget
     static let coverTargetPixels = 20_000_000
+
+    static func pixelBudget() -> Int {
+        ImageStego.pixelBudget(availableBytes: Int(os_proc_available_memory()))
+    }
 
     static func thumbnail(from data: Data, maxPixel: Int) -> UIImage? {
         let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
@@ -19,22 +25,22 @@ enum ImageBridge {
         return UIImage(cgImage: cg)
     }
 
-    static func isWithinLimits(_ image: UIImage) -> Bool {
+    static func isWithinLimits(_ image: UIImage, budget: Int = maxPixels) -> Bool {
         guard let cg = image.cgImage else { return true }
-        return cg.width * cg.height <= maxPixels
+        return cg.width * cg.height <= min(budget, maxPixels)
     }
 
-    static func isWithinLimits(data: Data) -> Bool {
+    static func isWithinLimits(data: Data, budget: Int = maxPixels) -> Bool {
         let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
         guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions),
               let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
               let width = props[kCGImagePropertyPixelWidth] as? Int,
               let height = props[kCGImagePropertyPixelHeight] as? Int,
               width > 0, height > 0 else { return true }
-        return width * height <= maxPixels
+        return width * height <= min(budget, maxPixels)
     }
 
-    static func coverImage(from data: Data) -> UIImage? {
+    static func coverImage(from data: Data, budget: Int = coverTargetPixels) -> UIImage? {
         let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
         guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
             return UIImage(data: data)
@@ -44,10 +50,11 @@ enum ImageBridge {
         let height = props?[kCGImagePropertyPixelHeight] as? Int ?? 0
         guard width > 0, height > 0 else { return UIImage(data: data) }
         let pixels = width * height
+        let target = min(budget, coverTargetPixels)
         let longest = max(width, height)
         var maxPixel = longest
-        if pixels > coverTargetPixels {
-            let scale = (Double(coverTargetPixels) / Double(pixels)).squareRoot()
+        if pixels > target {
+            let scale = (Double(target) / Double(pixels)).squareRoot()
             maxPixel = max(1, Int((Double(longest) * scale).rounded(.down)))
         }
         let options: [CFString: Any] = [
@@ -66,6 +73,7 @@ enum ImageBridge {
         guard let cg = image.cgImage else { return nil }
         let w = cg.width, h = cg.height
         guard w > 0, h > 0, w * h <= maxPixels else { return nil }
+        guard w <= Int.max / max(h, 1) / 4 else { return nil }
         var pixels = [UInt8](repeating: 0, count: w * h * 4)
         let cs = CGColorSpaceCreateDeviceRGB()
         let drawn = pixels.withUnsafeMutableBytes { raw -> Bool in

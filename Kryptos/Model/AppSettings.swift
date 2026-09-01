@@ -51,7 +51,7 @@ extension KeyboardConfig.FieldSize {
 @MainActor
 final class AppSettings: ObservableObject {
     enum LanguageChoice: String, CaseIterable, Identifiable {
-        case auto, english, russian, german, chinese
+        case auto, english, russian, german, chinese, persian
         var id: String { rawValue }
         var title: LocalizedStringKey {
             switch self {
@@ -60,6 +60,7 @@ final class AppSettings: ObservableObject {
             case .russian: return "Russian"
             case .german: return "German"
             case .chinese: return "Chinese"
+            case .persian: return "Persian"
             }
         }
     }
@@ -130,6 +131,15 @@ final class AppSettings: ObservableObject {
 
     @Published var appLock: Bool {
         didSet { persistPrivacy() }
+    }
+
+    @Published var appLockCodeOnly: Bool {
+        didSet { persistPrivacy() }
+    }
+
+    func applyLock(_ state: LockGate.LockState) {
+        if appLockCodeOnly != state.codeOnly { appLockCodeOnly = state.codeOnly }
+        if appLock != state.enabled { appLock = state.enabled }
     }
 
     @Published var privacyShield: Bool {
@@ -219,6 +229,7 @@ final class AppSettings: ObservableObject {
         keyboardFieldSize = KeyboardConfig.fieldSize
         keyboardLanguages = KeyboardConfig.languages
         appLock = PrivacyConfig.appLock
+        appLockCodeOnly = PrivacyConfig.appLockCodeOnly
         privacyShield = PrivacyConfig.shield
         clipboardLocalOnly = PrivacyConfig.clipboardLocalOnly
         clipboardExpiry = PrivacyConfig.clipboardExpiry
@@ -249,6 +260,7 @@ final class AppSettings: ObservableObject {
         keyboardLanguages = KeyboardConfig.languages
         langsExplicit = KeyboardConfig.storedLanguages != nil
         appLock = PrivacyConfig.appLock
+        appLockCodeOnly = PrivacyConfig.appLockCodeOnly
         privacyShield = PrivacyConfig.shield
         clipboardLocalOnly = PrivacyConfig.clipboardLocalOnly
         clipboardExpiry = PrivacyConfig.clipboardExpiry
@@ -277,7 +289,8 @@ final class AppSettings: ObservableObject {
         guard !loading else { return }
         PrivacyConfig.save(appLock: appLock, shield: privacyShield,
                            clipboardLocalOnly: clipboardLocalOnly, clipboardExpiry: clipboardExpiry,
-                           clipboardAutoDecrypt: clipboardAutoDecrypt, lengthPadding: lengthPadding)
+                           clipboardAutoDecrypt: clipboardAutoDecrypt, lengthPadding: lengthPadding,
+                           codeOnly: appLockCodeOnly)
     }
 
     var effectiveLanguage: StegoLanguage {
@@ -286,6 +299,7 @@ final class AppSettings: ObservableObject {
         case .russian: return .russian
         case .german: return .german
         case .chinese: return .chinese
+        case .persian: return .persian
         case .auto: return .forSystem()
         }
     }

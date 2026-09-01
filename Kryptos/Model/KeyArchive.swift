@@ -31,6 +31,8 @@ struct KeyArchive: Codable {
         var oneTimePreKeyIds: [Int64]
         var retired: [ArchivedRetired]
         var autoDelete: [String: Double]
+        var pinned: [String]?
+        var usedPreKeys: [String]?
         var contacts: [ArchivedContact]
         var preKeys: [String: String]
         var signedPreKeys: [String: String]
@@ -104,9 +106,9 @@ extension KeyArchive {
     func sealed(password: String) throws -> String {
         guard password.count >= KeyArchive.minPasswordLength else { throw KeyArchiveError.passwordTooShort }
         guard !isEmpty else { throw KeyArchiveError.nothingToExport }
-        var plain = [UInt8](try JSONEncoder().encode(self))
-        defer { Argon2id.zero(&plain) }
-        let raw = try PasswordCipher.encrypt(Data(plain), password: password)
+        var plain = try JSONEncoder().encode(self)
+        defer { plain.resetBytes(in: plain.startIndex ..< plain.endIndex) }
+        let raw = try PasswordCipher.encrypt(plain, password: password)
         return WireFormat.token(raw)
     }
 

@@ -1,6 +1,8 @@
 package com.kryptos.android.screen
 
+import android.os.SystemClock
 import com.kryptos.android.core.CachePurge
+import com.kryptos.android.core.ExpiringCache
 import com.kryptos.android.core.LetterStego
 import com.kryptos.android.core.SmartTextStego
 import com.kryptos.android.core.TextStego
@@ -10,6 +12,7 @@ import com.kryptos.android.signal.SignalService
 
 object ScreenDecryptor {
     private const val MAX_ENTRIES = 500
+    private const val HIT_TTL_MS = 5 * 60 * 1000L
     private const val NEG_RETRY_MS = 60_000L
     private const val MAX_STEGO_CHARS = 64_000
     private const val NO_PAYLOAD = 'N'
@@ -18,38 +21,33 @@ object ScreenDecryptor {
 
     class Result(val name: String, val text: String, val mine: Boolean)
 
-    private class Entry(val result: Result?, val at: Long)
-
-    private val cache = object : LinkedHashMap<String, Entry>(64, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Entry>): Boolean = size > MAX_ENTRIES
-    }
-    private val lock = Any()
+    private val clock: () -> Long = { SystemClock.elapsedRealtime() }
+    private val cache = ExpiringCache<Result>(MAX_ENTRIES, HIT_TTL_MS, NEG_RETRY_MS, clock)
+    private val keys = ExpiringCache<String>(MAX_ENTRIES, HIT_TTL_MS, HIT_TTL_MS, clock)
 
     init {
-        CachePurge.register { synchronized(lock) { cache.clear() } }
-        CachePurge.registerDecrypted { synchronized(lock) { cache.clear() } }
+        CachePurge.register { forget() }
+        CachePurge.registerDecrypted { forget() }
+    }
+
+    fun forget() {
+        cache.clear()
+        keys.clear()
     }
 
     fun quickCheck(text: String): Boolean {
         if (text.length > MAX_STEGO_CHARS) return false
-        if (WireFormat.hasTokenRun(text)) return true
+        if (WireFormat.extractToken(text) != null) return true
         return text.length >= 40 &&
             (TextStego.mightBeStego(text) || SmartTextStego.mightBeStego(text) || LetterStego.mightBeStego(text))
     }
 
     fun decryptIfPresent(text: String): Result? {
-        val key = dedupKey(text)
-        val now = System.currentTimeMillis()
-
-        synchronized(lock) {
-            cache[key]?.let { e ->
-                if (e.result != null) return e.result
-                if (now - e.at < NEG_RETRY_MS) return null
-            }
-        }
-
+        val textKey = sha256Hex(text.toByteArray(Charsets.UTF_8))
+        val key = keys.lookup(textKey)?.value ?: dedupKey(text).also { keys.remember(textKey, it) }
+        cache.lookup(key)?.let { return it.value }
         val result = if (key[0] == NO_PAYLOAD) null else attempt(text)
-        synchronized(lock) { cache[key] = Entry(result, System.currentTimeMillis()) }
+        cache.remember(key, result)
         return result
     }
 

@@ -9,6 +9,12 @@
             "value": "Wähle zuerst einen Kontakt"
           }
         },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نخست یک مخاطب انتخاب کنید"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -31,6 +37,12 @@
             "value": "Leeren"
           }
         },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "پاک کردن"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -51,6 +63,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die Zwischenablage ist leer."
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "کلیپ‌بورد خالی است."
           }
         },
         "ru": {
@@ -76,6 +94,12 @@
             "value": "Eingabefeld"
           }
         },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فیلد نوشتن"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -96,6 +120,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kontakt"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مخاطب"
           }
         },
         "ru": {
@@ -120,6 +150,12 @@
             "value": "Entschlüsseln fehlgeschlagen — prüfe Profil und Kontakt"
           }
         },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رمزگشایی نشد — نمایه و مخاطب را بررسی کنید"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -140,6 +176,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Entschlüsseln fehlgeschlagen — anderes Profil bzw. anderer Kontakt, oder die Nachricht ist beschädigt"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رمزگشایی نشد — نمایه یا مخاطب دیگری است، یا پیام آسیب دیده"
           }
         },
         "ru": {
@@ -164,6 +206,12 @@
             "value": "Verschlüsseln fehlgeschlagen"
           }
         },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رمزگذاری نشد"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -184,6 +232,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Entschlüsselt · %@"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رمزگشایی‌شده · %@"
           }
         },
         "ru": {
@@ -208,6 +262,12 @@
             "value": "Verschlüsselt für %@"
           }
         },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رمزگذاری‌شده برای %@"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -230,6 +290,12 @@
             "value": "Gib einen Text ein."
           }
         },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "متنی وارد کنید."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -244,6 +310,35 @@
         }
       }
     },
+    "Locked — open Kryptos and unlock it": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesperrt — Kryptos öffnen und entsperren"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قفل است — Kryptos را باز کنید و قفلش را بردارید"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заблокировано — откройте Kryptos и снимите блокировку"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已锁定 — 请打开 Kryptos 解锁"
+          }
+        }
+      }
+    },
     "Locked — unlock to use encryption": {
       "extractionState": "manual",
       "localizations": {
@@ -251,6 +346,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gesperrt — entsperre die App, um zu verschlüsseln"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قفل است — برای استفاده از رمزگذاری قفل را باز کنید"
           }
         },
         "ru": {
@@ -275,6 +376,12 @@
             "value": "Keine Kontakte in diesem Profil"
           }
         },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "این نمایه مخاطبی ندارد"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -295,6 +402,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Keine Nachricht — füge sie in das Feld ein oder kopiere sie"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "پیامی نیست — آن را در فیلد بچسبانید یا کپی کنید"
           }
         },
         "ru": {
@@ -319,6 +432,12 @@
             "value": "Noch keine zuletzt verwendeten Emoji — wähle unten eine Kategorie"
           }
         },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هنوز ایموجی اخیری نیست — از پایین یک دسته انتخاب کنید"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -333,12 +452,47 @@
         }
       }
     },
+    "Not available in a password field": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Passwortfeld nicht verfügbar"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "در فیلد گذرواژه در دسترس نیست"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Недоступно в поле пароля"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密码输入框中不可用"
+          }
+        }
+      }
+    },
     "Open the Kryptos app and add a contact.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Öffne die Kryptos-App und füge einen Kontakt hinzu."
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "برنامه Kryptos را باز کنید و یک مخاطب اضافه کنید."
           }
         },
         "ru": {
@@ -361,6 +515,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Einfügen"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "چسباندن"
           }
         },
         "ru": {
@@ -386,6 +546,12 @@
             "value": "Diese App lässt die Tastatur das Feld nicht leeren - verschlüssle stattdessen in der Kryptos-App."
           }
         },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "این برنامه اجازه نمی‌دهد صفحه‌کلید فیلد را پاک کند — به‌جای آن در برنامه Kryptos رمزگذاری کنید."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -406,6 +572,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aktiviere für die Verschlüsselung „Vollen Zugriff“ in den Tastatureinstellungen."
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "برای رمزگذاری، «دسترسی کامل» را در تنظیمات صفحه‌کلید روشن کنید."
           }
         },
         "ru": {
@@ -430,6 +602,12 @@
             "value": "Tippe oder füge Text ein — der Messenger sieht ihn erst, wenn er verschlüsselt ist"
           }
         },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بنویسید یا متن را بچسبانید — پیام‌رسان تا پیش از رمزگذاری آن را نمی‌بیند"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -451,6 +629,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kryptos entsperren"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قفل Kryptos را باز کنید"
           }
         },
         "ru": {

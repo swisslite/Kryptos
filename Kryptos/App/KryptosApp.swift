@@ -17,21 +17,26 @@ struct KryptosApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                if signal.hasBooted {
-                    RootView()
-                        .environmentObject(signal)
-                        .environmentObject(settings)
-                        .environmentObject(pgp)
-                        .environmentObject(lock)
+                if lock.isLocked {
+                    LockScreen(gate: lock, onCode: handleCode)
                 } else {
-                    BootScreen()
+                    if signal.hasBooted {
+                        RootView()
+                            .environmentObject(signal)
+                            .environmentObject(settings)
+                            .environmentObject(pgp)
+                            .environmentObject(lock)
+                    } else {
+                        BootScreen()
+                    }
+                    if lock.isShielded { PrivacyShield() }
                 }
-                if lock.isShielded && !lock.isLocked { PrivacyShield() }
-                if lock.isLocked { LockScreen(gate: lock, onCode: handleCode) }
             }
             .task {
                 signal.start()
                 pgp.start()
+                if scenePhase == .active { ForegroundMarker.open() }
+                Task.detached(priority: .background) { SharedStore.excludeStoredFilesFromBackup() }
                 Task.detached(priority: .background) { SharedStore.purgeObsolete() }
                 if scenePhase == .active, !lock.isLocked { scanClipboard() }
             }
@@ -43,12 +48,18 @@ struct KryptosApp: App {
                 if phase == .active {
                     AppGroup.revalidate()
                     SharedStore.revalidateBackend()
+                    ForegroundMarker.open()
                     if signal.hasBooted { signal.reloadCurrentFromDisk() }
                     if !lock.isLocked { scanClipboard() }
                 } else {
+                    ForegroundMarker.close()
+                    if signal.hasBooted { signal.purgeExpiredMessages() }
                     let cover = PrivacyConfig.coverState()
                     if cover.shield || cover.appLock { incoming = nil }
                 }
+            }
+            .onChange(of: lock.isShielded) { _, shielded in
+                ScreenCover.set(shielded)
             }
             .onChange(of: lock.isLocked) { _, locked in
                 if locked {
@@ -73,21 +84,20 @@ struct KryptosApp: App {
     }
 
     @MainActor
-    private func handleCode(_ code: String) async -> Bool {
-        let throttle = lock.codeThrottle
-        if throttle > .zero { try? await Task.sleep(for: throttle) }
+    private func handleCode(_ code: String) async -> LockScreen.Outcome {
         switch await LockCodes.classifyOffMain(code) {
         case .rejected:
-            lock.noteCodeRejected()
-            return false
+            return .rejected
+        case .unavailable:
+            return .unavailable
         case .unlocked:
             lock.forceUnlock()
-            return true
+            return .accepted
         case .wiped:
             incoming = nil
             PanicWipe.run(signal: signal, pgp: pgp, settings: settings)
             lock.forceUnlock()
-            return true
+            return .accepted
         }
     }
 }

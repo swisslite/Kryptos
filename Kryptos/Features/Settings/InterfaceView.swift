@@ -17,6 +17,7 @@ struct InterfaceView: View {
                     Text("Russian").tag("ru")
                     Text("German").tag("de")
                     Text("Chinese").tag("zh-Hans")
+                    Text("Persian").tag("fa")
                 }
             } header: {
                 Text("Appearance")

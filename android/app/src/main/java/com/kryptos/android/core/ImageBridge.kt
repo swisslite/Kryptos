@@ -13,6 +13,14 @@ object ImageBridge {
 
     const val COVER_TARGET_PIXELS = 20_000_000L
 
+    const val WORKING_BYTES_PER_PIXEL = 11L
+    const val MIN_PIXEL_BUDGET = 8_000_000L
+
+    fun pixelBudgetFor(maxMemoryBytes: Long): Long =
+        (maxMemoryBytes / 2 / WORKING_BYTES_PER_PIXEL).coerceIn(MIN_PIXEL_BUDGET, MAX_PIXELS)
+
+    fun pixelBudget(): Long = pixelBudgetFor(Runtime.getRuntime().maxMemory())
+
     fun sampleSizeFor(width: Int, height: Int, target: Long): Int {
         if (width <= 0 || height <= 0) return 1
         var sample = 1
@@ -20,10 +28,13 @@ object ImageBridge {
         return sample
     }
 
-    fun withinLimits(width: Int, height: Int, sample: Int): Boolean {
+    fun withinLimits(width: Int, height: Int, sample: Int): Boolean =
+        withinBudget(width, height, sample, MAX_PIXELS)
+
+    fun withinBudget(width: Int, height: Int, sample: Int, budget: Long): Boolean {
         if (width <= 0 || height <= 0) return true
         val s = sample.coerceAtLeast(1)
-        return (width.toLong() / s) * (height.toLong() / s) <= MAX_PIXELS
+        return (width.toLong() / s) * (height.toLong() / s) <= budget
     }
 
     fun rgba(stream: InputStream): Pixels? {

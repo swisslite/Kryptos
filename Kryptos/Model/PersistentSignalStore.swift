@@ -93,13 +93,6 @@ final class PersistentSignalStore: InMemorySignalProtocolStore {
         return try? ProtocolAddress(name: String(parts[0]), deviceId: d)
     }
 
-    private func decryptedBlob() -> Data? {
-        guard let enc = SharedStore.read(storageKey),
-              let box = try? AES.GCM.SealedBox(combined: enc),
-              let dec = try? AES.GCM.open(box, using: cryptKey) else { return nil }
-        return dec
-    }
-
     private func load() {
         switch SharedStore.readStrict(storageKey) {
         case .absent:
@@ -165,13 +158,18 @@ final class PersistentSignalStore: InMemorySignalProtocolStore {
 
     private func writeSnapshot() throws {
         guard !loadFailed else { throw PersistError.staleSnapshot }
-        let diskGeneration: UInt64 = {
-            guard let dec = decryptedBlob() else { return 0 }
-            return (try? JSONDecoder().decode(GenerationProbe.self, from: dec))?.generation ?? 0
-        }()
-        guard diskGeneration == expectedGeneration else {
-            hadStaleConflict = true
-            throw PersistError.staleSnapshot
+        let onDisk = SharedStore.read(storageKey)
+        if PersistentSignalStore.digest(of: onDisk) != diskDigest {
+            let diskGeneration: UInt64 = {
+                guard let onDisk,
+                      let box = try? AES.GCM.SealedBox(combined: onDisk),
+                      let dec = try? AES.GCM.open(box, using: cryptKey) else { return 0 }
+                return (try? JSONDecoder().decode(GenerationProbe.self, from: dec))?.generation ?? 0
+            }()
+            guard diskGeneration == expectedGeneration else {
+                hadStaleConflict = true
+                throw PersistError.staleSnapshot
+            }
         }
         let next = expectedGeneration &+ 1
         snap.generation = next
@@ -209,6 +207,7 @@ final class PersistentSignalStore: InMemorySignalProtocolStore {
         try super.storeSession(record, for: address, context: context)
         snap.sessions[addrKey(address)] = record.serialize(); try persist()
     }
+
 
     override func saveIdentity(_ identity: IdentityKey, for address: ProtocolAddress, context: StoreContext) throws -> IdentityChange {
         let change = try super.saveIdentity(identity, for: address, context: context)

@@ -11,7 +11,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.FileCopy
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -168,11 +167,7 @@ private fun ResultCard(result: String, encrypting: Boolean) {
                 accent = true,
             ) { copySensitive(context, result, context.getString(R.string.copied)) }
             Spacer(Modifier.width(12.dp))
-            PrimaryButton(
-                stringResource(R.string.share),
-                Modifier.weight(1f),
-                icon = Icons.Default.Share,
-            ) { shareText(context, result) }
+            ShareButton(result, plaintext = !encrypting, modifier = Modifier.weight(1f))
         }
     }
 }

@@ -45,6 +45,11 @@ enum KeyboardSelection {
     static func forgetContact(profileID: UUID) {
         SharedStore.delete(contactKey(profileID))
     }
+
+    static func forgetContact(_ fingerprint: String, profileID: UUID) {
+        guard contactFingerprint(profileID: profileID) == fingerprint else { return }
+        SharedStore.delete(contactKey(profileID))
+    }
 }
 
 final class SharedSignalStore {
@@ -58,6 +63,7 @@ final class SharedSignalStore {
     private let storeKey: String
     private let metaKey: String
     private let lock = NSRecursiveLock()
+    private static let history = DispatchQueue(label: "kryptos.shared.history", qos: .userInitiated)
 
     static func index() -> ProfilesIndex? {
         guard let d = SharedStore.read("index") else { return nil }
@@ -94,6 +100,25 @@ final class SharedSignalStore {
         registrationId = meta.registrationId
     }
 
+    func purgeExpired() {
+        withLock {
+            for _ in 0 ..< Self.metaWriteAttempts {
+                guard let enc = SharedStore.read(metaKey),
+                      let box = try? AES.GCM.SealedBox(combined: enc),
+                      let dec = try? AES.GCM.open(box, using: cryptKey),
+                      var meta = try? JSONDecoder().decode(Meta.self, from: dec) else { return }
+                guard meta.purgeExpired() else { return }
+                guard let json = try? Self.metaEncoder.encode(meta),
+                      let sealed = try? AES.GCM.seal(json, using: cryptKey),
+                      let combined = sealed.combined else { return }
+                guard SharedStore.read(metaKey) == enc else { continue }
+                SharedStore.write(metaKey, combined)
+                DecryptPurgeMarker.bump()
+                return
+            }
+        }
+    }
+
     private func freshStore() -> PersistentSignalStore {
         PersistentSignalStore(identity: identity, registrationId: registrationId, storageKey: storeKey, cryptKey: cryptKey)
     }
@@ -101,14 +126,22 @@ final class SharedSignalStore {
     func encrypt(_ text: String, to fingerprint: String) throws -> String {
         let cover = ChatStego.resolvedCover()
         let pad = PrivacyConfig.lengthPadding
-        return try withLock {
-            let cipher = try withConflictRetry { store in
+        let cipher = try withLock {
+            try withConflictRetry { store in
                 try SignalWire.encrypt(text, toFingerprint: fingerprint, myFingerprint: myFingerprint,
                                        store: store, stego: cover.language, mode: cover.mode, pad: pad)
             }
-            OwnCipherMarker.mark(cipher)
-            appendMessage(text, mine: true, to: fingerprint)
-            return cipher
+        }
+        OwnCipherMarker.mark(cipher)
+        recordInBackground { $0.appendMessage(text, mine: true, to: fingerprint) }
+        return cipher
+    }
+
+    private func recordInBackground(_ body: @escaping @Sendable (SharedSignalStore) -> Void) {
+        let profile = self.profile
+        Self.history.async {
+            guard let store = SharedSignalStore(profile: profile) else { return }
+            store.withLock { body(store) }
         }
     }
 
@@ -133,6 +166,7 @@ final class SharedSignalStore {
                   let box = try? AES.GCM.SealedBox(combined: enc),
                   let dec = try? AES.GCM.open(box, using: cryptKey),
                   var meta = try? JSONDecoder().decode(Meta.self, from: dec) else { return }
+            let expired = meta.purgeExpired()
             meta.messages[fingerprint, default: []].append(ChatMessage(text: text, mine: mine))
             if let armored {
                 meta.rememberDecrypt(armored: armored, fingerprint: fingerprint, text: text, stego: .some(stego))
@@ -142,6 +176,7 @@ final class SharedSignalStore {
                   let combined = sealed.combined else { return }
             guard SharedStore.read(metaKey) == enc else { continue }
             SharedStore.write(metaKey, combined)
+            if expired { DecryptPurgeMarker.bump() }
             return
         }
     }
@@ -173,8 +208,11 @@ final class SharedSignalStore {
                     let text = try SignalWire.decrypt(armored, fromFingerprint: contact.fingerprint,
                                                       myFingerprint: myFingerprint, store: store,
                                                       stego: .some(wire))
-                    appendMessage(text, mine: false, to: contact.fingerprint,
-                                  decryptedFrom: armored, stego: cacheStego)
+                    let fingerprint = contact.fingerprint
+                    recordInBackground {
+                        $0.appendMessage(text, mine: false, to: fingerprint,
+                                         decryptedFrom: armored, stego: cacheStego)
+                    }
                     return (contact, text)
                 } catch {
                     if store.hadStaleConflict { store = freshStore() }

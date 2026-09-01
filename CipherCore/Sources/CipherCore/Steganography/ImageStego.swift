@@ -47,6 +47,16 @@ struct KeyStream {
 }
 
 public enum ImageStego {
+    public static let workingBytesPerPixel = 12
+    public static let minPixelBudget = 4_000_000
+    public static let maxPixelBudget = 50_000_000
+
+    public static func pixelBudget(availableBytes: Int) -> Int {
+        guard availableBytes > 0 else { return minPixelBudget }
+        let usable = availableBytes / 2 / workingBytesPerPixel
+        return min(max(usable, minPixelBudget), maxPixelBudget)
+    }
+
     public static let containerVersion: UInt8 = 2
     static let saltBits = PasswordCipher.saltLength * 8
     static let lengthBits = 32

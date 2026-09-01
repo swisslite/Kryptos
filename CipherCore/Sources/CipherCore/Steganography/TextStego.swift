@@ -5,6 +5,7 @@ public enum StegoLanguage: String, Sendable, CaseIterable {
     case russian
     case german
     case chinese
+    case persian
 
     var words: [String] {
         switch self {
@@ -12,16 +13,40 @@ public enum StegoLanguage: String, Sendable, CaseIterable {
         case .russian: return StegoWordlists.russian
         case .german: return StegoWordlists.german
         case .chinese: return StegoWordlists.chinese
+        case .persian: return StegoWordlists.persian
         }
     }
 
     var isHan: Bool { self == .chinese }
+
+    var needsWideResync: Bool { self == .chinese || self == .persian }
+
+    var comma: String {
+        switch self {
+        case .chinese: return "\u{FF0C}"
+        case .persian: return "\u{060C}"
+        default: return ","
+        }
+    }
+
+    var question: String {
+        switch self {
+        case .chinese: return "\u{FF1F}"
+        case .persian: return "\u{061F}"
+        default: return "?"
+        }
+    }
+
+    var bang: String { isHan ? "\u{FF01}" : "!" }
+
+    var stop: String { isHan ? "\u{3002}" : "." }
 
     public static func forSystem() -> StegoLanguage {
         let code = (Locale.preferredLanguages.first ?? "en").lowercased()
         if code.hasPrefix("ru") { return .russian }
         if code.hasPrefix("de") { return .german }
         if code.hasPrefix("zh") { return .chinese }
+        if code.hasPrefix("fa") { return .persian }
         return .english
     }
 }
@@ -30,7 +55,7 @@ public enum TextStego {
     private static let bitsPerWord = 12
     private static let wordMask = 0xFFF
     private static let resyncStarts = 3
-    private static let hanResyncStarts = 8
+    private static let wideResyncStarts = 8
     private static let magic: UInt8 = 0xC7
 
     public static let maxPayloadBytes = 0x7FFF
@@ -97,7 +122,7 @@ public enum TextStego {
     private static func decode(tokens: [String], language: StegoLanguage) -> Data? {
         let index = language.indexMap
         let kept = tokens.filter { index[$0] != nil }
-        let starts = language.isHan ? hanResyncStarts : resyncStarts
+        let starts = language.needsWideResync ? wideResyncStarts : resyncStarts
         for start in 0 ..< min(starts, kept.count) {
             if let data = decodeFrom(kept[start...], index: index) { return data }
         }
@@ -172,13 +197,13 @@ public enum TextStego {
             for (k, word) in chunk.enumerated() {
                 if k > 0, !han { sentence += " " }
                 sentence += word
-                if k < chunk.count - 1, next() % 6 == 0 { sentence += han ? "\u{FF0C}" : "," }
+                if k < chunk.count - 1, next() % 6 == 0 { sentence += language.comma }
             }
             let mark: String
             switch next() % 10 {
-            case 8: mark = han ? "\u{FF1F}" : "?"
-            case 9: mark = han ? "\u{FF01}" : "!"
-            default: mark = han ? "\u{3002}" : "."
+            case 8: mark = language.question
+            case 9: mark = language.bang
+            default: mark = language.stop
             }
             if !han { sentence = sentence.prefix(1).uppercased() + sentence.dropFirst() }
             sentences.append(sentence + mark)

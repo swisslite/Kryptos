@@ -118,7 +118,7 @@ public enum SmartTextStego {
     private static let resyncStarts = 3
     private static let hanResyncStarts = 8
 
-    private static let commaBefore: Set<String> = ["but", "so", "yet", "then", "while", "because", "though", "aber", "denn", "sondern", "и", "но", "а", "затем", "потом", "пока", "когда", "поэтому", "\u{800C}\u{4E14}", "\u{4F46}\u{662F}", "\u{7136}\u{540E}", "\u{56E0}\u{6B64}"]
+    private static let commaBefore: Set<String> = ["but", "so", "yet", "then", "while", "because", "though", "aber", "denn", "sondern", "и", "но", "а", "затем", "потом", "пока", "когда", "поэтому", "\u{800C}\u{4E14}", "\u{4F46}\u{662F}", "\u{7136}\u{540E}", "\u{56E0}\u{6B64}", "\u{0627}\u{0645}\u{0627}", "\u{0648}\u{0644}\u{06CC}", "\u{067E}\u{0633}"]
 
     struct Style {
         let unit: Int
@@ -129,6 +129,7 @@ public enum SmartTextStego {
 
         static let latin = Style(unit: 1, space: " ", comma: ",", stop: ".", bang: "!")
         static let han = Style(unit: 2, space: "", comma: "\u{FF0C}", stop: "\u{3002}", bang: "\u{FF01}")
+        static let persian = Style(unit: 1, space: " ", comma: "\u{060C}", stop: ".", bang: "!")
     }
 
     private static func render(opener: String, kind: Int, parts: [String], style: Style) -> String {
@@ -223,13 +224,15 @@ public enum SmartTextStego {
     private static let russianGrammar = Grammar(SmartStegoData.russian, style: .latin)
     private static let germanGrammar = Grammar(SmartStegoData.german, style: .latin)
     private static let chineseGrammar = Grammar(SmartStegoData.chinese, style: .han)
-    private static let grammars = [englishGrammar, russianGrammar, germanGrammar, chineseGrammar]
+    private static let persianGrammar = Grammar(SmartStegoData.persian, style: .persian)
+    private static let grammars = [englishGrammar, russianGrammar, germanGrammar, chineseGrammar, persianGrammar]
 
     private static func grammar(_ language: StegoLanguage) -> Grammar {
         switch language {
         case .russian: return russianGrammar
         case .german: return germanGrammar
         case .chinese: return chineseGrammar
+        case .persian: return persianGrammar
         case .english: return englishGrammar
         }
     }

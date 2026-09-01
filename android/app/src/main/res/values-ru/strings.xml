@@ -47,6 +47,8 @@
     <string name="new_profile">Новый профиль</string>
     <string name="profile_name">Имя профиля</string>
     <string name="rename">Переименовать</string>
+    <string name="pin_chat">Закрепить чат</string>
+    <string name="unpin_chat">Открепить чат</string>
     <string name="rename_profile">Переименовать профиль</string>
     <string name="rename_contact">Переименовать контакт</string>
     <string name="save">Сохранить</string>
@@ -94,6 +96,7 @@
     <string name="lang_ru">Русский</string>
     <string name="lang_de">Немецкий</string>
     <string name="lang_zh">Китайский</string>
+    <string name="lang_fa">Персидский</string>
     <string name="settings_keyboard">Клавиатура</string>
     <string name="settings_enable_keyboard">Включить клавиатуру Kryptos</string>
     <string name="settings_kb_autodecrypt">Авторасшифровка буфера в клавиатуре</string>
@@ -135,7 +138,7 @@
     <string name="about_offline">Полностью офлайн: без серверов, аккаунтов и аналитики. Ключи не покидают устройство.</string>
     <string name="about_under_hood">Под капотом</string>
     <string name="about_signal_t">Signal Protocol — официальная libsignal</string>
-    <string name="about_signal_d">Та же библиотека, что и в приложении Signal: постквантовый обмен ключами (PQXDH с Kyber) и Double Ratchet — новый ключ для каждого сообщения.</string>
+    <string name="about_signal_d">Та же библиотека, что и в приложении Signal: постквантовый обмен ключами (PQXDH с Kyber) и Triple Ratchet — новый ключ для каждого сообщения.</string>
     <string name="about_pgp_t">OpenPGP — PGPainless / Bouncy Castle</string>
     <string name="about_pgp_d">Классическое асимметричное шифрование с подписями, совместимое с другими PGP-инструментами.</string>
     <string name="about_pw_t">Парольный режим</string>
@@ -157,6 +160,7 @@
     <string name="screen_block_screenshots_desc">Пока работает расшифровка на экране, скриншоты и запись экрана блокируются на всём устройстве — расшифрованный текст не попадёт в снимок.</string>
     <string name="screen_decrypt_footer">Показывает расшифровку поверх шифртекста в других приложениях.</string>
     <string name="screen_decrypt_enable_service">Включить службу спец. возможностей</string>
+    <string name="screen_decrypt_keep_running">Не приостанавливать приложение</string>
     <string name="screen_decrypt_service_off">Нужна служба спец. возможностей — нажмите, чтобы открыть настройки.</string>
 
     <string name="kb_select_contact">Контакт</string>
@@ -167,8 +171,13 @@
     <string name="kb_locked">Сначала разблокируйте приложение Kryptos</string>
 
     <string name="sec_section">Безопасность</string>
-    <string name="sec_app_lock">Блокировка входа (биометрия / PIN)</string>
-    <string name="sec_app_lock_unavailable">Сначала установите блокировку экрана в настройках Android.</string>
+    <string name="sec_app_lock">Блокировка входа</string>
+    <string name="sec_lock_method_code">Код приложения</string>
+    <string name="sec_lock_method_no_system">Биометрия и PIN недоступны: на устройстве нет блокировки экрана.</string>
+    <string name="sec_lock_method_no_code">Чтобы входить только по коду, задайте код приложения ниже.</string>
+    <string name="sec_lock_method_system">Биометрия или PIN</string>
+    <string name="sec_lock_method">Способ входа</string>
+    <string name="sec_app_lock_unavailable">Установите блокировку экрана или задайте код приложения.</string>
     <string name="sec_autolock">Автоблокировка</string>
     <string name="sec_autolock_immediate">Сразу</string>
     <string name="sec_autolock_10s">Через 10 секунд</string>
@@ -229,13 +238,15 @@
 
     <string name="manage_profiles">Управление профилями…</string>
     <string name="empty_title">Пока нет диалогов</string>
-    <string name="empty_hint">Чтобы начать, обменяйтесь ключами: нажмите значок QR (справа сверху) — откроется «Мой ключ», дайте собеседнику отсканировать его. Затем нажмите «+» рядом, чтобы добавить его ключ. Оба добавляете друг друга один раз. Пошаговая инструкция со скриншотами — в разделе «Настройки → Как пользоваться».</string>
+    <string name="empty_hint">Чтобы начать, обменяйтесь ключами: нажмите значок QR (справа сверху) — откроется «Мой ключ», дайте собеседнику отсканировать его. Затем нажмите «+» рядом, чтобы добавить его ключ. Оба добавляете друг друга один раз. Пошаговая инструкция со скриншотами — в разделе «%1$s».</string>
     <string name="chat_hint">Зашифруйте сообщение, отправьте результат через любой мессенджер, а ответ вставьте сюда для расшифровки.</string>
+    <string name="chat_scroll_bottom">К последнему сообщению</string>
     <string name="auto_delete_hint">Сообщения исчезают через %1$s.</string>
     <string name="sent_banner">Зашифровано и скопировано — вставьте собеседнику.</string>
     <string name="sent_banner_stego">Спрятано в тексте и скопировано — вставьте собеседнику.</string>
     <string name="clipboard_empty">Буфер обмена пуст.</string>
     <string name="decrypt_failed">Не удалось расшифровать — не тот контакт, либо сообщение уже было прочитано. Если не читается каждое НОВОЕ сообщение — отправьте контакту свой ключ заново, пусть добавит вас ещё раз.</string>
+    <string name="decrypt_prekey_used">Сообщение зашифровано по ключу, который уже использован или устарел. Передайте свой ключ заново и попросите добавить вас ещё раз.</string>
     <string name="decrypted_other_contact">Это сообщение от другого контакта: %1$s.</string>
     <string name="encrypt_failed">Не удалось зашифровать сообщение.</string>
     <string name="key_for_profile">Ключ профиля</string>
@@ -251,7 +262,7 @@
     <string name="confirm_delete_contact_title">Удалить контакт и чат?</string>
     <string name="confirm_delete_contact_text">Его ключ и сессия будут стёрты с этого устройства вместе со всей перепиской; ваш собственный ключ останется. Отменить нельзя.</string>
     <string name="confirm_clear_chat_title">Очистить этот чат?</string>
-    <string name="confirm_clear_chat_text">Переписка будет надёжно стёрта. Отменить нельзя.</string>
+    <string name="confirm_clear_chat_text">Переписка будет удалена. Отменить нельзя.</string>
     <string name="confirm_delete_profile_title">Удалить профиль?</string>
     <string name="confirm_delete_profile_text">Этот профиль будет удалён навсегда — его ключи, контакты и сообщения. Отменить нельзя.</string>
     <string name="confirm_wipe_chats_text">История сообщений во всех чатах будет стёрта. Контакты останутся. Отменить нельзя.</string>
@@ -275,9 +286,32 @@
     <string name="settings_kb_compose_desc">Поле — набор идёт мимо мессенджера, он не сохранит черновик. Кнопка включает это поле прямо на клавиатуре.</string>
 
     <string name="kb_typing">Набор текста</string>
+    <string name="kb_field_section">Поле сообщения</string>
     <string name="settings_kb_suggestions">Подсказки слов</string>
     <string name="settings_kb_autocorrect">Автоисправление</string>
     <string name="settings_kb_emoji">Клавиша эмодзи</string>
+    <string name="settings_kb_punct">Клавиша точки и запятой</string>
+    <string name="settings_kb_punct_double">Запятая по двойному нажатию</string>
+    <string name="kb_voice_section">Голосовой ввод</string>
+    <string name="settings_kb_voice">Кнопка микрофона</string>
+    <string name="settings_kb_voice_engine">Движок</string>
+    <string name="kb_voice_engine_system">Встроенная (Android)</string>
+    <string name="settings_kb_voice_footer">Встроенная диктовка Android. Без сервисов Google недоступна.</string>
+    <string name="settings_kb_voice_unsupported">На этом устройстве встроенной диктовки нет.</string>
+    <string name="settings_kb_voice_permission">Разрешить доступ к микрофону</string>
+    <string name="settings_kb_voice_download_footer">Android установит язык используя интернет. Kryptos при этом интернет не задействует.</string>
+    <string name="kb_voice_empty">Ничего не распознано</string>
+    <string name="kb_voice_permission">Нет доступа к микрофону</string>
+    <string name="kb_voice_language">Язык для диктовки не загружен</string>
+    <string name="kb_voice_busy">Распознавание занято</string>
+    <string name="kb_voice_unavailable">Диктовка недоступна</string>
+    <string name="kb_voice_failed">Не удалось распознать</string>
+    <string name="kb_voice_field_changed">Поле сменилось — текст в поле клавиатуры</string>
+    <string name="settings_kb_composeapps">Поле по приложениям</string>
+    <string name="settings_kb_composeapps_enable">Включать поле автоматически</string>
+    <string name="settings_kb_composeapps_footer">Поле сообщения открывается само в выбранных приложениях.</string>
+    <string name="settings_kb_composeapps_add">Добавить приложения</string>
+    <string name="settings_kb_composeapps_empty">Приложения пока не выбраны.</string>
     <string name="settings_kb_suggestions_desc">Подсказки и автоисправление по офлайн-словарям. В полях паролей отключены.</string>
     <string name="kb_forget_words">Забыть выученные слова</string>
     <string name="confirm_forget_words_title">Забыть выученные слова?</string>
@@ -290,8 +324,8 @@
     <string name="panic_status_on">Задан</string>
     <string name="panic_status_off">Не задан</string>
     <string name="panic_desc">Введите его на экране блокировки — Kryptos сразу и безвозвратно сотрёт все данные и откроется пустым, как после установки.</string>
-    <string name="panic_enable_lock">Включить блокировку</string>
     <string name="panic_set_header">Задать пароль</string>
+    <string name="panic_change_header">Сменить пароль</string>
     <string name="panic_new">Новый пароль</string>
     <string name="panic_repeat">Повторите пароль</string>
     <string name="panic_save">Сохранить пароль</string>
@@ -308,16 +342,18 @@
     <string name="codes_section">Коды на экране блокировки</string>
     <string name="codes_row_footer">Код приложения открывает Kryptos, пароль-ловушка стирает всё.</string>
     <string name="appcode_title">Код приложения</string>
-    <string name="appcode_desc">Обычный код для входа в Kryptos, если не хочется биометрии. Необязателен.</string>
+    <string name="appcode_desc">Открывает Kryptos на экране блокировки. Можно входить только по нему, без биометрии и PIN.</string>
+    <string name="appcode_set_header">Задать код</string>
+    <string name="appcode_change_header">Сменить код</string>
     <string name="appcode_new">Новый код</string>
     <string name="appcode_repeat">Повторите код</string>
     <string name="appcode_save">Сохранить код</string>
     <string name="appcode_set_footer">Минимум 4 символа. Он должен отличаться от пароля-ловушки.</string>
     <string name="appcode_remove">Удалить код приложения</string>
-    <string name="appcode_remove_confirm">Входить по биометрии или PIN-коду устройства по-прежнему можно будет.</string>
+    <string name="appcode_remove_confirm">Вход вернётся к биометрии или PIN-коду устройства, а если их нет — блокировка выключится.</string>
     <string name="appcode_saved">Код приложения сохранён.</string>
     <string name="appcode_removed">Код приложения удалён.</string>
-    <string name="code_needs_lock">Коды вводятся на экране блокировки. Включите блокировку приложения, чтобы они работали.</string>
+    <string name="code_needs_lock">Коды вводятся на экране блокировки. Без блокировки входа он не появляется.</string>
     <string name="code_duplicate">Этот код уже используется как другой. Выберите другой.</string>
     <string name="code_save_failed">Не удалось сохранить код.</string>
     <string name="backup_title">Резервная копия ключей</string>
@@ -376,7 +412,7 @@
     <string name="howto_setup_title">Kryptos в других приложениях</string>
     <string name="howto_setup_intro">Kryptos умеет работать прямо в других приложениях, чтобы не переключаться туда-сюда. За это отвечают две функции: расшифровка на экране, которая показывает расшифрованный текст поверх шифртекста, и клавиатура Kryptos, которая шифрует прямо в поле ввода.</string>
     <string name="howto_setup_s1_title">Откройте Приватность</string>
-    <string name="howto_setup_s1_text">В Kryptos откройте Настройки → Приватность.</string>
+    <string name="howto_setup_s1_text">В Kryptos откройте Настройки — Приватность.</string>
     <string name="howto_setup_s2_title">Включите расшифровку на экране</string>
     <string name="howto_setup_s2_text">В разделе «На экране» включите «Расшифровывать на экране». Kryptos будет находить свой шифртекст в любом приложении и показывать расшифровку поверх него — только для контактов из Диалогов и никогда при заблокированном Kryptos.</string>
     <string name="howto_setup_s3_title">Найдите её в спец. возможностях</string>
@@ -384,7 +420,7 @@
     <string name="howto_setup_s4_title">Включите службу</string>
     <string name="howto_setup_s4_text">Включите переключатель вверху страницы. Служба читает только текст, который уже виден на экране, — без нажатий клавиш и без сети.</string>
     <string name="howto_setup_s5_title">Откройте настройки клавиатуры</string>
-    <string name="howto_setup_s5_text">Вернитесь в Kryptos и откройте Настройки → Клавиатура.</string>
+    <string name="howto_setup_s5_text">Вернитесь в Kryptos и откройте Настройки — Клавиатура.</string>
     <string name="howto_setup_s6_title">Включите клавиатуру Kryptos</string>
     <string name="howto_setup_s6_text">Нажмите «Включить клавиатуру Kryptos» — откроется системный список клавиатур. Здесь же оставьте включённой «Авторасшифровку буфера в клавиатуре»: если в буфере лежит зашифрованное сообщение, клавиатура расшифрует его сразу при открытии.</string>
     <string name="howto_setup_s7_title">Включите её в списке</string>
@@ -392,9 +428,13 @@
     <string name="faq_q1">Нужен ли интернет?</string>
     <string name="faq_a1">Нет. У Kryptos нет ни серверов, ни аккаунтов — приложение даже не запрашивает разрешение на доступ в сеть. Шифрование целиком происходит на устройстве, а доставку берёт на себя тот мессенджер, которым вы и так пользуетесь.</string>
     <string name="faq_q2">Видит ли мессенджер мои сообщения?</string>
-    <string name="faq_a2">Нет — ему достаётся уже зашифрованный текст. Но он видит сам факт отправки, кому и примерно какого объёма. Это метаданные, и Kryptos их не скрывает; замаскировать хотя бы длину можно в «Настройках → Приватность».</string>
+    <string name="faq_a2">Нет — ему достаётся уже зашифрованный текст. Но он видит сам факт отправки, кому и примерно какого объёма. Это метаданные, и Kryptos их не скрывает; замаскировать хотя бы длину можно в «Настройках — Приватность».</string>
     <string name="faq_q3">Почему первое сообщение такое длинное?</string>
     <string name="faq_a3">В нём передаётся постквантовое рукопожатие (PQXDH с Kyber) — это около двух килобайт. Оно отправляется один раз: как только собеседник ответит, сообщения станут в разы короче.</string>
+    <string name="faq_q22">Постквантовая защита работает во всех сообщениях?</string>
+    <string name="faq_a22">Да. Kryptos собран на libsignal, где с версии 0.83.0 постквантовый ратчет SPQR включён постоянно: ключ каждого сообщения выводится с постквантовой частью, а не только рукопожатие. Включить или отключить его нельзя — ни в Kryptos, ни в самой библиотеке.</string>
+    <string name="faq_q23">Расшифровка на экране перестала работать сама по себе</string>
+    <string name="faq_a23">Телефон может приостановить приложение, которым, по его мнению, вы больше не пользуетесь. Android при этом выключает службу спец. возможностей Kryptos и возвращает системную клавиатуру. Включите службу заново здесь же, а клавиатуру выберите заново в системных настройках ввода. Чтобы это не повторялось, откройте свойства приложения и отключите приостановку неиспользуемого приложения; на Samsung дополнительно уберите Kryptos из списка спящих приложений в разделе обслуживания устройства.</string>
     <string name="faq_q4">Почему сообщение не расшифровывается второй раз?</string>
     <string name="faq_a4">Это не поломка, а прямая секретность: ключ каждого сообщения уничтожается сразу после прочтения, поэтому старую переписку не восстановить, даже забрав телефон. Уже открытые сообщения остаются в истории чата.</string>
     <string name="faq_q5">Пишет, что не удалось расшифровать. Что делать?</string>
@@ -406,7 +446,7 @@
     <string name="faq_q8">Спрятал сообщение в фото, а оно не читается</string>
     <string name="faq_a8">Фотографию нужно отправлять файлом (документом). Отправленная как обычная картинка, она пережимается мессенджером, а пережатие разрушает спрятанные данные.</string>
     <string name="faq_q9">Что такое пароль-ловушка?</string>
-    <string name="faq_a9">Это второй пароль для экрана блокировки. Введите его вместо обычного кода — и приложение молча и необратимо уничтожит все ключи, переписку и настройки, а затем откроется как только что установленное. Настраивается в «Настройках → Приватность».</string>
+    <string name="faq_a9">Это второй пароль для экрана блокировки. Введите его вместо обычного кода — и приложение молча и необратимо уничтожит все ключи, переписку и настройки, а затем откроется как только что установленное. Настраивается в «Настройках — Приватность».</string>
     <string name="faq_q10">Я забыл пароль от резервной копии ключей</string>
     <string name="faq_a10">Восстановить его невозможно: файл зашифрован именно этим паролем, а Kryptos нигде его не хранит. Сделайте новую копию с паролем, который точно не забудете.</string>
     <string name="faq_q11">Зачем нужны профили?</string>
@@ -443,6 +483,7 @@
     <string name="kb_a11y_backspace">Удалить</string>
     <string name="kb_a11y_enter">Ввод</string>
     <string name="kb_a11y_shift">Регистр</string>
+    <string name="kb_a11y_zwnj">Полупробел</string>
     <string name="kb_a11y_emoji">Эмодзи</string>
     <string name="kb_a11y_hidden">Скрытый символ</string>
     <string name="scan_captured">Ключ отсканирован</string>
@@ -462,4 +503,9 @@
     <string name="profiles_intro">Профиль — это отдельная пара ключей со своими контактами. Создайте несколько, чтобы разделить общение. Ваш «код безопасности» публичный (им можно делиться, он нужен только для сверки контакта); приватный ключ никогда не покидает это устройство.</string>
     <string name="current_profile">ТЕКУЩИЙ ПРОФИЛЬ</string>
     <string name="safety_number_label">КОД БЕЗОПАСНОСТИ</string>
+    <string name="kb_field_changed">Поле сменилось — зашифрованный текст скопирован</string>
+    <string name="kb_password_field">Недоступно в поле пароля</string>
+    <string name="kb_stego_unavailable">Зашифровано, но подобрать текст-прикрытие не удалось</string>
+    <string name="share_plain_title">Отправить открытый текст?</string>
+    <string name="share_plain_text">Расшифрованный текст уйдёт в выбранное приложение, а системная шторка отправки покажет его превью.</string>
 </resources>

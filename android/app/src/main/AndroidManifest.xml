@@ -1,15 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
     <uses-permission android:name="android.permission.HIDE_OVERLAY_WINDOWS" />
     <uses-permission android:name="android.permission.VIBRATE" />
+
+    <uses-feature android:name="android.hardware.camera.autofocus" tools:node="remove" />
+    <uses-feature android:name="android.hardware.camera.flash" tools:node="remove" />
+    <uses-feature android:name="android.hardware.camera.front" tools:node="remove" />
+    <uses-feature android:name="android.hardware.wifi" tools:node="remove" />
+    <uses-feature android:name="android.hardware.screen.landscape" tools:node="remove" />
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
 
 
     <application
         android:name=".KryptosApp"
         android:label="@string/app_name"
+        android:supportsRtl="true"
         android:icon="@mipmap/ic_launcher"
         android:theme="@style/Theme.Kryptos"
         android:allowBackup="false"
@@ -39,6 +56,10 @@
             </intent-filter>
         </activity>
 
+        <receiver
+            android:name=".signal.ExpiryReceiver"
+            android:exported="false" />
+
         <service
             android:name=".screen.ScreenDecryptService"
             android:exported="true"
@@ -51,6 +72,25 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/screen_decrypt_service" />
         </service>
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+                tools:node="remove" />
+        </provider>
+
+        <receiver
+            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+            android:exported="false"
+            tools:node="remove" />
+
+        <activity
+            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            tools:node="remove" />
 
         <service
             android:name=".keyboard.KryptosImeService"

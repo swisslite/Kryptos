@@ -56,6 +56,7 @@ import com.kryptos.android.pgp.PgpDecryption
 import com.kryptos.android.pgp.PgpException
 import com.kryptos.android.pgp.PgpService
 import com.kryptos.android.pgp.PgpVerification
+import com.kryptos.android.security.ClipboardGuard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
@@ -238,11 +239,7 @@ fun PgpScreen(modifier: Modifier = Modifier) {
                         accent = true,
                     ) { copySensitive(context, result, context.getString(R.string.copied)) }
                     Spacer(Modifier.width(12.dp))
-                    PrimaryButton(
-                        stringResource(R.string.share),
-                        Modifier.weight(1f),
-                        icon = Icons.Default.Share,
-                    ) { shareText(context, result) }
+                    ShareButton(result, plaintext = !encrypting, modifier = Modifier.weight(1f))
                 }
             }
         }
@@ -438,7 +435,7 @@ private fun PgpShareSheet(onDismiss: () -> Unit) {
                 icon = Icons.Outlined.FileCopy,
                 enabled = key.isNotEmpty(),
                 accent = true,
-            ) { copySensitive(context, key, context.getString(R.string.copied)) }
+            ) { ClipboardGuard.copyPlain(context, key, context.getString(R.string.copied)) }
             Spacer(Modifier.width(12.dp))
             PrimaryButton(
                 stringResource(R.string.share),

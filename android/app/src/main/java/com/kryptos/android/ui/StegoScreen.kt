@@ -44,6 +44,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kryptos.android.R
+import com.kryptos.android.security.launchFromApp
 import com.kryptos.android.core.CipherException
 import com.kryptos.android.core.ImageBridge
 import com.kryptos.android.core.ImageStego
@@ -84,12 +85,18 @@ fun StegoScreen(modifier: Modifier = Modifier) {
             status = context.getString(R.string.save_failed)
             isError = true
         } else {
-            val ok = runCatching {
-                context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) } != null
-            }.getOrDefault(false)
-            status = context.getString(if (ok) R.string.saved_as_file else R.string.save_failed)
-            isError = !ok
-            if (ok) pngToSave = null
+            busy = true
+            scope.launch {
+                val ok = withContext(Dispatchers.IO + NonCancellable) {
+                    runCatching {
+                        context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) } != null
+                    }.getOrDefault(false)
+                }
+                busy = false
+                status = context.getString(if (ok) R.string.saved_as_file else R.string.save_failed)
+                isError = !ok
+                if (ok) pngToSave = null
+            }
         }
     }
 
@@ -130,7 +137,7 @@ fun StegoScreen(modifier: Modifier = Modifier) {
                         .fillMaxWidth()
                         .height(170.dp)
                         .clip(shape)
-                        .quietClickable { picker.launch("image/*") },
+                        .quietClickable { picker.launchFromApp("image/*") },
                     contentScale = ContentScale.Crop,
                 )
             } else {
@@ -141,7 +148,7 @@ fun StegoScreen(modifier: Modifier = Modifier) {
                         .clip(shape)
                         .background(K.fieldFill)
                         .border(1.dp, K.hairline, shape)
-                        .quietClickable { picker.launch("image/*") },
+                        .quietClickable { picker.launchFromApp("image/*") },
                     contentAlignment = Alignment.Center,
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -159,7 +166,7 @@ fun StegoScreen(modifier: Modifier = Modifier) {
                 stringResource(R.string.pick_file),
                 Modifier.fillMaxWidth(),
                 icon = Icons.Default.FolderOpen,
-            ) { filePicker.launch(arrayOf("image/*")) }
+            ) { filePicker.launchFromApp(arrayOf("image/*")) }
         }
 
         GlassCard(spacing = 14.dp) {
@@ -191,8 +198,9 @@ fun StegoScreen(modifier: Modifier = Modifier) {
                     val outcome = withContext(Dispatchers.Default + NonCancellable) {
                         runCatching {
                             val degrees = if (isHiding) exifRotation(context, uri) else 0f
-                            val shrink = if (isHiding) ImageBridge.COVER_TARGET_PIXELS else null
-                            val pixels = readPixels(context, uri, degrees, shrink)
+                            val budget = ImageBridge.pixelBudget()
+                            val shrink = if (isHiding) minOf(ImageBridge.COVER_TARGET_PIXELS, budget) else null
+                            val pixels = readPixels(context, uri, degrees, shrink, budget)
                                 ?: throw CipherException(CipherException.Kind.INVALID_INPUT)
                             if (isHiding) {
                                 val stego = ImageStego.hideInto(
@@ -210,7 +218,7 @@ fun StegoScreen(modifier: Modifier = Modifier) {
                     outcome.onSuccess {
                         if (it.png != null) {
                             pngToSave = it.png
-                            saver.launch("kryptos.png")
+                            saver.launchFromApp("kryptos.png")
                         } else {
                             revealed = it.text.orEmpty()
                             isError = false
@@ -265,11 +273,18 @@ private class StegoResult(val png: ByteArray?, val text: String?)
 
 private class PhotoTooLargeException : Exception()
 
-private fun readPixels(context: Context, uri: Uri, degrees: Float, shrinkTo: Long? = null): ImageBridge.Pixels? {
+private fun readPixels(
+    context: Context,
+    uri: Uri,
+    degrees: Float,
+    shrinkTo: Long? = null,
+    budget: Long = ImageBridge.MAX_PIXELS,
+): ImageBridge.Pixels? {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
     val sample = shrinkTo?.let { ImageBridge.sampleSizeFor(bounds.outWidth, bounds.outHeight, it) } ?: 1
     if (!ImageBridge.withinLimits(bounds.outWidth, bounds.outHeight, sample)) throw PhotoTooLargeException()
+    if (!ImageBridge.withinBudget(bounds.outWidth, bounds.outHeight, sample, budget)) throw PhotoTooLargeException()
     return context.contentResolver.openInputStream(uri)?.use { stream ->
         if (degrees == 0f && sample == 1) {
             ImageBridge.rgba(stream)

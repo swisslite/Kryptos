@@ -1,5 +1,6 @@
 package com.kryptos.android.ui
 
+import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
@@ -32,6 +33,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.selectable
@@ -66,6 +69,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -97,6 +101,7 @@ import com.kryptos.android.signal.OwnCipherMarker
 import com.kryptos.android.signal.SignalService
 import com.kryptos.android.store.SecureStore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -165,6 +170,7 @@ class MainActivity : FragmentActivity() {
                         val visible = ui.visibleTabs
                         var tabKey by rememberSaveable { mutableStateOf(AppSettingsStore.AppTab.CHATS.key) }
                         var chatOpen by remember { mutableStateOf(false) }
+                        var howTo by remember { mutableStateOf<HowToPage?>(null) }
                         var homeSignal by remember { mutableIntStateOf(0) }
                         val tab = AppSettingsStore.AppTab.of(tabKey)
                             ?.takeIf { it in visible }
@@ -175,7 +181,7 @@ class MainActivity : FragmentActivity() {
                             Scaffold(
                                 containerColor = Color.Transparent,
                                 bottomBar = {
-                                    if (!chatOpen) BottomDock(visible, tab) { entry ->
+                                    if (!chatOpen && howTo == null) BottomDock(visible, tab) { entry ->
                                         if (entry == tab) homeSignal++ else tabKey = entry.key
                                     }
                                 },
@@ -187,21 +193,43 @@ class MainActivity : FragmentActivity() {
                                 CompositionLocalProvider(
                                     LocalTabBarInset provides padding.calculateBottomPadding(),
                                 ) {
-                                    AnimatedContent(
-                                        targetState = tab,
-                                        transitionSpec = {
-                                            fadeIn(tween(130)) togetherWith fadeOut(tween(90))
-                                        },
-                                        label = "tabContent",
-                                    ) { t ->
-                                        when (t) {
-                                            AppSettingsStore.AppTab.CHATS ->
-                                                SessionsScreen(mod, homeSignal, onChatOpenChanged = { chatOpen = it })
-                                            AppSettingsStore.AppTab.PGP -> PgpScreen(mod)
-                                            AppSettingsStore.AppTab.QUICK -> QuickScreen(mod)
-                                            AppSettingsStore.AppTab.STEGO -> StegoScreen(mod)
-                                            AppSettingsStore.AppTab.SETTINGS ->
-                                                SettingsScreen(mod, homeSignal, onShieldChanged = { applyShield() })
+                                    val howToPage = howTo
+                                    if (howToPage != null) {
+                                        BackHandler {
+                                            howTo = if (howToPage == HowToPage.Root) null else HowToPage.Root
+                                        }
+                                        when (howToPage) {
+                                            HowToPage.Root -> HowToSettings(
+                                                mod,
+                                                backLabel = stringResource(R.string.tab_chats),
+                                                onBack = { howTo = null },
+                                                openKeys = { howTo = HowToPage.Keys },
+                                                openSetup = { howTo = HowToPage.Setup },
+                                            )
+                                            HowToPage.Keys -> HowToKeysSettings(mod) { howTo = HowToPage.Root }
+                                            HowToPage.Setup -> HowToSetupSettings(mod) { howTo = HowToPage.Root }
+                                        }
+                                    } else {
+                                        AnimatedContent(
+                                            targetState = tab,
+                                            transitionSpec = {
+                                                fadeIn(tween(130)) togetherWith fadeOut(tween(90))
+                                            },
+                                            label = "tabContent",
+                                        ) { t ->
+                                            when (t) {
+                                                AppSettingsStore.AppTab.CHATS ->
+                                                    SessionsScreen(
+                                                        mod, homeSignal,
+                                                        onChatOpenChanged = { chatOpen = it },
+                                                        onHowTo = { howTo = HowToPage.Root },
+                                                    )
+                                                AppSettingsStore.AppTab.PGP -> PgpScreen(mod)
+                                                AppSettingsStore.AppTab.QUICK -> QuickScreen(mod)
+                                                AppSettingsStore.AppTab.STEGO -> StegoScreen(mod)
+                                                AppSettingsStore.AppTab.SETTINGS ->
+                                                    SettingsScreen(mod, homeSignal, onShieldChanged = { applyShield() })
+                                            }
                                         }
                                     }
                                 }
@@ -222,6 +250,7 @@ class MainActivity : FragmentActivity() {
             return
         }
         AppLock.onForeground(this)
+        ClipboardGuard.flushPending(this)
         KryptosApp.scope.launch { runCatching { SignalService.purgeExpiredMessages() } }
     }
 
@@ -232,7 +261,9 @@ class MainActivity : FragmentActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (!hasFocus || AppLock.locked.value || !AppSettingsStore.clipboardAutoDecrypt) return
+        if (!hasFocus) return
+        ClipboardGuard.flushPending(this)
+        if (AppLock.locked.value || !AppSettingsStore.clipboardAutoDecrypt) return
         if (!SignalService.isReady) return
         val clip = clipboardText(this)
         if (clip.isBlank() || !ClipScanMemory.markSeen(clip)) return
@@ -245,6 +276,7 @@ class MainActivity : FragmentActivity() {
             ) return@launch
             if (OwnCipherMarker.matches(clip)) return@launch
             for (contact in SignalService.contacts.value) {
+                if (AppLock.locked.value) return@launch
                 try {
                     SignalService.decrypt(clip, contact)
                     if (AppSettingsStore.clearClipboardOnDecrypt) {
@@ -268,6 +300,18 @@ class MainActivity : FragmentActivity() {
         window.decorView.filterTouchesWhenObscured = true
         if (android.os.Build.VERSION.SDK_INT >= 31) window.setHideOverlayWindows(true)
         if (android.os.Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(false)
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            runCatching {
+                getSystemService(android.view.contentcapture.ContentCaptureManager::class.java)
+                    ?.setContentCaptureEnabled(false)
+            }
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            runCatching {
+                window.decorView.importantForContentCapture =
+                    android.view.View.IMPORTANT_FOR_CONTENT_CAPTURE_NO_EXCLUDE_DESCENDANTS
+            }
+        }
     }
 
 }
@@ -340,6 +384,7 @@ private class TabAnimSpecs(
 )
 
 private val dockFadeHeight = 28.dp
+private val tabGapMax = 16.dp
 
 @Composable
 private fun BottomDock(
@@ -392,17 +437,16 @@ private fun KTabBar(
             .fillMaxWidth()
             .navigationBarsPadding()
             .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 12.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Row(
+        TabStrip(
             Modifier
-                .fillMaxWidth()
                 .shadow(6.dp, dock, ambientColor = K.glassShadow, spotColor = K.glassShadow)
                 .clip(dock)
                 .background(glass)
                 .border(1.dp, rim, dock)
                 .padding(horizontal = 6.dp, vertical = 7.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+            gapMax = tabGapMax,
         ) {
             visible.forEach { entry ->
                 key(entry) {
@@ -414,6 +458,34 @@ private fun KTabBar(
                         onSelect = onSelect,
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabStrip(
+    modifier: Modifier,
+    gapMax: Dp,
+    content: @Composable () -> Unit,
+) {
+    Layout(content, modifier) { measurables, constraints ->
+        var free = constraints.maxWidth
+        val placeables = measurables.map { measurable ->
+            val placeable = measurable.measure(constraints.copy(minWidth = 0, maxWidth = free))
+            free = (free - placeable.width).coerceAtLeast(0)
+            placeable
+        }
+        val gaps = (placeables.size - 1).coerceAtLeast(0)
+        val gap = if (gaps == 0) 0 else (free / gaps).coerceAtMost(gapMax.roundToPx())
+        val used = placeables.sumOf { it.width } + gap * gaps
+        val width = used.coerceIn(constraints.minWidth, constraints.maxWidth)
+        val height = placeables.maxOfOrNull { it.height } ?: constraints.minHeight
+        layout(width, height) {
+            var x = 0
+            placeables.forEach { placeable ->
+                placeable.placeRelative(x, (height - placeable.height) / 2)
+                x += placeable.width + gap
             }
         }
     }
@@ -515,6 +587,18 @@ fun shareText(context: Context, text: String) {
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, text)
+        clipData = ClipData.newPlainText("", text).apply {
+            description.extras = android.os.PersistableBundle().apply {
+                putBoolean(
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        ClipDescription.EXTRA_IS_SENSITIVE
+                    } else {
+                        "android.content.extra.IS_SENSITIVE"
+                    },
+                    true,
+                )
+            }
+        }
     }
     context.startActivity(Intent.createChooser(intent, null))
 }
@@ -551,7 +635,7 @@ private fun StorageRecoveryScreen(onReset: () -> Unit) {
                 enabled = !busy,
             ) {
                 busy = true
-                scope.launch(Dispatchers.Default) {
+                scope.launch(Dispatchers.Default + NonCancellable) {
                     onReset()
                     withContext(Dispatchers.Main) { busy = false }
                 }
@@ -559,3 +643,5 @@ private fun StorageRecoveryScreen(onReset: () -> Unit) {
         }
     }
 }
+
+private enum class HowToPage { Root, Keys, Setup }

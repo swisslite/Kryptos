@@ -16,6 +16,12 @@
             "value": "Scanning QR codes to exchange keys securely."
           }
         },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اسکن کد QR برای تبادل کلید."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -43,6 +49,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unlocking the Kryptos app."
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "باز کردن قفل برنامه Kryptos."
           }
         },
         "ru": {

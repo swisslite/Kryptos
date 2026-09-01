@@ -1,7 +1,6 @@
 package com.kryptos.android.keyboard
 
 import android.content.Context
-import com.kryptos.android.core.CachePurge
 import com.kryptos.android.store.SecureStore
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
@@ -37,23 +36,15 @@ object PinyinEngine {
     private var maxSyllable = 6
 
     private val personal = HashMap<String, Int>()
+    private val sessionNoted = HashMap<String, Int>()
     private var personalLoaded = false
     private var personalDirty = false
+    private var storeGeneration = 0
 
     private val json = Json { ignoreUnknownKeys = true }
     private val mapSerializer = MapSerializer(String.serializer(), Int.serializer())
 
     val isLoaded: Boolean get() = loaded
-
-    init {
-        CachePurge.register {
-            synchronized(lock) {
-                personal.clear()
-                personalDirty = false
-                personalLoaded = false
-            }
-        }
-    }
 
     private val loading = AtomicBoolean(false)
 
@@ -104,6 +95,7 @@ object PinyinEngine {
         if (word.isEmpty()) return
         synchronized(lock) {
             personal[word] = (personal[word] ?: 0) + 1
+            sessionNoted[word] = (sessionNoted[word] ?: 0) + 1
             if (personal.size > PERSONAL_CAP) {
                 val keep = personal.entries.sortedByDescending { it.value }.take(PERSONAL_CAP)
                 personal.clear()
@@ -113,21 +105,52 @@ object PinyinEngine {
         }
     }
 
+    fun beginTypingSession() {
+        synchronized(lock) { sessionNoted.clear() }
+    }
+
+    fun forgetTypingSession() {
+        synchronized(lock) {
+            if (sessionNoted.isEmpty()) return
+            for ((word, count) in sessionNoted) {
+                val left = (personal[word] ?: 0) - count
+                if (left > 0) personal[word] = left else personal.remove(word)
+            }
+            sessionNoted.clear()
+            personalDirty = true
+        }
+    }
+
     fun persist() {
+        var generation = 0
         val snapshot = synchronized(lock) {
             if (!personalDirty || !personalLoaded) return
+            generation = storeGeneration
             HashMap(personal)
         }
+        val payload = json.encodeToString(mapSerializer, snapshot).toByteArray(Charsets.UTF_8)
+        if (synchronized(lock) { generation != storeGeneration }) {
+            payload.fill(0)
+            return
+        }
         val ok = runCatching {
-            SecureStore.write(STORE_KEY, json.encodeToString(mapSerializer, snapshot).toByteArray(Charsets.UTF_8))
+            SecureStore.write(STORE_KEY, payload)
             true
         }.getOrDefault(false)
-        if (ok) synchronized(lock) { personalDirty = false }
+        payload.fill(0)
+        synchronized(lock) {
+            when {
+                generation != storeGeneration -> runCatching { SecureStore.delete(STORE_KEY) }
+                ok -> personalDirty = false
+            }
+        }
     }
 
     fun forget() {
         synchronized(lock) {
+            storeGeneration++
             personal.clear()
+            sessionNoted.clear()
             personalDirty = false
         }
         runCatching { SecureStore.delete(STORE_KEY) }
@@ -153,6 +176,7 @@ object PinyinEngine {
         }
         if (n == 0) return emptyList()
         val input = letters.copyOf(n)
+        val boosts = synchronized(lock) { HashMap(personal) }
 
         fun consumedFor(count: Int): Int =
             if (count <= 0) 0 else if (count < n) origin[count - 1] + 1 else buffer.length
@@ -164,7 +188,7 @@ object PinyinEngine {
 
         fun offer(text: String, consumed: Int, cost: Int, tier: Int) {
             if (text.isEmpty() || !texts.add(text)) return
-            val boost = (personal[text] ?: 0) * USER_BOOST
+            val boost = (boosts[text] ?: 0) * USER_BOOST
             costs.add(maxOf(0, cost - boost))
             tiers.add(tier)
             cands.add(PinyinCandidate(text, consumed))

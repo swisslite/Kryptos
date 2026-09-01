@@ -20,6 +20,7 @@ class StegoSafetyTests {
         StegoLanguage.RUSSIAN -> Wordlists.russian
         StegoLanguage.GERMAN -> Wordlists.german
         StegoLanguage.CHINESE -> Wordlists.chinese
+        StegoLanguage.PERSIAN -> Wordlists.persian
     }
 
     private fun grammar(language: StegoLanguage): SmartStegoData.Grammar = when (language) {
@@ -27,6 +28,7 @@ class StegoSafetyTests {
         StegoLanguage.RUSSIAN -> SmartStegoData.russian
         StegoLanguage.GERMAN -> SmartStegoData.german
         StegoLanguage.CHINESE -> SmartStegoData.chinese
+        StegoLanguage.PERSIAN -> SmartStegoData.persian
     }
 
     @Test
@@ -141,5 +143,20 @@ class StegoSafetyTests {
         assertTrue(StegoSafety.containsBlocked("aaabombbbb"))
         assertFalse(StegoSafety.containsBlocked("гей"))
         assertEquals(4, StegoSafety.RUNTIME_MIN_LENGTH)
+    }
+
+    @Test
+    fun blocklistCoversPersianDangerousTerms() {
+        for (word in listOf("کیر", "کس", "کون", "کونی", "جنده", "جاکش", "کسکش", "سکس", "سکسی", "پورن", "لخت", "تجاوز", "فاحشه", "شهوت", "زنا", "همجنسگرا", "همجنسباز", "لزبین", "ترنس", "کشتن", "کشتار", "قتل", "قاتل", "اعدام", "جنایت", "ترور", "تروریست", "بمب", "انفجار", "تفنگ", "اسلحه", "گلوله", "موشک", "نارنجک", "شکنجه", "گروگان", "جنگ", "حمله", "خشونت", "شلیک", "مسلح", "چاقو", "خنجر", "جسد", "جنازه", "مخدر", "هروئین", "کوکائین", "تریاک", "حشیش", "معتاد", "اعتیاد", "دزد", "دزدی", "سرقت", "قاچاق", "اختلاس", "رشوه", "کلاهبرداری", "خودکشی", "زندان", "زندانی", "تظاهرات", "اعتراض", "اعتصاب", "شورش", "انقلاب", "براندازی", "آشوب", "دیکتاتور", "کودتا", "سرباز", "ارتش", "حرومزاده", "بیشرف", "پدرسگ", "عوضی", "کثافت", "احمق", "ابله", "کتک", "خفه", "مرگ", "بکش", "میکشمت", "رید", "شاش")) {
+            assertTrue(word, StegoSafety.blocks(word))
+        }
+    }
+
+    @Test
+    fun innocentPersianWordsAreNotBlocked() {
+        for (word in listOf("سلام", "خوبی", "ممنون", "کتاب", "مدرسه", "خانه", "پنجره", "درخت", "باران", "آفتاب", "کلاس", "معلم", "برادر", "خواهر", "مادر", "پدر", "دوست", "شهر", "خیابان", "ماشین", "قطار", "هواپیما", "بیمارستان", "دکتر", "پرستار", "نان", "چای", "قهوه", "میوه", "سیب", "گربه", "دریا", "کوه", "رودخانه", "ستاره", "ماه", "خورشید", "کارگر", "مهندس", "نویسنده", "نقاش", "خواننده", "ورزش", "فوتبال", "توپ", "بازی", "خنده", "عشق", "زندگی", "امید", "صلح", "دوستی", "مهربان", "زیبا", "بزرگ", "کوچک", "تازه", "روشن", "گرم", "سرد", "شیرین", "کشور", "عکس", "کسی", "تکون", "زنان", "فرزندان", "مقابله", "کوسه", "گوزن", "حمل", "انتقام", "سلامت", "تظاهر", "مسلما", "شهادت", "کشیدن", "بگیر", "دیگه", "یعنی", "معنی", "خونه", "بزن", "پلیس", "درد", "زخم")) {
+            assertFalse(word, StegoSafety.blocks(word))
+            assertFalse(word, StegoSafety.containsBlocked(word))
+        }
     }
 }

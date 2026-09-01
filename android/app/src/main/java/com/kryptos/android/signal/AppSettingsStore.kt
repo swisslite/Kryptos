@@ -43,6 +43,7 @@ object AppSettingsStore {
             "russian" -> StegoLanguage.RUSSIAN
             "german" -> StegoLanguage.GERMAN
             "chinese" -> StegoLanguage.CHINESE
+            "persian" -> StegoLanguage.PERSIAN
             else -> StegoLanguage.forSystem()
         }
     }
@@ -60,6 +61,31 @@ object AppSettingsStore {
     var keyboardCompose: Boolean
         get() = prefs.getBoolean("kb.compose", false)
         set(v) { prefs.edit().putBoolean("kb.compose", v).apply() }
+
+    var keyboardComposeAuto: Boolean
+        get() = prefs.getBoolean("kb.composeauto", false)
+        set(v) { prefs.edit().putBoolean("kb.composeauto", v).apply() }
+
+    private const val COMPOSE_APPS = "kb.composeapps"
+
+    @Volatile private var composeAppsCache: Set<String>? = null
+
+    fun composeAutoApps(): Set<String> {
+        composeAppsCache?.let { return it }
+        val stored = runCatching { SecureStore.read(COMPOSE_APPS)?.toString(Charsets.UTF_8) }.getOrNull()
+        val apps = stored?.lineSequence()?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
+        composeAppsCache = apps
+        return apps
+    }
+
+    fun setComposeAutoApps(apps: Set<String>) {
+        val cleaned = apps.filter { it.isNotBlank() }.sorted()
+        runCatching {
+            if (cleaned.isEmpty()) SecureStore.delete(COMPOSE_APPS)
+            else SecureStore.write(COMPOSE_APPS, cleaned.joinToString("\n").toByteArray(Charsets.UTF_8))
+        }
+        composeAppsCache = cleaned.toSet()
+    }
 
     var keyboardComposeToggle: Boolean
         get() = prefs.getBoolean("kb.composetoggle", true)
@@ -105,13 +131,37 @@ object AppSettingsStore {
         get() = prefs.getBoolean("kb.emoji", true)
         set(v) { prefs.edit().putBoolean("kb.emoji", v).apply() }
 
+    var keyboardPunctKey: Boolean
+        get() = prefs.getBoolean("kb.punct", true)
+        set(v) { prefs.edit().putBoolean("kb.punct", v).apply() }
+
+    var keyboardPunctDouble: Boolean
+        get() = prefs.getBoolean("kb.punctdouble", false)
+        set(v) { prefs.edit().putBoolean("kb.punctdouble", v).apply() }
+
+    enum class VoiceEngine(val key: String) {
+        SYSTEM("system");
+
+        companion object {
+            fun resolve(raw: String?): VoiceEngine = entries.firstOrNull { it.key == raw } ?: SYSTEM
+        }
+    }
+
+    var keyboardVoice: Boolean
+        get() = prefs.getBoolean("kb.voice", false)
+        set(v) { prefs.edit().putBoolean("kb.voice", v).apply() }
+
+    var keyboardVoiceEngine: VoiceEngine
+        get() = VoiceEngine.resolve(prefs.getString("kb.voice.engine", null))
+        set(v) { prefs.edit().putString("kb.voice.engine", v.key).apply() }
+
     val systemKeyboardLang: String
         get() {
             val tag = java.util.Locale.getDefault().language
-            return if (tag == "ru" || tag == "de" || tag == "zh") tag else "en"
+            return if (tag == "ru" || tag == "de" || tag == "zh" || tag == "fa") tag else "en"
         }
 
-    private val nonLatinLanguages = setOf("ru", "zh")
+    private val nonLatinLanguages = setOf("ru", "zh", "fa")
 
     fun keyboardLangEnabled(code: String): Boolean {
         val sys = systemKeyboardLang
@@ -141,6 +191,11 @@ object AppSettingsStore {
         runCatching { SecureStore.delete("kb.contact.$profileId") }
     }
 
+    fun clearKeyboardContact(profileId: String, fingerprint: String) {
+        if (profileId.isEmpty() || keyboardContact(profileId) != fingerprint) return
+        clearKeyboardContact(profileId)
+    }
+
     var privacyShield: Boolean
         get() = prefs.getBoolean("privacy.shield", true)
         set(v) { prefs.edit().putBoolean("privacy.shield", v).apply() }
@@ -150,12 +205,16 @@ object AppSettingsStore {
         set(v) { prefs.edit().putBoolean("privacy.clipauto", v).apply() }
 
     var clipboardClearSeconds: Int
-        get() = prefs.getInt("privacy.clipclear", 30)
+        get() = prefs.getInt("privacy.clipclear", 60)
         set(v) { prefs.edit().putInt("privacy.clipclear", v).apply() }
 
     var appLock: Boolean
         get() = prefs.getBoolean("privacy.applock", false)
         set(v) { prefs.edit().putBoolean("privacy.applock", v).apply() }
+
+    var appLockCodeOnly: Boolean
+        get() = prefs.getBoolean("privacy.applock.codeonly", false)
+        set(v) { prefs.edit().putBoolean("privacy.applock.codeonly", v).apply() }
 
     var autoLockGraceSeconds: Int
         get() = prefs.getInt("privacy.lockgrace", 0)
@@ -249,6 +308,12 @@ object AppSettingsStore {
 
     const val CODE_MIN_LENGTH = 4
 
+    private const val CODE_FAILURES = "privacy.codefails"
+
+    var codeFailures: Int
+        get() = runCatching { prefs.getInt(CODE_FAILURES, 0) }.getOrDefault(0)
+        set(v) { runCatching { prefs.edit().putInt(CODE_FAILURES, v.coerceAtLeast(0)).commit() } }
+
     enum class CodeResult { OK, TOO_SHORT, DUPLICATE, FAILED }
 
     private const val DURESS_BLOB = "duress"
@@ -265,6 +330,7 @@ object AppSettingsStore {
     fun invalidateCaches() {
         duressPresent = null
         appCodePresent = null
+        composeAppsCache = null
         keyboardHandledClip = null
         loadUiState()
     }
@@ -272,8 +338,12 @@ object AppSettingsStore {
     private fun codeHash(salt: ByteArray, code: String): ByteArray =
         Argon2id.derive(code, salt, DURESS_HASH_LENGTH)
 
-    private fun codeStored(name: String): Boolean =
-        runCatching { SecureStore.read(name)?.size == BLOB_LENGTH }.getOrDefault(false)
+    private fun codeStored(name: String): Boolean? {
+        val present = runCatching { SecureStore.exists(name) }.getOrNull() ?: return null
+        if (!present) return false
+        val blob = runCatching { SecureStore.read(name) }.getOrNull() ?: return null
+        return blob.size == BLOB_LENGTH
+    }
 
     private fun writeCode(name: String, code: String): Boolean {
         val salt = randomBytes(Argon2id.MIN_SALT_LENGTH)
@@ -313,13 +383,17 @@ object AppSettingsStore {
         get() {
             migrateDuressPin()
             duressPresent?.let { return it }
-            return codeStored(DURESS_BLOB).also { duressPresent = it }
+            val stored = codeStored(DURESS_BLOB)
+            if (stored != null) duressPresent = stored
+            return stored ?: false
         }
 
     val hasAppCode: Boolean
         get() {
             appCodePresent?.let { return it }
-            return codeStored(APPCODE_BLOB).also { appCodePresent = it }
+            val stored = codeStored(APPCODE_BLOB)
+            if (stored != null) appCodePresent = stored
+            return stored ?: false
         }
 
     fun setPanicPassword(code: String): CodeResult {

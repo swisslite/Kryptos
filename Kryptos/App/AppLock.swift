@@ -7,9 +7,53 @@ final class LockGate: ObservableObject {
     @Published private(set) var isShielded = false
     private var authInFlight = false
     private var cameFromBackground = false
+    private var phaseShield = false
+    private var captureShield = false
 
     init() {
-        isLocked = PrivacyConfig.appLock && LockGate.canAuthenticate
+        isLocked = PrivacyConfig.appLock && LockGate.lockUsable
+        NotificationCenter.default.addObserver(
+            forName: UIScreen.capturedDidChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refreshCapture() }
+        }
+        refreshCapture()
+    }
+
+    private static var screenIsCaptured: Bool {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .contains { $0.screen.isCaptured }
+    }
+
+    private func refreshCapture() {
+        captureShield = LockGate.screenIsCaptured && PrivacyConfig.shield
+        applyShield()
+    }
+
+    private func applyShield() {
+        isShielded = phaseShield || captureShield
+    }
+
+    static var lockUsable: Bool {
+        guard PrivacyConfig.appLockCodeOnly else { return canAuthenticate }
+        return LockCodes.app.presence != .absent
+    }
+
+    struct LockState: Equatable {
+        var enabled: Bool
+        var codeOnly: Bool
+    }
+
+    static func resolveLockState(_ state: LockState, canSystem: Bool, appCodeSet: Bool) -> LockState {
+        var codeOnly = state.codeOnly
+        if codeOnly, !appCodeSet {
+            codeOnly = false
+        } else if !codeOnly, appCodeSet, !canSystem {
+            codeOnly = true
+        }
+        let usable = codeOnly ? appCodeSet : canSystem
+        return LockState(enabled: state.enabled && usable, codeOnly: codeOnly)
     }
 
     private nonisolated(unsafe) static var cachedCanAuthenticate: Bool?
@@ -38,42 +82,41 @@ final class LockGate: ObservableObject {
     func scenePhaseChanged(_ phase: ScenePhase) {
         switch phase {
         case .active:
-            isShielded = false
+            phaseShield = false
+            refreshCapture()
             if isLocked, cameFromBackground { unlock() }
             cameFromBackground = false
+            if !isLocked { LockSession.open() }
         case .inactive, .background:
             let state = PrivacyConfig.coverState()
-            isShielded = state.shield || state.appLock
+            phaseShield = state.shield || state.appLock
+            applyShield()
             if phase == .background {
                 cameFromBackground = true
                 LockGate.refreshAuthenticationAvailability()
-                if state.appLock, LockGate.canAuthenticate { isLocked = true }
+                if state.appLock, LockGate.lockUsable {
+                    isLocked = true
+                    LockSession.close()
+                    LockMarker.bump()
+                }
             }
         @unknown default:
             break
         }
     }
 
-    private var codeFailures = 0
-
-    var codeThrottle: Duration {
-        let over = codeFailures - 4
-        guard over > 0 else { return .zero }
-        return .seconds(min(30, 1 << min(over - 1, 5)))
-    }
-
-    func noteCodeRejected() { if codeFailures < Int.max { codeFailures += 1 } }
-
     func forceUnlock() {
-        codeFailures = 0
+        LockThrottle.reset()
         authInFlight = false
         cameFromBackground = false
         isLocked = false
-        isShielded = false
+        phaseShield = false
+        refreshCapture()
+        LockSession.open()
     }
 
     func unlock() {
-        guard isLocked, !authInFlight else { return }
+        guard isLocked, !authInFlight, !PrivacyConfig.appLockCodeOnly else { return }
         authInFlight = true
         let ctx = LAContext()
         Task {
@@ -81,18 +124,22 @@ final class LockGate: ObservableObject {
             let reason = String(localized: "Unlock Kryptos")
             if (try? await ctx.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)) == true {
                 isLocked = false
+                LockSession.open()
             }
         }
     }
 }
 
 struct LockScreen: View {
+    enum Outcome: Sendable { case accepted, rejected, unavailable }
+
     @ObservedObject var gate: LockGate
-    let onCode: @MainActor (String) async -> Bool
+    let onCode: @MainActor (String) async -> Outcome
 
     @State private var code = ""
     @State private var checking = false
-    @State private var wrong = false
+    @State private var failure: LocalizedStringKey?
+    private let codeOnly = PrivacyConfig.appLockCodeOnly
 
     var body: some View {
         ZStack {
@@ -102,9 +149,11 @@ struct LockScreen: View {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 44, weight: .semibold)).foregroundStyle(KTheme.accent)
                     Text("Kryptos is locked").font(.kHeadline()).foregroundStyle(KTheme.textPrimary)
-                    Button { gate.unlock() } label: { Label("Unlock", systemImage: "faceid") }
-                        .buttonStyle(PrimaryButtonStyle())
-                        .frame(maxWidth: 220)
+                    if !codeOnly {
+                        Button { gate.unlock() } label: { Label("Unlock", systemImage: "faceid") }
+                            .buttonStyle(PrimaryButtonStyle())
+                            .frame(maxWidth: 220)
+                    }
                     codeEntry
                 }
                 .padding(32)
@@ -112,7 +161,7 @@ struct LockScreen: View {
             }
             .scrollDismissesKeyboard(.interactively)
         }
-        .onAppear { gate.unlock() }
+        .onAppear { if !codeOnly { gate.unlock() } }
     }
 
     private var codeEntry: some View {
@@ -124,8 +173,10 @@ struct LockScreen: View {
                 .onSubmit { submit() }
                 .padding(12)
                 .background(FieldBackground())
-            if wrong {
-                Text("Wrong passcode.").font(.kLabel()).foregroundStyle(KTheme.danger)
+            if let failure {
+                Text(failure).font(.kLabel()).foregroundStyle(KTheme.danger)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Button(action: submit) {
                 Label(checking ? "Working…" : "Continue", systemImage: checking ? "hourglass" : "arrow.right")
@@ -141,12 +192,16 @@ struct LockScreen: View {
         guard !checking, code.count >= LockCode.minLength else { return }
         let entered = code
         code = ""
-        wrong = false
+        failure = nil
         checking = true
         Task { @MainActor in
-            let accepted = await onCode(entered)
+            let outcome = await onCode(entered)
             checking = false
-            wrong = !accepted
+            switch outcome {
+            case .accepted: failure = nil
+            case .rejected: failure = "Wrong passcode."
+            case .unavailable: failure = "Secure storage is unavailable right now. Try again in a moment."
+            }
         }
     }
 }

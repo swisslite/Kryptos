@@ -15,7 +15,7 @@ private enum StegoWork {
 
     static func hide(cover: Data, password: String, message: String) -> StegoOutcome {
         var w = 0, h = 0
-        guard let img = ImageBridge.coverImage(from: cover) else {
+        guard let img = ImageBridge.coverImage(from: cover, budget: ImageBridge.pixelBudget()) else {
             return .failed(String(localized: "Could not read the photo."))
         }
         guard var pixels = ImageBridge.rgbaBuffer(from: img, width: &w, height: &h) else {
@@ -36,13 +36,14 @@ private enum StegoWork {
     }
 
     static func reveal(carrier: Data, password: String) -> StegoOutcome {
-        guard ImageBridge.isWithinLimits(data: carrier) else {
+        let budget = ImageBridge.pixelBudget()
+        guard ImageBridge.isWithinLimits(data: carrier, budget: budget) else {
             return .failed(String(localized: "This photo is too large. Use a smaller one."))
         }
         guard let img = UIImage(data: carrier) else {
             return .failed(String(localized: "Could not read the photo."))
         }
-        guard ImageBridge.isWithinLimits(img) else {
+        guard ImageBridge.isWithinLimits(img, budget: budget) else {
             return .failed(String(localized: "This photo is too large. Use a smaller one."))
         }
         var w = 0, h = 0

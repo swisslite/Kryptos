@@ -107,6 +107,8 @@ class KeyArchiveTests {
                     signedPreKeySig = b64(0x02), kyberPreKeyId = 3, kyberPreKeyPub = b64(0x03),
                     kyberPreKeySig = b64(0x04), prekeyCreatedAt = null,
                     nextSignedPreKeyId = 4, nextKyberPreKeyId = 5, nextOneTimePreKeyId = 6,
+                    pinned = listOf("aabb"),
+                    usedPreKeys = listOf("ff00"),
                     contacts = listOf(ArchivedContact("aabb", "Ирина")),
                     sessions = mapOf("aabb|1" to b64(0x07)),
                 )

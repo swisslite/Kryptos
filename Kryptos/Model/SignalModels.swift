@@ -122,6 +122,81 @@ enum OwnCipherMarker {
     }
 }
 
+enum DecryptPurgeMarker {
+    private static let storeKey = "decrypt.purge"
+
+    static func bump() {
+        SharedStore.write(storeKey, Data(UUID().uuidString.utf8))
+    }
+
+    static func token() -> String? {
+        guard let data = SharedStore.read(storeKey) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+}
+
+enum StoreMarker {
+    static func bump(_ key: String) {
+        SharedStore.write(key, Data(UUID().uuidString.utf8))
+    }
+
+    static func token(_ key: String) -> String? {
+        guard let data = SharedStore.read(key) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+}
+
+enum TypingRollbackMarker {
+    private static let storeKey = "typing.rollback"
+
+    static func bump() { StoreMarker.bump(storeKey) }
+    static func token() -> String? { StoreMarker.token(storeKey) }
+}
+
+enum LockMarker {
+    private static let storeKey = "lock.generation"
+
+    static func bump() { StoreMarker.bump(storeKey) }
+    static func token() -> String? { StoreMarker.token(storeKey) }
+}
+
+enum WipeMarker {
+    private static let storeKey = "wipe.generation"
+
+    static func bump() { StoreMarker.bump(storeKey) }
+    static func token() -> String? { StoreMarker.token(storeKey) }
+}
+
+enum ForegroundMarker {
+    private static let storeKey = "app.foreground"
+    private static let staleAfter: TimeInterval = 12 * 3600
+
+    static func open() {
+        let stamp = UInt64(max(0, Date().timeIntervalSince1970)).bigEndian
+        SharedStore.write(storeKey, withUnsafeBytes(of: stamp) { Data($0) })
+    }
+
+    static func close() { SharedStore.delete(storeKey) }
+
+    static var isOpen: Bool {
+        guard let data = SharedStore.read(storeKey), data.count == 8 else { return false }
+        let stamp = data.withUnsafeBytes { UInt64(bigEndian: $0.loadUnaligned(as: UInt64.self)) }
+        let age = Date().timeIntervalSince1970 - TimeInterval(stamp)
+        return age >= 0 && age <= staleAfter
+    }
+}
+
+enum TypingMemory {
+    static let wordsKey = "kbdict"
+    static let pinyinKey = "kbpinyin"
+    static let emojiKey = "kbemoji"
+
+    static func forgetAll() {
+        for key in [wordsKey, pinyinKey, emojiKey] { SharedStore.delete(key) }
+        TypingRollbackMarker.bump()
+    }
+}
+
 enum ClipProbe: Sendable {
     struct Verdict: Sendable {
         let worthDecrypting: Bool
@@ -160,6 +235,17 @@ struct Meta: Codable {
     var oneTimePreKeyIds: [UInt32]?
 
     var autoDelete: [String: Double]?
+    var pinned: [String]?
+    var usedPreKeys: [String]?
+
+    mutating func rememberUsedPreKey(_ mark: String) {
+        var marks = usedPreKeys ?? []
+        guard !marks.contains(mark) else { return }
+        marks.append(mark)
+        let cap = 512
+        if marks.count > cap { marks.removeFirst(marks.count - cap) }
+        usedPreKeys = marks
+    }
 
     mutating func rememberDecrypt(armored: String, fingerprint: String, text: String, stego: Data?? = nil) {
         var cache = decryptCache ?? [:]
@@ -194,6 +280,23 @@ struct Meta: Codable {
             return false
         }
         decryptCache = cache.isEmpty ? nil : cache
+    }
+
+    mutating func purgeExpired() -> Bool {
+        guard let map = autoDelete, !map.isEmpty else { return false }
+        let now = Date()
+        let cacheBefore = decryptCache?.count ?? 0
+        var changed = false
+        for (fingerprint, seconds) in map where seconds > 0 {
+            purgeDecryptCache(fingerprint: fingerprint, olderThan: seconds)
+            guard var list = messages[fingerprint], !list.isEmpty else { continue }
+            let before = list.count
+            list.removeAll { now.timeIntervalSince($0.date) >= seconds }
+            guard list.count != before else { continue }
+            messages[fingerprint] = list.isEmpty ? nil : list
+            changed = true
+        }
+        return changed || (decryptCache?.count ?? 0) != cacheBefore
     }
 }
 
@@ -235,6 +338,16 @@ enum AutoDeletePreset: CaseIterable, Identifiable {
 struct ProfilesIndex: Codable {
     var profiles: [Profile]
     var currentID: UUID
+}
+
+enum PreKeyMark {
+    static let length = 32
+
+    static func of(identityKey: Data, oneTimePreKey: Data) -> String {
+        let bound = Data(SHA256.hash(data: identityKey)) + oneTimePreKey
+        let hex = SHA256.hash(data: bound).map { String(format: "%02x", $0) }.joined()
+        return String(hex.prefix(length))
+    }
 }
 
 enum SignalServiceError: LocalizedError {

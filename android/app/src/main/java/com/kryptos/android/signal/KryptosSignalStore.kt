@@ -1,9 +1,12 @@
 package com.kryptos.android.signal
 
+import com.kryptos.android.core.wipingBytes
 import com.kryptos.android.store.SecureStore
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToStream
 import org.signal.libsignal.protocol.IdentityKey
 import org.signal.libsignal.protocol.IdentityKeyPair
 import org.signal.libsignal.protocol.InvalidKeyIdException
@@ -60,8 +63,9 @@ class KryptosSignalStore(
         writeSnapshot()
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     private fun writeSnapshot() {
-        SecureStore.write(storageKey, json.encodeToString(Snapshot.serializer(), snap).toByteArray(Charsets.UTF_8))
+        writeWiped(storageKey, wipingBytes { json.encodeToStream(Snapshot.serializer(), snap, it) })
     }
 
     fun <T> batch(body: () -> T): T {
@@ -233,6 +237,7 @@ class KryptosSignalStore(
             )
         }
 
+        @OptIn(ExperimentalSerializationApi::class)
         fun writeArchive(storageKey: String, parts: Map<String, Map<String, String>>) {
             fun dec(name: String): MutableMap<String, Blob> {
                 val out = mutableMapOf<String, Blob>()
@@ -246,10 +251,15 @@ class KryptosSignalStore(
                 sessions = dec("sessions"),
                 identities = dec("identities"),
             )
-            SecureStore.write(
-                storageKey,
-                archiveJson.encodeToString(Snapshot.serializer(), snap).toByteArray(Charsets.UTF_8),
-            )
+            writeWiped(storageKey, wipingBytes { archiveJson.encodeToStream(Snapshot.serializer(), snap, it) })
+        }
+
+        internal fun writeWiped(name: String, data: ByteArray) {
+            try {
+                SecureStore.write(name, data)
+            } finally {
+                data.fill(0)
+            }
         }
     }
 }

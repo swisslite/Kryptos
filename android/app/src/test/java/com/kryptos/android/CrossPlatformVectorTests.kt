@@ -541,11 +541,13 @@ class CrossPlatformVectorTests {
         val payload = ByteArray(120) { (it * 11 and 0xFF).toByte() }
         val other = ByteArray(120) { (it * 13 and 0xFF).toByte() }
         for (language in StegoLanguage.entries) {
-            val a = requireNotNull(LetterStego.encode(payload, language))
-            val b = requireNotNull(LetterStego.encode(payload, language))
-            assertTrue(a != b)
-            assertEquals(DecryptCacheKey.of(a), DecryptCacheKey.of(b))
-            assertTrue(DecryptCacheKey.of(a) != DecryptCacheKey.of(requireNotNull(LetterStego.encode(other, language))))
+            val covers = HashSet<String>()
+            repeat(24) { covers.add(requireNotNull(LetterStego.encode(payload, language))) }
+            assertTrue("$language", covers.size > 1)
+            val keys = covers.mapTo(HashSet()) { DecryptCacheKey.of(it) }
+            assertEquals("$language", 1, keys.size)
+            val otherKey = DecryptCacheKey.of(requireNotNull(LetterStego.encode(other, language)))
+            assertTrue("$language", otherKey !in keys)
         }
     }
 
@@ -682,6 +684,51 @@ class CrossPlatformVectorTests {
         )
         assertArrayEquals(payload, TextStego.decode("掷行睛难，浮班萦吻朱袁特唉骂毛晨吻。疲墩暮戴锉洞瓜，毛腰。"))
         assertArrayEquals(letterProbe, LetterStego.decode("它讲带玩新把睡问无糟另水呀却带我"))
+    }
+
+    @Test
+    fun persianStegoMatchesIosVectors() {
+        val payload = ByteArray(0x21) { it.toByte() }
+        assertEquals(
+            "صاحب کنید لین نباید، نکنیم ازدواج؟ دکستر میتونه نزن دادین چطوری عشق یارو. گذشته، سوزی میتونه محاصره یو اسمت هیچوقت. چجور، عاشق میفهمی، گذشته نسبت؟",
+            TextStego.encode(payload, StegoLanguage.PERSIAN, seed = 0x5C),
+        )
+        assertEquals(
+            "وانگهی، کشاورز آن سوزن را شمرد، اما نانوا یک جعبه را دوشید. امسال عکاس یک روبان را سپرد. دیشب خریدار آن میخ را دوشید، اما ماهیگیر شش قوری را برداشت.",
+            SmartTextStego.encode(letterProbe, StegoLanguage.PERSIAN, seed = 0x5C),
+        )
+        assertEquals(
+            "رظضچدزعطصپییغجچژچچعتکرمثتل",
+            LetterStego.encode(letterProbe, StegoLanguage.PERSIAN, seed = 0x5C),
+        )
+        assertArrayEquals(payload, TextStego.decode("صاحب کنید لین نباید، نکنیم ازدواج؟ دکستر میتونه نزن دادین چطوری عشق یارو. گذشته، سوزی میتونه محاصره یو اسمت هیچوقت. چجور، عاشق میفهمی، گذشته نسبت؟"))
+        assertArrayEquals(letterProbe, SmartTextStego.decode("وانگهی، کشاورز آن سوزن را شمرد، اما نانوا یک جعبه را دوشید. امسال عکاس یک روبان را سپرد. دیشب خریدار آن میخ را دوشید، اما ماهیگیر شش قوری را برداشت."))
+        assertArrayEquals(letterProbe, LetterStego.decode("رظضچدزعطصپییغجچژچچعتکرمثتل"))
+    }
+
+    @Test
+    fun persianStegoRoundTrips() {
+        val rnd = java.util.Random(29)
+        for (n in intArrayOf(1, 3, 16, 64, 127, 200, 512, 1500)) {
+            val data = ByteArray(n).also { rnd.nextBytes(it) }
+            val words = requireNotNull(TextStego.encode(data, StegoLanguage.PERSIAN))
+            assertArrayEquals("words n=$n", data, TextStego.decode(words))
+            val smart = requireNotNull(SmartTextStego.encode(data, StegoLanguage.PERSIAN))
+            assertArrayEquals("smart n=$n", data, SmartTextStego.decode(smart))
+            val letters = requireNotNull(LetterStego.encode(data, StegoLanguage.PERSIAN))
+            assertArrayEquals("letters n=$n", data, LetterStego.decode(letters))
+        }
+    }
+
+    @Test
+    fun persianWordsSurvivesLeadingChatter() {
+        val data = ByteArray(48) { (it * 5 + 1).toByte() }
+        val cover = requireNotNull(TextStego.encode(data, StegoLanguage.PERSIAN))
+        val chatter = listOf("سلام", "امروز", "خیلی", "کتاب", "دوست", "خانه", "این")
+        for (junk in 1..7) {
+            val text = chatter.take(junk).joinToString(" ") + " " + cover
+            assertArrayEquals("junk=$junk", data, TextStego.decode(text))
+        }
     }
 
     @Test

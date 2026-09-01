@@ -3,11 +3,12 @@ package com.kryptos.android
 import android.content.Context
 import android.content.res.Configuration
 import android.content.res.Resources
+import android.view.View
 import com.kryptos.android.signal.AppSettingsStore
 import java.util.Locale
 
 object AppLanguage {
-    val supported = listOf("en", "ru", "de", "zh")
+    val supported = listOf("en", "ru", "de", "zh", "fa")
 
     fun systemLocale(): Locale = Resources.getSystem().configuration.locales[0]
 
@@ -28,5 +29,14 @@ object AppLanguage {
         config.setLocale(locale)
         config.setLayoutDirection(locale)
         return base.createConfigurationContext(config)
+    }
+
+    fun wrapLtr(base: Context): Context {
+        val wrapped = wrap(base)
+        val current = wrapped.resources.configuration
+        if (current.layoutDirection == View.LAYOUT_DIRECTION_LTR) return wrapped
+        val config = Configuration(current)
+        config.setLayoutDirection(Locale.ENGLISH)
+        return wrapped.createConfigurationContext(config)
     }
 }
