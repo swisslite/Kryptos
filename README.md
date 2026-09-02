@@ -36,7 +36,7 @@ contact carries.
 - The Kryptos keyboard installs like any ordinary system keyboard and encrypts the text right in the input field of any app
 - It is a full keyboard as well: five layouts, emoji, completions and autocorrection for English, Russian, German and Persian, and pinyin input for Chinese, all of it working offline
 - On Android the ciphertext is decrypted right on screen, over the message in the chat. Nothing has to be copied or opened separately - the conversation reads like an ordinary one. The feature works only with your contacts and is off by default
-- Conversations run on the Signal Protocol: a new key is created for every message, and the initial key exchange is protected even against future quantum computers
+- Conversations run on the Signal Protocol: a new key is created for every message, and post-quantum protection covers each one, not just the initial key exchange
 - You exchange keys with a contact once, by QR code or as a string. Several profiles can be kept in the app
 - If a key exchange is not wanted, a shared-password mode is available. PGP is built in as well, for those who work with it
 - Photo steganography: the ciphertext hides inside an ordinary picture, and the file gives no way to tell that anything is in it
