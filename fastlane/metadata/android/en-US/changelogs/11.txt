@@ -1,0 +1,13 @@
+Kryptos 2.3.3
+New features
+
+- Persian language
+- Voice input has been added to the keyboard
+- Keyboards have been adjusted to the system size. Larger letters, taller keys, wider spacing
+- App lock has been redesigned
+
+Bug fixes
+
+- When launching Kryptos, it no longer contacts Google services to load the emoji font
+- Re-adding a contact with the same saved key no longer permanently breaks the conversation in one direction
+- Other fixes

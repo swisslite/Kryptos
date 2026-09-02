@@ -34,7 +34,7 @@ contact carries.
 ## Features
 
 - The Kryptos keyboard installs like any ordinary system keyboard and encrypts the text right in the input field of any app
-- It is a full keyboard as well: completions, autocorrection, emoji and four layouts. English, Russian, German and Chinese with pinyin input, all of it working offline
+- It is a full keyboard as well: five layouts, emoji, completions and autocorrection for English, Russian, German and Persian, and pinyin input for Chinese, all of it working offline
 - On Android the ciphertext is decrypted right on screen, over the message in the chat. Nothing has to be copied or opened separately - the conversation reads like an ordinary one. The feature works only with your contacts and is off by default
 - Conversations run on the Signal Protocol: a new key is created for every message, and the initial key exchange is protected even against future quantum computers
 - You exchange keys with a contact once, by QR code or as a string. Several profiles can be kept in the app
@@ -112,7 +112,8 @@ bc1qwsnex9q5ux88fnt93udn2xmf8752mnx4km2rvm
 
 - **Signal Protocol** — the official [libsignal](https://github.com/signalapp/libsignal) v0.96.4,
   built from source on both platforms. PQXDH (X3DH with Kyber-1024) for the initial agreement and the
-  Double Ratchet for the conversation itself. Signed and Kyber prekeys are rotated every two days, and
+  Triple Ratchet for the conversation itself — the Double Ratchet with Signal's post-quantum SPQR
+  mixed into the key of every message. Signed and Kyber prekeys are rotated every two days, and
   retired generations are deleted after 30 days.
 - **Wire format** — `salt ‖ AES-256-CTR(HKDF-SHA256(pairKey, salt) → key/IV, header ‖ body)`,
   base64url, with no prefix and no plaintext header. Nothing in the output says that Kryptos produced

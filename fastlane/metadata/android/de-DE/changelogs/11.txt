@@ -1,0 +1,13 @@
+Kryptos 2.3.3
+Neuerungen
+
+- Persisch
+- Die Tastatur hat eine Spracheingabe bekommen
+- Die Tastaturen haben die Größe der Systemtastatur. Größere Buchstaben, höhere Tasten, breitere Abstände
+- Die App-Sperre wurde überarbeitet
+
+Fehlerbehebungen
+
+- Beim Start lädt Kryptos die Emoji-Schriftart nicht mehr von Google-Diensten
+- Ein Kontakt, der mit demselben gespeicherten Schlüssel erneut hinzugefügt wird, zerstört den Chat in eine Richtung nicht mehr dauerhaft
+- Weitere Fehlerbehebungen
