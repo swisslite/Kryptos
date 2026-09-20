@@ -28,6 +28,7 @@ private struct CoinBadge: View {
 }
 
 struct DonateView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var copied: String?
     @State private var shown: String?
     @State private var codes: [String: UIImage] = [:]
@@ -67,6 +68,7 @@ struct DonateView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task(id: shown) { await renderCode() }
         .onChange(of: shown) { _, value in setBright(value != nil) }
+        .onChange(of: scenePhase) { _, phase in setBright(phase == .active && shown != nil) }
         .onDisappear { setBright(false) }
     }
 

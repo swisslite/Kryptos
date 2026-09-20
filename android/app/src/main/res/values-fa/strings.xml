@@ -91,12 +91,6 @@
     <string name="stego_letters_footer">کوتاه‌ترین حالت — نزدیک به نصف طول واژه‌های ساده.</string>
     <string name="stego_letters_footer_han">یک رشته پیوسته بدون نشانه‌گذاری.</string>
     <string name="stego_smart_footer">جمله‌های واقعی به‌جای مشتی واژه پراکنده، به بهای متنی بلندتر.</string>
-    <string name="lang_auto">خودکار (زبان سیستم)</string>
-    <string name="lang_en">انگلیسی</string>
-    <string name="lang_ru">روسی</string>
-    <string name="lang_de">آلمانی</string>
-    <string name="lang_zh">چینی</string>
-    <string name="lang_fa">فارسی</string>
     <string name="settings_keyboard">صفحه‌کلید</string>
     <string name="settings_enable_keyboard">فعال کردن صفحه‌کلید Kryptos</string>
     <string name="settings_kb_autodecrypt">رمزگشایی خودکار کلیپ‌بورد در صفحه‌کلید</string>
@@ -158,7 +152,7 @@
     <string name="screen_section">روی صفحه</string>
     <string name="screen_decrypt_toggle">رمزگشایی روی صفحه</string>
     <string name="screen_block_screenshots">مسدود کردن عکس صفحه</string>
-    <string name="screen_block_screenshots_desc">تا وقتی رمزگشایی روی صفحه کار می‌کند، گرفتن عکس و فیلم از صفحه در کل دستگاه مسدود می‌شود تا متن رمزگشایی‌شده در هیچ تصویری نیفتد.</string>
+    <string name="screen_block_screenshots_desc">هنگام فعال بودن رمزگشایی روی صفحه، عکس صفحه در دستگاه مسدود می‌شود.</string>
     <string name="screen_decrypt_footer">متن رمزگشایی‌شده را روی متن رمزشده در برنامه‌های دیگر نشان می‌دهد.</string>
     <string name="screen_decrypt_enable_service">روشن کردن سرویس دسترس‌پذیری</string>
     <string name="screen_decrypt_keep_running">متوقف نکردن برنامه</string>
@@ -203,9 +197,9 @@
     <string name="quick_subtitle">حالت متقارن ساده: شما و مخاطبتان روی یک گذرواژه مشترک توافق می‌کنید و بعد متن را برای هر پیام‌رسانی رمزگذاری یا رمزگشایی می‌کنید. (این PGP نیست — PGP زبانه خودش را دارد.)</string>
     <string name="label_message_text">متن پیام</string>
     <string name="label_encrypted_block">بلوک رمزشده</string>
-    <string name="label_ready">آماده — این را برای مخاطبتان بفرستید</string>
+    <string name="label_ready">آماده. آن را برای مخاطبتان بفرستید.</string>
     <string name="label_decrypted">متن رمزگشایی‌شده</string>
-    <string name="copied_banner">رمزگذاری شد و در کلیپ‌بورد کپی شد — آن را برای مخاطبتان بچسبانید.</string>
+    <string name="copied_banner">رمزگذاری و کپی شد. آن را برای مخاطبتان بفرستید.</string>
 
     <string name="label_cover_photo">عکس پوششی</string>
     <string name="label_stego_photo">عکس دارای راز</string>
@@ -242,9 +236,9 @@
     <string name="empty_hint">برای شروع کلیدها را رد و بدل کنید: نشان QR (بالا سمت چپ) را بزنید تا «کلید من» باز شود و مخاطبتان آن را اسکن کند. سپس نشان + کنار آن را بزنید و کلید او را اضافه کنید. هرکدام یک بار دیگری را اضافه می‌کند. راهنمای گام‌به‌گام همراه با تصویر در «%1$s» است.</string>
     <string name="chat_hint">پیامی را رمزگذاری کنید، نتیجه را با هر پیام‌رسانی بفرستید و پاسخ را برای رمزگشایی اینجا بچسبانید.</string>
     <string name="chat_scroll_bottom">رفتن به آخرین پیام</string>
-    <string name="auto_delete_hint">پیام‌ها پس از %1$s ناپدید می‌شوند.</string>
-    <string name="sent_banner">رمزگذاری و کپی شد — آن را برای مخاطبتان بچسبانید.</string>
-    <string name="sent_banner_stego">در متن پنهان و کپی شد — آن را برای مخاطبتان بچسبانید.</string>
+    <string name="auto_delete_hint">پیام‌های جدید پس از %1$s ناپدید می‌شوند.</string>
+    <string name="sent_banner">رمزگذاری و کپی شد. آن را برای مخاطبتان بفرستید.</string>
+    <string name="sent_banner_stego">در متن پنهان و کپی شد. آن را برای مخاطبتان بفرستید.</string>
     <string name="clipboard_empty">کلیپ‌بورد خالی است.</string>
     <string name="decrypt_failed">رمزگشایی نشد — یا مخاطب اشتباه است یا این پیام یک بار خوانده شده. اگر هر پیام تازه از این مخاطب ناکام می‌ماند، کلیدتان را دوباره برایش بفرستید و بخواهید شما را از نو اضافه کند.</string>
     <string name="decrypt_prekey_used">این پیام با کلیدی رمزگذاری شده که پیش‌تر استفاده شده یا منقضی است. کلیدتان را دوباره بفرستید و بخواهید شما را از نو اضافه کند.</string>
@@ -276,6 +270,10 @@
 
     <string name="kb_clear">پاک کردن</string>
     <string name="settings_kb_haptics">لرزش کلیدها</string>
+    <string name="settings_kb_vibration">شدت لرزش</string>
+    <string name="vibration_light">سبک</string>
+    <string name="vibration_medium">متوسط</string>
+    <string name="vibration_strong">قوی</string>
     <string name="settings_kb_sounds">صدای کلیدها</string>
     <string name="settings_kb_compose">فیلد پیام در صفحه‌کلید</string>
     <string name="settings_kb_compose_toggle">دکمه فیلد روی صفحه‌کلید</string>
@@ -286,11 +284,20 @@
     <string name="field_size_large">بزرگ</string>
     <string name="settings_kb_compose_desc">این فیلد به شما اجازه می‌دهد بیرون از پیام‌رسان بنویسید، پس پیام‌رسان نمی‌تواند پیش‌نویس نگه دارد. دکمه، همان فیلد را از روی صفحه‌کلید روشن و خاموش می‌کند.</string>
 
+    <string name="kb_keys_section">کلیدها</string>
+    <string name="settings_kb_keysize">اندازه متن کلیدها</string>
+    <string name="settings_kb_keypreview">بزرگ‌نمایی کلید هنگام فشردن</string>
+    <string name="key_text_small">کوچک</string>
+    <string name="key_text_medium">متوسط</string>
+    <string name="key_text_large">بزرگ</string>
+    <string name="kb_keys_footer">اندازه حروف و برچسب‌های روی کلیدها. حرف بزرگ‌شده بالای کلید فشرده‌شده ظاهر می‌شود؛ اگر خاموش باشد فقط خود کلید روشن می‌شود.</string>
+
     <string name="kb_typing">تایپ</string>
     <string name="kb_field_section">فیلد پیام</string>
     <string name="settings_kb_suggestions">پیشنهاد واژه</string>
     <string name="settings_kb_autocorrect">تصحیح خودکار</string>
-    <string name="settings_kb_emoji">کلید ایموجی</string>
+    <string name="settings_kb_autocaps">بزرگ‌نویسی خودکار</string>
+    <string name="settings_kb_emoji">کلید ویرگول و ایموجی</string>
     <string name="settings_kb_punct">کلید نقطه و ویرگول</string>
     <string name="settings_kb_punct_double">ویرگول با دو بار زدن</string>
     <string name="kb_voice_section">ورودی صوتی</string>
@@ -360,6 +367,8 @@
     <string name="backup_title">پشتیبان کلیدها</string>
     <string name="backup_intro">این فایل کلیدهای شما را نگه می‌دارد و با گذرواژه‌ای که همین‌جا انتخاب می‌کنید رمزگذاری می‌شود. Kryptos هیچ نسخه‌ای از آن نگه نمی‌دارد.</string>
     <string name="backup_warning">تاریخچه پیام‌ها در آن نیست.</string>
+    <string name="backup_chats">پشتیبان‌گیری از گفتگوها</string>
+    <string name="backup_chats_on">گفتگوهای شما در فایل پشتیبان قرار می‌گیرد و با همان رمز رمزگذاری می‌شود.</string>
     <string name="backup_export_header">تهیه پشتیبان</string>
     <string name="backup_password">گذرواژه پشتیبان</string>
     <string name="backup_repeat">تکرار گذرواژه</string>
@@ -375,6 +384,7 @@
     <string name="backup_unreadable">این پشتیبان خوانده نشد — یا گذرواژه اشتباه است یا فایل، پشتیبان کلیدهای Kryptos نیست.</string>
     <string name="backup_too_short">برای گذرواژه پشتیبان دست‌کم ۸ نویسه بگذارید.</string>
     <string name="backup_nothing">هنوز کلیدی برای تهیه پشتیبان نیست.</string>
+    <string name="backup_too_large">این پشتیبان بیش از حد بزرگ است و بعداً بازیابی نمی‌شود. پشتیبان‌گیری از گفتگوها را خاموش کنید و دوباره تلاش کنید.</string>
     <string name="backup_write_failed">فایل پشتیبان ساخته نشد.</string>
     <string name="backup_read_failed">فایل خوانده نشد.</string>
     <string name="backup_confirm_title">کلیدها بازیابی شوند؟</string>
@@ -436,6 +446,8 @@
     <string name="faq_a22">بله. برنامه Kryptos روی libsignal ساخته شده و در آن، رچت پساکوانتومی SPQR از نسخه 0.83.0 همیشه روشن است: کلید هر پیام با ماده پساکوانتومی ساخته می‌شود، نه فقط دست‌دادن اولیه. برای این کار هیچ کلید روشن و خاموشی وجود ندارد، نه در Kryptos و نه در خود کتابخانه.</string>
     <string name="faq_q23">رمزگشایی روی صفحه خودبه‌خود از کار افتاد</string>
     <string name="faq_a23">گوشی می‌تواند برنامه‌ای را که فکر می‌کند دیگر استفاده نمی‌شود متوقف کند. اندروید در این حالت سرویس دسترس‌پذیری Kryptos را خاموش می‌کند و صفحه‌کلید سیستم را برمی‌گرداند. سرویس را همین‌جا دوباره روشن کنید و صفحه‌کلید Kryptos را در تنظیمات ورودی سیستم دوباره انتخاب کنید. برای اینکه تکرار نشود، اطلاعات برنامه را باز کنید و توقف برنامه در زمان استفاده‌نشدن را خاموش کنید؛ روی گوشی‌های سامسونگ افزون بر آن Kryptos را از فهرست برنامه‌های خفته در بخش نگهداری دستگاه بیرون بیاورید.</string>
+    <string name="faq_q24">اگر قفل صفحه گوشی را بردارم چه می‌شود؟</string>
+    <string name="faq_a24">همه کلیدها، مخاطبان و گفت‌وگوهای شما در Kryptos برای همیشه از دست می‌روند. اگر روی گوشی پین، گذرواژه یا الگو تنظیم شده باشد، Kryptos داده‌هایش را با کلیدی رمزگذاری می‌کند که فقط وقتی قفل گوشی باز است کار می‌کند. وقتی قفل صفحه برداشته شود، اندروید این کلید را نابود می‌کند و روشن کردن دوباره قفل هم آن را برنمی‌گرداند. پس پیش از برداشتن قفل صفحه، در تنظیمات از کلیدها پشتیبان بگیرید.</string>
     <string name="faq_q4">چرا یک پیام بار دوم رمزگشایی نمی‌شود؟</string>
     <string name="faq_a4">این ایراد نیست، رازداری پیش‌رو است: کلید هر پیام همان لحظه‌ای که خوانده می‌شود نابود می‌شود، پس حتی کسی که گوشی شما را بردارد نمی‌تواند مکاتبات قدیمی را بازیابی کند. پیام‌هایی که پیش‌تر باز کرده‌اید در تاریخچه گفت‌وگو می‌مانند.</string>
     <string name="faq_q5">می‌گوید رمزگشایی نشد. حالا چه کنم؟</string>
@@ -453,7 +465,7 @@
     <string name="faq_q11">نمایه‌ها برای چه هستند؟</string>
     <string name="faq_a11">هر نمایه یک جفت‌کلید جداگانه با مخاطبان خودش است. می‌توانید چند تا داشته باشید و میانشان جابه‌جا شوید — مثلاً برای جدا نگه داشتن کار از زندگی شخصی.</string>
     <string name="faq_q12">رمزگذاری چقدر قوی است؟</string>
-    <string name="faq_a12">گفت‌وگوها از کتابخانه libsignal خود Signal استفاده می‌کنند — همان پروتکل خود Signal، همراه با دست‌دادن پساکوانتومی. حالت گذرواژه و عکس‌ها از Argon2id و AES-256-GCM استفاده می‌کنند. در Kryptos هیچ رمزنگاری دست‌سازی وجود ندارد.</string>
+    <string name="faq_a12">گفت‌وگوها از کتابخانه libsignal خود Signal استفاده می‌کنند — همان پروتکل خود Signal، با محافظت پساکوانتومی در هر پیام، نه فقط در دست‌دادن. حالت گذرواژه و عکس‌ها از Argon2id و AES-256-GCM استفاده می‌کنند. در Kryptos هیچ رمزنگاری دست‌سازی وجود ندارد.</string>
     <string name="faq_q13">مخاطب من هم باید Kryptos داشته باشد؟</string>
     <string name="faq_a13">بله — هیچ چیز جز Kryptos نمی‌تواند پیام را رمزگشایی کند. اما فرقی نمی‌کند هرکدام چه گوشی‌ای دارید: نسخه‌های آیفون و اندروید کاملاً سازگارند و کلیدها و پیام‌ها در هر دو جهت کار می‌کنند.</string>
     <string name="faq_q14">می‌توانم عکس یا فایلی را با Kryptos بفرستم؟</string>
@@ -462,8 +474,8 @@
     <string name="faq_a15">گفت‌وگو را پس از زمانی که انتخاب می‌کنید داخل Kryptos پاک می‌کنند — روی دستگاه شما، و روی دستگاه مخاطبتان اگر او هم همین را تنظیم کرده باشد. کاری که از دستشان برنمی‌آید، متن رمزشده‌ای است که همین حالا در پیام‌رسان نشسته: تنها خود پیام‌رسان می‌تواند آن را بردارد.</string>
     <string name="faq_q16">اگر برنامه را حذف کنم یا گوشی‌ام را گم کنم چه می‌شود؟</string>
     <string name="faq_a16">کلیدها روی دستگاه هستند و هیچ‌جای دیگر، پس حذف برنامه آن‌ها را برای همیشه نابود می‌کند و چیزی برای رمزگشایی نمی‌ماند. تنها بیمه این است که از پیش در تنظیمات از کلیدها پشتیبان بگیرید. روی دیگر همین ویژگی: هرکس گوشی را پیدا کند هم چیزی گیرش نمی‌آید.</string>
-    <string name="faq_q17">آیا پشتیبان کلیدها پیام‌هایم را هم برمی‌گرداند؟</string>
-    <string name="faq_a17">نه، و این عمدی است. فایل تنها کلیدها، مخاطبان و کلیدهای PGP شما را دارد — تاریخچه پیام‌ها هرگز در آن نوشته نمی‌شود. پس از بازیابی روی گوشی تازه با همان آدم‌ها ادامه می‌دهید، اما پیام‌های قدیمی برنمی‌گردند.</string>
+    <string name="faq_q17">آیا پشتیبان کلیدها پیام‌هایم را برمی‌گرداند؟</string>
+    <string name="faq_a17">فقط اگر هنگام ساختن فایل «پشتیبان‌گیری از گفتگوها» روشن بوده باشد. در غیر این صورت فایل تنها کلیدها، مخاطبان و کلیدهای PGP شما را دارد.</string>
     <string name="faq_q18">چرا برنامه دوربین می‌خواهد؟</string>
     <string name="faq_a18">تنها برای اسکن کلید مخاطب از روی کد QR. دوربین هیچ‌جای دیگری به کار نمی‌رود و رد کردن این دسترسی چیزی را خراب نمی‌کند — همیشه می‌توانید کلید را به‌صورت متن بچسبانید.</string>
     <string name="faq_q19">آیا کلیدها و پیام‌هایم در پشتیبان ابری گوشی می‌افتند؟</string>
@@ -484,6 +496,7 @@
     <string name="kb_a11y_backspace">پس‌بر</string>
     <string name="kb_a11y_enter">ورود</string>
     <string name="kb_a11y_shift">تبدیل</string>
+    <string name="kb_a11y_language">زبان‌ها و صفحه‌کلیدها</string>
     <string name="kb_a11y_zwnj">نیم‌فاصله</string>
     <string name="kb_a11y_emoji">ایموجی</string>
     <string name="kb_a11y_hidden">نویسه پنهان</string>

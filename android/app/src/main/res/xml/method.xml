@@ -2,9 +2,19 @@
 <input-method xmlns:android="http://schemas.android.com/apk/res/android"
     android:supportsSwitchingToNextInputMethod="true">
     <subtype
+        android:label="@string/lang_de"
+        android:imeSubtypeLocale="de_DE"
+        android:languageTag="de"
+        android:imeSubtypeMode="keyboard" />
+    <subtype
         android:label="@string/lang_en"
         android:imeSubtypeLocale="en_US"
         android:languageTag="en"
+        android:imeSubtypeMode="keyboard" />
+    <subtype
+        android:label="@string/lang_pt"
+        android:imeSubtypeLocale="pt_BR"
+        android:languageTag="pt"
         android:imeSubtypeMode="keyboard" />
     <subtype
         android:label="@string/lang_ru"
@@ -12,18 +22,13 @@
         android:languageTag="ru"
         android:imeSubtypeMode="keyboard" />
     <subtype
-        android:label="@string/lang_de"
-        android:imeSubtypeLocale="de_DE"
-        android:languageTag="de"
+        android:label="@string/lang_fa"
+        android:imeSubtypeLocale="fa_IR"
+        android:languageTag="fa"
         android:imeSubtypeMode="keyboard" />
     <subtype
         android:label="@string/lang_zh"
         android:imeSubtypeLocale="zh_CN"
         android:languageTag="zh"
-        android:imeSubtypeMode="keyboard" />
-    <subtype
-        android:label="@string/lang_fa"
-        android:imeSubtypeLocale="fa_IR"
-        android:languageTag="fa"
         android:imeSubtypeMode="keyboard" />
 </input-method>

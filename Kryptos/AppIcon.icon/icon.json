@@ -1,0 +1,33 @@
+{
+  "fill": {
+    "linear-gradient": [
+      "extended-srgb:0.92941,0.94510,0.99216,1.00000",
+      "extended-srgb:0.82745,0.86275,0.95294,1.00000"
+    ]
+  },
+  "groups": [
+    {
+      "layers": [
+        {
+          "image-name": "Lock.svg",
+          "name": "Lock"
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "specular": true,
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      }
+    }
+  ],
+  "supported-platforms": {
+    "circles": [
+      "watchOS"
+    ],
+    "squares": "shared"
+  }
+}

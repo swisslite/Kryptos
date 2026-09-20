@@ -44,12 +44,14 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,12 +70,15 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -246,6 +251,13 @@ fun FieldLabel(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
+fun monoValueStyle(): TextStyle = LocalTextStyle.current.copy(
+    fontFamily = FontFamily.Monospace,
+    textDirection = TextDirection.Ltr,
+    textAlign = if (LocalLayoutDirection.current == LayoutDirection.Rtl) TextAlign.Right else TextAlign.Left,
+)
+
+@Composable
 fun SectionHeader(text: String) {
     FieldLabel(text, Modifier.padding(start = 4.dp, top = 6.dp))
 }
@@ -346,6 +358,7 @@ fun KSegmented(
                     fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Medium,
                     color = if (sel) K.textPrimary else K.textSecondary,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -621,23 +634,36 @@ fun NavRow(
             Icon(icon, null, Modifier.size(20.dp), tint = K.accent)
             Spacer(Modifier.width(10.dp))
         }
-        Text(
-            title,
-            fontSize = 15.sp,
-            color = K.textPrimary,
-            modifier = Modifier.weight(1f),
-        )
+        Text(title, fontSize = 15.sp, color = K.textPrimary)
         if (value != null) {
-            Text(
-                value,
-                fontSize = 14.sp,
-                color = K.textSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 8.dp, end = 6.dp),
-            )
+            Box(
+                Modifier
+                    .weight(1f)
+                    .padding(start = 8.dp, end = 6.dp),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Text(
+                    value,
+                    fontSize = 14.sp,
+                    color = K.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                )
+            }
+        } else {
+            Spacer(Modifier.weight(1f))
         }
         Text("›", fontSize = 17.sp, color = K.textSecondary)
+    }
+}
+
+@Composable
+fun ObscuredTouchGuard() {
+    val view = LocalView.current
+    DisposableEffect(view) {
+        view.rootView.filterTouchesWhenObscured = true
+        onDispose {}
     }
 }
 
@@ -660,8 +686,9 @@ fun MenuRow(
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(title, fontSize = 15.sp, color = K.textPrimary, modifier = Modifier.weight(1f))
-        Box {
+        Text(title, fontSize = 15.sp, color = K.textPrimary)
+        Spacer(Modifier.weight(1f))
+        Box(Modifier.padding(start = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     options.getOrNull(selected) ?: "",
@@ -669,11 +696,13 @@ fun MenuRow(
                     color = K.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
                 Spacer(Modifier.width(2.dp))
                 Icon(Icons.Default.UnfoldMore, null, Modifier.size(16.dp), tint = K.textSecondary)
             }
             DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                ObscuredTouchGuard()
                 options.forEachIndexed { i, label ->
                     val enabled = optionEnabled(i)
                     DropdownMenuItem(
@@ -711,7 +740,10 @@ fun PromptDialog(
         containerColor = K.surface,
         titleContentColor = K.textPrimary,
         textContentColor = K.textSecondary,
-        title = { Text(title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold) },
+        title = {
+            ObscuredTouchGuard()
+            Text(title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+        },
         text = {
             KTextField(
                 value, { value = it },
@@ -781,7 +813,10 @@ fun ConfirmDialog(
         containerColor = K.surface,
         titleContentColor = K.textPrimary,
         textContentColor = K.textSecondary,
-        title = { Text(title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold) },
+        title = {
+            ObscuredTouchGuard()
+            Text(title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+        },
         text = { Text(text, fontSize = 14.sp, lineHeight = 19.sp) },
         confirmButton = {
             Text(
@@ -821,6 +856,7 @@ fun KSheet(
         containerColor = K.surface,
         contentColor = K.textPrimary,
     ) {
+        ObscuredTouchGuard()
         Column(
             Modifier
                 .fillMaxWidth()

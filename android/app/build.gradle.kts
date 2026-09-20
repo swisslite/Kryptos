@@ -9,23 +9,29 @@ val hasSigning = keystoreProps.getProperty("storePassword").isNullOrEmpty().not(
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
     namespace = "com.kryptos.android"
-    compileSdk = 34
-    ndkVersion = "26.1.10909125"
+    compileSdk = 37
+    ndkVersion = "30.0.16248370"
 
     defaultConfig {
         applicationId = "com.kryptos.android"
         minSdk = 26
         targetSdk = 34
-        versionCode = 11
-        versionName = "2.3.3"
+        versionCode = 13
+        versionName = "2.4"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+    }
+
+    androidResources {
+        localeFilters += listOf(
+            "de", "en", "en-rAU", "en-rCA", "en-rGB", "en-rIN", "fa",
+            "pt", "pt-rBR", "pt-rPT", "ru", "zh", "zh-rCN", "zh-rHK", "zh-rTW",
+        )
     }
 
     signingConfigs {
@@ -56,47 +62,48 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
         isCoreLibraryDesugaringEnabled = true
     }
-    kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
 
     packaging {
         resources.excludes += setOf(
             "META-INF/{AL2.0,LGPL2.1}",
-            "META-INF/versions/9/OSGI-INF/MANIFEST.MF",
+            "META-INF/*.version",
+            "META-INF/versions/*/OSGI-INF/MANIFEST.MF",
             "libsignal_jni*.dylib", "signal_jni*.dll", "libsignal_jni*.so",
-            "org/bouncycastle/pqc/crypto/picnic/*.properties",
             "org/bouncycastle/x509/CertPathReviewerMessages*.properties",
             "DebugProbesKt.bin",
             "kotlin-tooling-metadata.json",
+            "META-INF/**/verification.properties",
             "kotlin/**.kotlin_builtins",
         )
+        resources.pickFirsts += "META-INF/LICENSE.md"
         jniLibs.excludes += "**/libsignal_jni_testing.so"
     }
-
-    sourceSets["main"].resources.srcDir("src/main/resources")
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.09.03")
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.activity:activity-compose:1.9.2")
+    implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.biometric:biometric:1.1.0")
-    implementation("androidx.fragment:fragment-ktx:1.8.4")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    implementation("androidx.fragment:fragment-ktx:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 
     implementation(project(":libsignal"))
 
-    implementation("org.pgpainless:pgpainless-core:1.6.8")
-    implementation("org.bouncycastle:bcprov-jdk18on:1.77")
+    implementation("org.pgpainless:pgpainless-core:2.0.4")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.86")
+    implementation("org.bouncycastle:bcpg-jdk18on:1.86")
+    implementation("org.bouncycastle:bcutil-jdk18on:1.86")
 
-    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.zxing:core:3.5.4")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
     testImplementation("junit:junit:4.13.2")
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }

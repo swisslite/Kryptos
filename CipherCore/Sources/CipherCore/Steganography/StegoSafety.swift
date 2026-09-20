@@ -134,6 +134,13 @@ public enum StegoSafety {
         "کشت", "کلاهبردار", "کودتا", "کوسکش", "کولی", "کون",
         "کوکائین", "کوکایین", "کوییر", "کیر", "کیری", "گانگستر",
         "گاید", "گایید", "گراس", "گروگان", "گلوله", "گوزید",
+        "buceta", "caralho", "chacina", "cocain", "cocaín", "espingard",
+        "estupr", "facada", "fodid", "foder", "granada", "guerra",
+        "heroína", "homicíd", "linchar", "maconha", "maconheir", "mataram",
+        "matança", "matar", "matei", "matou", "merda", "metralhad",
+        "muniç", "pedofil", "pedófil", "porra", "prostitu", "revólver",
+        "sequestr", "sexo", "suicid", "suicíd", "tiroteio", "tortur",
+        "trafic", "transar", "tráfic", "vagabund",
     ]
 
     static let exactWords: [String] = [
@@ -181,6 +188,10 @@ public enum StegoSafety {
         "زندانیان", "زندون", "زندونی", "شیره", "عن", "قیام",
         "لز", "ممه", "منی", "نعش", "چاقو", "کس",
         "کص", "کودن", "کوس", "کونی", "گه", "گی",
+        "arma", "armas", "bicha", "bichas", "cu", "cus",
+        "droga", "drogas", "faca", "facas", "gay", "pelada",
+        "pelado", "puta", "putas", "veado", "veados", "viado",
+        "viados",
     ]
 
     static let hanStems: [String] = [

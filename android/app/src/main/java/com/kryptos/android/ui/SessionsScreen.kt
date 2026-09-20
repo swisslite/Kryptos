@@ -33,6 +33,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -86,6 +87,7 @@ import androidx.compose.material.icons.outlined.FileCopy
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -109,6 +111,7 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
@@ -116,13 +119,16 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withLink
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogWindowProvider
@@ -303,12 +309,16 @@ private fun SessionsList(
                 ) {
                     Text(
                         profiles.firstOrNull { it.id == currentID }?.name ?: stringResource(R.string.tab_chats),
-                        fontSize = 30.sp, fontWeight = FontWeight.Bold, color = K.textPrimary, maxLines = 1,
+                        fontSize = 30.sp, fontWeight = FontWeight.Bold, color = K.textPrimary,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                        modifier = Modifier.weight(1f, fill = false),
                     )
                     Spacer(Modifier.width(6.dp))
                     Icon(Icons.Default.ExpandMore, null, Modifier.size(22.dp), tint = K.textSecondary)
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    ObscuredTouchGuard()
                     profiles.forEach { p ->
                         DropdownMenuItem(
                             leadingIcon = {
@@ -318,7 +328,13 @@ private fun SessionsList(
                                     tint = if (p.id == currentID) K.accent else K.textSecondary,
                                 )
                             },
-                            text = { Text(p.name, color = K.textPrimary) },
+                            text = {
+                                Text(
+                                    p.name, color = K.textPrimary,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                                )
+                            },
                             onClick = {
                                 menu = false
                                 onProfileError(null)
@@ -390,9 +406,8 @@ private fun EmptyHint(onHowTo: () -> Unit) {
             append(hint)
         } else {
             append(hint.substring(0, start))
-            withLink(LinkAnnotation.Clickable(HOW_TO_LINK) { onHowTo() }) {
-                withStyle(SpanStyle(color = K.accent, fontWeight = FontWeight.SemiBold)) { append(label) }
-            }
+            val style = TextLinkStyles(SpanStyle(color = K.accent, fontWeight = FontWeight.SemiBold))
+            withLink(LinkAnnotation.Clickable(HOW_TO_LINK, style) { onHowTo() }) { append(label) }
             append(hint.substring(start + label.length))
         }
     }
@@ -460,12 +475,15 @@ private fun ContactCard(
             Column(Modifier.weight(1f)) {
                 Text(
                     contact.displayName,
-                    fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = K.textPrimary, maxLines = 1,
+                    fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = K.textPrimary,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
                 )
                 Text(
                     contact.safetyNumber,
-                    fontSize = 11.sp, fontFamily = FontFamily.Monospace,
-                    color = K.textSecondary, maxLines = 1,
+                    fontSize = 11.sp,
+                    color = K.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = monoValueStyle(),
                 )
             }
             if (pinned) {
@@ -479,6 +497,7 @@ private fun ContactCard(
             Text("›", fontSize = 17.sp, color = K.textSecondary)
         }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            ObscuredTouchGuard()
             DropdownMenuItem(
                 leadingIcon = { Icon(Icons.Default.PushPin, null, Modifier.size(18.dp), tint = K.accent) },
                 text = {
@@ -545,9 +564,10 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
     val msgs = messages[contact.fingerprint] ?: emptyList()
     val autoDeleteMap by SignalService.autoDelete.collectAsState()
     val autoDeleteSecs = autoDeleteMap[contact.fingerprint]?.takeIf { it > 0 }
+    val hasExpiring = msgs.any { it.expiryAt != null }
 
-    LaunchedEffect(autoDeleteSecs) {
-        if (autoDeleteSecs == null) return@LaunchedEffect
+    LaunchedEffect(hasExpiring) {
+        if (!hasExpiring) return@LaunchedEffect
         while (true) {
             kotlinx.coroutines.delay(5_000)
             withContext(Dispatchers.Default) { SignalService.purgeExpiredMessages() }
@@ -575,18 +595,22 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     live.displayName,
-                    fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = K.textPrimary, maxLines = 1,
+                    fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = K.textPrimary,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
                 )
                 Text(
                     live.safetyNumber,
-                    fontSize = 10.sp, fontFamily = FontFamily.Monospace,
-                    color = K.textSecondary, maxLines = 1,
+                    fontSize = 10.sp,
+                    color = K.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = monoValueStyle(),
                 )
             }
             Spacer(Modifier.width(10.dp))
             Box {
                 GlassIconButton(Icons.Default.MoreVert, null, size = 40.dp, tint = K.textPrimary) { menuOpen = true }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    ObscuredTouchGuard()
                     DropdownMenuItem(
                         leadingIcon = { Icon(Icons.Default.Timer, null, Modifier.size(18.dp), tint = K.accent) },
                         text = { Text(stringResource(R.string.auto_delete), color = K.textPrimary) },
@@ -696,6 +720,8 @@ private fun ChatScreen(contact: Contact, modifier: Modifier = Modifier, onBack: 
             val sent = lastCipher
             if (sent != null) {
                 shownCipher.value = sent
+                kotlinx.coroutines.delay(SENT_BANNER_MS)
+                lastCipher = null
             } else {
                 kotlinx.coroutines.delay(400)
                 shownCipher.value = SentCipher("", false)
@@ -911,16 +937,22 @@ private fun Bubble(
         if (mine) Brush.verticalGradient(listOf(bright, accent)) else SolidColor(incoming)
     }
     var menu by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val linkColor = if (mine) Color.White else K.link
+    val links = remember(text) { MessageLinks.find(text) }
+    val body = remember(text, linkColor, links) { MessageLinks.styled(text, linkColor, links) }
+    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     Box(
         modifier.fillMaxWidth(),
         contentAlignment = if (mine) Alignment.CenterEnd else Alignment.CenterStart,
     ) {
         Box {
             Text(
-                text,
+                body,
                 fontSize = 16.sp,
                 lineHeight = 21.sp,
                 color = if (mine) Color.White else K.textPrimary,
+                onTextLayout = { layout = it },
                 modifier = Modifier
                     .widthIn(max = 300.dp)
                     .clip(shape)
@@ -932,9 +964,19 @@ private fun Bubble(
                         onClick = {},
                         onLongClick = { menu = true },
                     )
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onLongPress = { menu = true },
+                            onTap = { position ->
+                                MessageLinks.hit(links, layout, position)
+                                    ?.let { MessageLinks.open(context, it) }
+                            },
+                        )
+                    },
             )
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                ObscuredTouchGuard()
                 DropdownMenuItem(
                     leadingIcon = { Icon(Icons.Outlined.FileCopy, null, Modifier.size(18.dp), tint = K.accent) },
                     text = { Text(stringResource(R.string.copy), color = K.textPrimary) },
@@ -949,6 +991,8 @@ private fun Bubble(
         }
     }
 }
+
+private const val SENT_BANNER_MS = 7000L
 
 private class SentCipher(val text: String, val hidden: Boolean)
 
@@ -1020,6 +1064,9 @@ private fun MyKeySheet(onDismiss: () -> Unit) {
             Text(
                 profiles.firstOrNull { it.id == currentID }?.name ?: "",
                 fontSize = 12.sp, fontWeight = FontWeight.Bold, color = K.textPrimary,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                modifier = Modifier.weight(1f, fill = false),
             )
         }
 
@@ -1089,8 +1136,9 @@ private fun MyKeySheet(onDismiss: () -> Unit) {
             FieldLabel(stringResource(R.string.safety_number))
             Text(
                 safety,
-                fontSize = 15.sp, fontFamily = FontFamily.Monospace,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold, color = K.accent,
+                style = monoValueStyle(),
             )
             Text(
                 stringResource(R.string.key_public_hint) + " " + stringResource(R.string.key_hint),
@@ -1298,7 +1346,9 @@ private fun ProfilesSheet(onDismiss: () -> Unit) {
                     Text(
                         p.name,
                         fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = K.textPrimary,
-                        maxLines = 1, modifier = Modifier.weight(1f),
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                        modifier = Modifier.weight(1f),
                     )
                     Box(
                         Modifier
@@ -1390,14 +1440,16 @@ private fun ProfilesSheet(onDismiss: () -> Unit) {
             FieldLabel(stringResource(R.string.current_profile))
             Text(
                 current?.name.orEmpty(),
-                fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = K.textPrimary, maxLines = 1,
+                fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = K.textPrimary,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
             )
             FieldLabel(stringResource(R.string.safety_number_label))
             Text(
                 safety,
                 fontSize = 14.sp,
-                fontFamily = FontFamily.Monospace,
                 color = K.accent,
+                style = monoValueStyle(),
             )
             if (confirmRegenerate) {
                 Banner(stringResource(R.string.regenerate_warning), BannerKind.Warning)

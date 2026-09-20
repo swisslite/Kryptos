@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="lock" x1="512" y1="242" x2="512" y2="783" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#91A1FF"/>
+      <stop offset="1" stop-color="#4D5EE6"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#lock)" fill-rule="evenodd" d="
+    M 362 419
+    V 391.5
+    A 149.5 149.5 0 0 1 661 391.5
+    V 419
+    H 607
+    V 391.5
+    A 95.5 95.5 0 0 0 416 391.5
+    V 419
+    Z
+    M 282 499
+    A 80 80 0 0 1 362 419
+    L 362 435.5
+    A 27.5 27.5 0 0 0 417 435.5
+    L 417 419
+    L 607 419
+    L 607 435.5
+    A 27.5 27.5 0 0 0 662 435.5
+    L 662 419
+    A 80 80 0 0 1 742 499
+    L 742 703
+    A 80 80 0 0 1 662 783
+    L 362 783
+    A 80 80 0 0 1 282 703
+    Z
+    M 485.9 612.9
+    A 50 50 0 1 1 537.1 612.9
+    L 552.6 692.4
+    A 8 8 0 0 1 544.8 702
+    L 478.2 702
+    A 8 8 0 0 1 470.4 692.4
+    Z
+  "/>
+</svg>

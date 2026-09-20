@@ -64,7 +64,7 @@ object LetterStego {
             StegoLanguage.RUSSIAN -> russian
             StegoLanguage.CHINESE -> chinese
             StegoLanguage.PERSIAN -> persian
-            StegoLanguage.ENGLISH, StegoLanguage.GERMAN -> english
+            StegoLanguage.ENGLISH, StegoLanguage.GERMAN, StegoLanguage.PORTUGUESE -> english
         }
 
     internal fun alphabetCharacters(language: StegoLanguage): CharArray = table(language).letters

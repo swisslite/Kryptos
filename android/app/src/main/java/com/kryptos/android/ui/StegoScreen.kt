@@ -48,6 +48,7 @@ import com.kryptos.android.security.launchFromApp
 import com.kryptos.android.core.CipherException
 import com.kryptos.android.core.ImageBridge
 import com.kryptos.android.core.ImageStego
+import com.kryptos.android.core.KryptosCore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
@@ -185,7 +186,9 @@ fun StegoScreen(modifier: Modifier = Modifier) {
                 stringResource(if (hiding) R.string.stego_hide_action else R.string.stego_reveal_action),
                 Modifier.fillMaxWidth(),
                 icon = if (hiding) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                enabled = pickedUri != null && password.isNotEmpty() && (!hiding || message.isNotBlank()),
+                enabled = pickedUri != null &&
+                    (if (hiding) password.length >= KryptosCore.MIN_PASSWORD_LENGTH else password.isNotEmpty()) &&
+                    (!hiding || message.isNotBlank()),
                 busy = busy,
             ) {
                 status = null
@@ -258,7 +261,7 @@ fun StegoScreen(modifier: Modifier = Modifier) {
         if (revealed.isNotEmpty()) {
             GlassCard {
                 FieldLabel(stringResource(R.string.label_hidden_message))
-                Text(revealed, fontSize = 16.sp, color = K.textPrimary)
+                Text(linkedText(revealed, K.link), fontSize = 16.sp, color = K.textPrimary)
                 SecondaryButton(
                     stringResource(R.string.copy),
                     Modifier.fillMaxWidth(),

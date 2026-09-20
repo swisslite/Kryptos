@@ -91,12 +91,12 @@
     <string name="stego_letters_footer">The shortest mode — about half the length of Simple words.</string>
     <string name="stego_letters_footer_han">A single unbroken run with no punctuation.</string>
     <string name="stego_smart_footer">Real sentences instead of a word salad, at the cost of a longer text.</string>
-    <string name="lang_auto">Automatic (system language)</string>
-    <string name="lang_en">English</string>
-    <string name="lang_ru">Russian</string>
-    <string name="lang_de">German</string>
-    <string name="lang_zh">Chinese</string>
-    <string name="lang_fa">Persian</string>
+    <string name="lang_en" translatable="false">English</string>
+    <string name="lang_ru" translatable="false">Русский</string>
+    <string name="lang_de" translatable="false">Deutsch</string>
+    <string name="lang_zh" translatable="false">中文</string>
+    <string name="lang_fa" translatable="false">فارسی</string>
+    <string name="lang_pt" translatable="false">Português (Brasil)</string>
     <string name="settings_keyboard">Keyboard</string>
     <string name="settings_enable_keyboard">Enable Kryptos keyboard</string>
     <string name="settings_kb_autodecrypt">Auto-decrypt clipboard in keyboard</string>
@@ -157,7 +157,7 @@
     <string name="screen_section">On screen</string>
     <string name="screen_decrypt_toggle">Decrypt on screen</string>
     <string name="screen_block_screenshots">Block screenshots</string>
-    <string name="screen_block_screenshots_desc">While on-screen decryption is running, screenshots and screen recording are blocked on the whole device so decrypted text never ends up in a capture.</string>
+    <string name="screen_block_screenshots_desc">While on-screen decryption is active, screenshots are blocked on the device.</string>
     <string name="screen_decrypt_footer">Shows the decrypted text over the ciphertext in other apps.</string>
     <string name="screen_decrypt_enable_service">Turn on the accessibility service</string>
     <string name="screen_decrypt_keep_running">Do not pause the app</string>
@@ -202,9 +202,9 @@
     <string name="quick_subtitle">A simple symmetric mode: you and your contact agree on one shared password, then encrypt/decrypt text for any messenger. (This is not PGP — PGP has its own tab.)</string>
     <string name="label_message_text">Message text</string>
     <string name="label_encrypted_block">Encrypted block</string>
-    <string name="label_ready">Ready — paste this to your contact</string>
+    <string name="label_ready">Ready. Send it to your contact.</string>
     <string name="label_decrypted">Decrypted text</string>
-    <string name="copied_banner">Encrypted and copied to the clipboard — paste it to your contact.</string>
+    <string name="copied_banner">Encrypted and copied. Send it to your contact.</string>
 
     <string name="label_cover_photo">Cover photo</string>
     <string name="label_stego_photo">Photo with a secret</string>
@@ -241,9 +241,9 @@
     <string name="empty_hint">Exchange keys to start: tap the QR icon (top right) to show My key and let your contact scan it. Then tap + beside it to add their key. Both of you add each other once. A step-by-step guide with screenshots is in “%1$s”.</string>
     <string name="chat_hint">Encrypt a message, send the result through any messenger, and paste the reply here to decrypt.</string>
     <string name="chat_scroll_bottom">Scroll to the latest message</string>
-    <string name="auto_delete_hint">Messages disappear after %1$s.</string>
-    <string name="sent_banner">Encrypted &amp; copied — paste it to your contact.</string>
-    <string name="sent_banner_stego">Hidden in text &amp; copied — paste it to your contact.</string>
+    <string name="auto_delete_hint">New messages disappear after %1$s.</string>
+    <string name="sent_banner">Encrypted and copied. Send it to your contact.</string>
+    <string name="sent_banner_stego">Hidden in text and copied. Send it to your contact.</string>
     <string name="clipboard_empty">Clipboard is empty.</string>
     <string name="decrypt_failed">Could not decrypt — wrong contact, or the message was already read once. If every NEW message from this contact fails, share your key with them again and have them re-add you.</string>
     <string name="decrypt_prekey_used">This message was encrypted with a key that was already used or has expired. Share your key again and ask your contact to add you once more.</string>
@@ -275,6 +275,10 @@
 
     <string name="kb_clear">Clear</string>
     <string name="settings_kb_haptics">Key vibration</string>
+    <string name="settings_kb_vibration">Vibration strength</string>
+    <string name="vibration_light">Light</string>
+    <string name="vibration_medium">Medium</string>
+    <string name="vibration_strong">Strong</string>
     <string name="settings_kb_sounds">Key sounds</string>
     <string name="settings_kb_compose">Message field in the keyboard</string>
     <string name="settings_kb_compose_toggle">Field button on the keyboard</string>
@@ -285,11 +289,20 @@
     <string name="field_size_large">Large</string>
     <string name="settings_kb_compose_desc">The field lets you type outside the messenger, so it cannot keep a draft. The button toggles that field from the keyboard.</string>
 
+    <string name="kb_keys_section">Keys</string>
+    <string name="settings_kb_keysize">Key text size</string>
+    <string name="settings_kb_keypreview">Enlarge key on press</string>
+    <string name="key_text_small">Small</string>
+    <string name="key_text_medium">Medium</string>
+    <string name="key_text_large">Large</string>
+    <string name="kb_keys_footer">Size of the letters and labels drawn on the keys. The enlarged letter appears above the key you press; with it off the key only lights up.</string>
+
     <string name="kb_typing">Typing</string>
     <string name="kb_field_section">Message field</string>
     <string name="settings_kb_suggestions">Word suggestions</string>
     <string name="settings_kb_autocorrect">Auto-correction</string>
-    <string name="settings_kb_emoji">Emoji key</string>
+    <string name="settings_kb_autocaps">Auto-capitalization</string>
+    <string name="settings_kb_emoji">Comma and emoji key</string>
     <string name="settings_kb_punct">Period and comma key</string>
     <string name="settings_kb_punct_double">Double tap for a comma</string>
     <string name="kb_voice_section">Voice input</string>
@@ -359,6 +372,8 @@
     <string name="backup_title">Key backup</string>
     <string name="backup_intro">The file holds your keys, encrypted with the password you choose here. Kryptos keeps no copy of it.</string>
     <string name="backup_warning">Your message history is not included.</string>
+    <string name="backup_chats">Back up chats</string>
+    <string name="backup_chats_on">Your chats go into the backup file, encrypted with the same password.</string>
     <string name="backup_export_header">Export</string>
     <string name="backup_password">Backup password</string>
     <string name="backup_repeat">Repeat password</string>
@@ -374,6 +389,7 @@
     <string name="backup_unreadable">Could not read this backup — wrong password, or the file is not a Kryptos key backup.</string>
     <string name="backup_too_short">Use at least 8 characters for the backup password.</string>
     <string name="backup_nothing">There are no keys to export yet.</string>
+    <string name="backup_too_large">This backup is too large to be restored later. Turn off chat backup and try again.</string>
     <string name="backup_write_failed">Could not create the backup file.</string>
     <string name="backup_read_failed">Could not read the file.</string>
     <string name="backup_confirm_title">Restore keys?</string>
@@ -435,6 +451,8 @@
     <string name="faq_a22">Yes. Kryptos is built on libsignal, where the SPQR post-quantum ratchet has been permanently on since version 0.83.0: the key of every message is derived with post-quantum material, not just the handshake. There is no switch for it, in Kryptos or in the library itself.</string>
     <string name="faq_q23">On-screen decryption stopped working by itself</string>
     <string name="faq_a23">The phone can pause an app it decides you no longer use. Android then switches the Kryptos accessibility service off and puts the system keyboard back. Turn the service on again here, and pick the Kryptos keyboard again in the system input settings. To stop it repeating, open the app details and turn off pausing the app while it is unused; on Samsung also take Kryptos out of the sleeping apps list under device care.</string>
+    <string name="faq_q24">What happens if I remove the screen lock from my phone?</string>
+    <string name="faq_a24">All keys, contacts and conversations in Kryptos are lost for good. If the phone has a PIN, password or pattern, Kryptos encrypts its data with a key that works only while the phone is unlocked. When the screen lock is removed, Android destroys that key, and setting the lock again will not bring it back. So before you remove the screen lock, make a key backup in Settings.</string>
     <string name="faq_q4">Why will a message not decrypt a second time?</string>
     <string name="faq_a4">That is not a fault but forward secrecy: the key for each message is destroyed the moment it is read, so old correspondence cannot be recovered even by someone who takes your phone. Messages you have already opened remain in the chat history.</string>
     <string name="faq_q5">It says it could not decrypt. What now?</string>
@@ -452,7 +470,7 @@
     <string name="faq_q11">What are profiles for?</string>
     <string name="faq_a11">A profile is a separate keypair with its own contacts. You can keep several and switch between them — to keep work and private life apart, for example.</string>
     <string name="faq_q12">How strong is the encryption?</string>
-    <string name="faq_a12">Chats use Signal\'s own libsignal library — the same protocol as Signal itself, post-quantum handshake included. Password mode and photos use Argon2id and AES-256-GCM. Kryptos contains no home-made cryptography.</string>
+    <string name="faq_a12">Chats use Signal\'s own libsignal library — the same protocol as Signal itself, with post-quantum protection on every message, not just the handshake. Password mode and photos use Argon2id and AES-256-GCM. Kryptos contains no home-made cryptography.</string>
     <string name="faq_q13">Does my contact need Kryptos too?</string>
     <string name="faq_a13">Yes — nothing but Kryptos can decrypt the message. Which phone each of you carries does not matter though: the iPhone and Android versions are fully compatible, and keys and messages work in both directions.</string>
     <string name="faq_q14">Can I send a photo or a file through Kryptos?</string>
@@ -461,8 +479,8 @@
     <string name="faq_a15">They erase the conversation inside Kryptos after the time you pick — on your device, and on your contact\'s if they set the same thing themselves. What they cannot touch is the ciphertext already sitting in the messenger: only the messenger itself can remove that.</string>
     <string name="faq_q16">What happens if I delete the app or lose my phone?</string>
     <string name="faq_a16">The keys live on the device and nowhere else, so deleting the app destroys them for good and there is nothing left to decrypt with. The only insurance is to make a key backup in Settings beforehand. The flip side of the same property: whoever finds the phone gets nothing either.</string>
-    <string name="faq_q17">Does the key backup restore my messages too?</string>
-    <string name="faq_a17">No, and that is deliberate. The file carries only your keys, your contacts and your PGP keys — message history is never written into it. After restoring on a new phone you carry on with the same people, but the old messages do not come back.</string>
+    <string name="faq_q17">Does the key backup restore my messages?</string>
+    <string name="faq_a17">Only if “Back up chats” was on when the file was made. Otherwise the file carries only your keys, your contacts and your PGP keys.</string>
     <string name="faq_q18">Why does the app ask for the camera?</string>
     <string name="faq_a18">Only to scan a contact key from a QR code. The camera is used nowhere else, and refusing access breaks nothing — you can always paste the key as text instead.</string>
     <string name="faq_q19">Do my keys and messages end up in the phone\'s cloud backup?</string>
@@ -483,6 +501,7 @@
     <string name="kb_a11y_backspace">Backspace</string>
     <string name="kb_a11y_enter">Enter</string>
     <string name="kb_a11y_shift">Shift</string>
+    <string name="kb_a11y_language">Languages and keyboards</string>
     <string name="kb_a11y_zwnj">Half space</string>
     <string name="kb_a11y_emoji">Emoji</string>
     <string name="kb_a11y_hidden">Hidden character</string>

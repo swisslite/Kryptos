@@ -22,6 +22,12 @@
             "value": "اسکن کد QR برای تبادل کلید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escaneamento de QR codes para trocar chaves com segurança."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -55,6 +61,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "باز کردن قفل برنامه Kryptos."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desbloqueio do app Kryptos."
           }
         },
         "ru": {

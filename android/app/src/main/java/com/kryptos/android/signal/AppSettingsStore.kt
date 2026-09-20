@@ -11,11 +11,14 @@ import java.security.MessageDigest
 object AppSettingsStore {
     private val prefs get() = SecureStore.prefs()
 
+    fun settingsAvailable(): Boolean = SecureStore.settingsReadable()
+
     private const val OBSOLETE_HANDLED_CLIP = "kb.clip.handled"
 
     init {
         runCatching {
-            if (prefs.contains(OBSOLETE_HANDLED_CLIP)) prefs.edit().remove(OBSOLETE_HANDLED_CLIP).apply()
+            val old = SecureStore.legacyPrefs()
+            if (old.contains(OBSOLETE_HANDLED_CLIP)) old.edit().remove(OBSOLETE_HANDLED_CLIP).apply()
         }
     }
 
@@ -44,6 +47,7 @@ object AppSettingsStore {
             "german" -> StegoLanguage.GERMAN
             "chinese" -> StegoLanguage.CHINESE
             "persian" -> StegoLanguage.PERSIAN
+            "portuguese" -> StegoLanguage.PORTUGUESE
             else -> StegoLanguage.forSystem()
         }
     }
@@ -53,6 +57,20 @@ object AppSettingsStore {
     var keyboardHaptics: Boolean
         get() = prefs.getBoolean("kb.haptics", true)
         set(v) { prefs.edit().putBoolean("kb.haptics", v).apply() }
+
+    enum class Vibration(val key: String, val durationMs: Long, val amplitude: Int, val scale: Float) {
+        LIGHT("light", 14L, 110, 0.65f),
+        MEDIUM("medium", 18L, 165, 0.6f),
+        STRONG("strong", 22L, 235, 1f);
+
+        companion object {
+            fun resolve(raw: String?): Vibration = entries.firstOrNull { it.key == raw } ?: LIGHT
+        }
+    }
+
+    var keyboardVibration: Vibration
+        get() = Vibration.resolve(prefs.getString("kb.vibration", null))
+        set(v) { prefs.edit().putString("kb.vibration", v.key).apply() }
 
     var keyboardSounds: Boolean
         get() = prefs.getBoolean("kb.sounds", true)
@@ -109,6 +127,24 @@ object AppSettingsStore {
         get() = FieldSize.resolve(prefs.getString("kb.fieldsize", null))
         set(v) { prefs.edit().putString("kb.fieldsize", v.key).apply() }
 
+    enum class KeySize(val key: String, val labelScale: Float) {
+        SMALL("small", 0.85f),
+        MEDIUM("medium", 1f),
+        LARGE("large", 1.15f);
+
+        companion object {
+            fun resolve(raw: String?): KeySize = entries.firstOrNull { it.key == raw } ?: MEDIUM
+        }
+    }
+
+    var keyboardKeySize: KeySize
+        get() = KeySize.resolve(prefs.getString("kb.keysize", null))
+        set(v) { prefs.edit().putString("kb.keysize", v.key).apply() }
+
+    var keyboardKeyPreview: Boolean
+        get() = prefs.getBoolean("kb.keypreview", true)
+        set(v) { prefs.edit().putBoolean("kb.keypreview", v).apply() }
+
     var keyboardAutoDecrypt: Boolean
         get() = prefs.getBoolean("kb.autodecrypt", true)
         set(v) { prefs.edit().putBoolean("kb.autodecrypt", v).apply() }
@@ -126,6 +162,10 @@ object AppSettingsStore {
     var keyboardAutocorrect: Boolean
         get() = prefs.getBoolean("kb.autocorrect", true)
         set(v) { prefs.edit().putBoolean("kb.autocorrect", v).apply() }
+
+    var keyboardAutoCaps: Boolean
+        get() = prefs.getBoolean("kb.autocaps", true)
+        set(v) { prefs.edit().putBoolean("kb.autocaps", v).apply() }
 
     var keyboardEmoji: Boolean
         get() = prefs.getBoolean("kb.emoji", true)
@@ -147,6 +187,10 @@ object AppSettingsStore {
         }
     }
 
+    var backupChats: Boolean
+        get() = prefs.getBoolean("backup.chats", false)
+        set(v) { prefs.edit().putBoolean("backup.chats", v).apply() }
+
     var keyboardVoice: Boolean
         get() = prefs.getBoolean("kb.voice", false)
         set(v) { prefs.edit().putBoolean("kb.voice", v).apply() }
@@ -158,7 +202,7 @@ object AppSettingsStore {
     val systemKeyboardLang: String
         get() {
             val tag = java.util.Locale.getDefault().language
-            return if (tag == "ru" || tag == "de" || tag == "zh" || tag == "fa") tag else "en"
+            return if (tag == "ru" || tag == "de" || tag == "zh" || tag == "fa" || tag == "pt") tag else "en"
         }
 
     private val nonLatinLanguages = setOf("ru", "zh", "fa")
@@ -221,7 +265,7 @@ object AppSettingsStore {
         set(v) { prefs.edit().putInt("privacy.lockgrace", v).apply() }
 
     var secureKeyboard: Boolean
-        get() = prefs.getBoolean("privacy.securekb", true)
+        get() = prefs.getBoolean("privacy.securekb", false)
         set(v) { prefs.edit().putBoolean("privacy.securekb", v).apply() }
 
     var clearClipboardOnDecrypt: Boolean
@@ -310,19 +354,26 @@ object AppSettingsStore {
 
     private const val CODE_FAILURES = "privacy.codefails"
 
+    @Volatile private var codeFailuresFloor = 0
+
     var codeFailures: Int
-        get() = runCatching { prefs.getInt(CODE_FAILURES, 0) }.getOrDefault(0)
-        set(v) { runCatching { prefs.edit().putInt(CODE_FAILURES, v.coerceAtLeast(0)).commit() } }
+        get() = maxOf(runCatching { prefs.getInt(CODE_FAILURES, 0) }.getOrDefault(0), codeFailuresFloor)
+        set(v) {
+            val next = v.coerceAtLeast(0)
+            codeFailuresFloor = if (next == 0) 0 else maxOf(codeFailuresFloor, next)
+            runCatching { prefs.edit().putInt(CODE_FAILURES, next).commit() }
+        }
 
     enum class CodeResult { OK, TOO_SHORT, DUPLICATE, FAILED }
 
-    private const val DURESS_BLOB = "duress"
-    private const val APPCODE_BLOB = "appcode"
+    private const val CODES_BLOB = "codes"
+    private const val LEGACY_DURESS_BLOB = "duress"
+    private const val LEGACY_APPCODE_BLOB = "appcode"
     private const val DURESS_OBSOLETE_HASH = "privacy.duresspin.argon2.hash"
     private const val DURESS_OBSOLETE_SALT = "privacy.duresspin.argon2.salt"
     private const val DURESS_LEGACY_KEYS = "privacy.duresspin.hash;privacy.duresspin.salt;privacy.duresspin.iter;privacy.duresspin"
-    private const val DURESS_HASH_LENGTH = 32
-    private const val BLOB_LENGTH = Argon2id.MIN_SALT_LENGTH + DURESS_HASH_LENGTH
+
+    private val codesLock = Any()
 
     @Volatile private var duressPresent: Boolean? = null
     @Volatile private var appCodePresent: Boolean? = null
@@ -335,38 +386,73 @@ object AppSettingsStore {
         loadUiState()
     }
 
-    private fun codeHash(salt: ByteArray, code: String): ByteArray =
-        Argon2id.derive(code, salt, DURESS_HASH_LENGTH)
+    private class LegacyRecord(val record: ByteArray?)
 
-    private fun codeStored(name: String): Boolean? {
+    private fun legacyRecord(name: String): LegacyRecord? {
         val present = runCatching { SecureStore.exists(name) }.getOrNull() ?: return null
-        if (!present) return false
+        if (!present) return LegacyRecord(null)
         val blob = runCatching { SecureStore.read(name) }.getOrNull() ?: return null
-        return blob.size == BLOB_LENGTH
+        return LegacyRecord(blob.takeIf { it.size == CodeSlots.RECORD })
     }
 
-    private fun writeCode(name: String, code: String): Boolean {
-        val salt = randomBytes(Argon2id.MIN_SALT_LENGTH)
-        val digest = codeHash(salt, code)
-        val stored = runCatching { SecureStore.write(name, salt + digest); true }.getOrDefault(false)
-        digest.fill(0)
-        return stored
+    private fun loadCodes(): CodeSlots.Records? = synchronized(codesLock) {
+        val stored = try {
+            SecureStore.readStrict(CODES_BLOB)
+        } catch (e: Exception) {
+            return null
+        }
+        if (stored != null) {
+            return try {
+                CodeSlots.decode(stored) ?: CodeSlots.Records(null, null)
+            } finally {
+                stored.fill(0)
+            }
+        }
+        val panic = legacyRecord(LEGACY_DURESS_BLOB) ?: return null
+        val app = legacyRecord(LEGACY_APPCODE_BLOB) ?: return null
+        val records = CodeSlots.Records(panic.record, app.record)
+        if (storeCodes(records)) {
+            runCatching { SecureStore.delete(LEGACY_DURESS_BLOB) }
+            runCatching { SecureStore.delete(LEGACY_APPCODE_BLOB) }
+        }
+        records
     }
 
-    private val DUMMY_BLOB = ByteArray(BLOB_LENGTH)
+    private fun storeCodes(records: CodeSlots.Records): Boolean {
+        val encoded = CodeSlots.encode(records)
+        return try {
+            SecureStore.write(CODES_BLOB, encoded)
+            true
+        } catch (e: Exception) {
+            false
+        } finally {
+            encoded.fill(0)
+        }
+    }
 
-    private fun verifyCode(name: String, code: String): Boolean {
-        val blob = runCatching { SecureStore.read(name) }.getOrNull()
-        val present = blob != null && blob.size == BLOB_LENGTH
-        val source = if (present) blob!! else DUMMY_BLOB
+    private fun remember(records: CodeSlots.Records) {
+        duressPresent = records.panic != null
+        appCodePresent = records.app != null
+    }
+
+    private fun codeHash(salt: ByteArray, code: String): ByteArray =
+        Argon2id.derive(code, salt, CodeSlots.HASH_LENGTH)
+
+    private fun matches(record: ByteArray?, code: String): Boolean {
+        val source = record ?: randomBytes(CodeSlots.RECORD)
         val salt = source.copyOfRange(0, Argon2id.MIN_SALT_LENGTH)
         val expected = source.copyOfRange(Argon2id.MIN_SALT_LENGTH, source.size)
         val digest = codeHash(salt, code)
         val equal = MessageDigest.isEqual(digest, expected)
         digest.fill(0)
         expected.fill(0)
-        blob?.fill(0)
-        return present && equal
+        return record != null && equal
+    }
+
+    private fun newRecord(code: String): ByteArray {
+        val salt = randomBytes(Argon2id.MIN_SALT_LENGTH)
+        val digest = codeHash(salt, code)
+        return (salt + digest).also { digest.fill(0) }
     }
 
     data class CodeCheck(val panic: Boolean, val app: Boolean)
@@ -374,59 +460,95 @@ object AppSettingsStore {
     fun verifyCodes(code: String): CodeCheck {
         migrateDuressPin()
         if (code.length < CODE_MIN_LENGTH) return CodeCheck(panic = false, app = false)
-        val panicMatch = verifyCode(DURESS_BLOB, code)
-        val appMatch = verifyCode(APPCODE_BLOB, code)
-        return CodeCheck(panic = panicMatch, app = appMatch)
+        val records = loadCodes()
+        return try {
+            CodeCheck(panic = matches(records?.panic, code), app = matches(records?.app, code))
+        } finally {
+            records?.wipe()
+        }
     }
 
     val hasPanicPassword: Boolean
         get() {
             migrateDuressPin()
             duressPresent?.let { return it }
-            val stored = codeStored(DURESS_BLOB)
-            if (stored != null) duressPresent = stored
-            return stored ?: false
+            val records = loadCodes() ?: return false
+            remember(records)
+            records.wipe()
+            return duressPresent == true
         }
 
     val hasAppCode: Boolean
         get() {
             appCodePresent?.let { return it }
-            val stored = codeStored(APPCODE_BLOB)
-            if (stored != null) appCodePresent = stored
-            return stored ?: false
+            val records = loadCodes() ?: return false
+            remember(records)
+            records.wipe()
+            return appCodePresent == true
         }
 
     fun setPanicPassword(code: String): CodeResult {
         migrateDuressPin()
         if (code.length < CODE_MIN_LENGTH) return CodeResult.TOO_SHORT
-        if (verifyCode(APPCODE_BLOB, code)) return CodeResult.DUPLICATE
-        val stored = writeCode(DURESS_BLOB, code)
-        duressPresent = stored
-        return if (stored) CodeResult.OK else CodeResult.FAILED
+        return setCode(code, panic = true)
     }
 
     fun setAppCode(code: String): CodeResult {
         if (code.length < CODE_MIN_LENGTH) return CodeResult.TOO_SHORT
-        if (verifyCode(DURESS_BLOB, code)) return CodeResult.DUPLICATE
-        val stored = writeCode(APPCODE_BLOB, code)
-        appCodePresent = stored
-        return if (stored) CodeResult.OK else CodeResult.FAILED
+        return setCode(code, panic = false)
+    }
+
+    private fun setCode(code: String, panic: Boolean): CodeResult = synchronized(codesLock) {
+        val records = loadCodes() ?: return CodeResult.FAILED
+        try {
+            if (matches(if (panic) records.app else records.panic, code)) return CodeResult.DUPLICATE
+            val record = newRecord(code)
+            val next = if (panic) CodeSlots.Records(record, records.app) else CodeSlots.Records(records.panic, record)
+            val stored = storeCodes(next)
+            record.fill(0)
+            if (!stored) {
+                duressPresent = null
+                appCodePresent = null
+                return CodeResult.FAILED
+            }
+            remember(next)
+            CodeResult.OK
+        } finally {
+            records.wipe()
+        }
     }
 
     fun clearPanicPassword() {
         migrateDuressPin()
-        runCatching { SecureStore.delete(DURESS_BLOB) }
-        duressPresent = false
+        clearCode(panic = true)
     }
 
-    fun clearAppCode() {
-        runCatching { SecureStore.delete(APPCODE_BLOB) }
-        appCodePresent = false
+    fun clearAppCode() = clearCode(panic = false)
+
+    private fun clearCode(panic: Boolean): Unit = synchronized(codesLock) {
+        val records = loadCodes()
+        if (records == null) {
+            duressPresent = null
+            appCodePresent = null
+            return
+        }
+        val next = if (panic) CodeSlots.Records(null, records.app) else CodeSlots.Records(records.panic, null)
+        if (storeCodes(next)) remember(next) else {
+            duressPresent = null
+            appCodePresent = null
+        }
+        records.wipe()
     }
 
-    fun purgeLegacyRecords() = migrateDuressPin()
+    fun resealCodes(): Unit = synchronized(codesLock) {
+        migrateDuressPin()
+        val records = loadCodes() ?: return
+        storeCodes(records)
+        records.wipe()
+    }
 
-    @Synchronized private fun migrateDuressPin() {
+    private fun migrateDuressPin(): Unit = synchronized(codesLock) {
+        val prefs = SecureStore.legacyPrefs()
         val legacy = DURESS_LEGACY_KEYS.split(";")
         val stale = legacy.any { prefs.contains(it) } ||
             prefs.contains(DURESS_OBSOLETE_HASH) || prefs.contains(DURESS_OBSOLETE_SALT)
@@ -437,9 +559,12 @@ object AppSettingsStore {
             val h = runCatching { Base64.decode(hash, Base64.NO_WRAP) }.getOrNull()
             val sBytes = runCatching { Base64.decode(salt, Base64.NO_WRAP) }.getOrNull()
             if (h != null && sBytes != null && sBytes.size == Argon2id.MIN_SALT_LENGTH &&
-                h.size == DURESS_HASH_LENGTH
+                h.size == CodeSlots.HASH_LENGTH
             ) {
-                runCatching { SecureStore.write(DURESS_BLOB, sBytes + h) }
+                val records = loadCodes() ?: return
+                val stored = storeCodes(CodeSlots.Records(sBytes + h, records.app))
+                records.wipe()
+                if (!stored) return
                 duressPresent = null
             }
         }
@@ -448,4 +573,42 @@ object AppSettingsStore {
         editor.remove(DURESS_OBSOLETE_HASH).remove(DURESS_OBSOLETE_SALT)
         editor.commit()
     }
+}
+
+internal object CodeSlots {
+    const val HASH_LENGTH = 32
+    const val RECORD = Argon2id.MIN_SALT_LENGTH + HASH_LENGTH
+    private const val SLOT = 1 + RECORD
+    const val SIZE = 2 * SLOT
+
+    class Records(val panic: ByteArray?, val app: ByteArray?) {
+        fun wipe() {
+            panic?.fill(0)
+            app?.fill(0)
+        }
+    }
+
+    fun encode(records: Records): ByteArray {
+        val out = ByteArray(SIZE)
+        put(out, 0, records.panic)
+        put(out, SLOT, records.app)
+        return out
+    }
+
+    fun decode(bytes: ByteArray): Records? {
+        if (bytes.size != SIZE) return null
+        return Records(slot(bytes, 0), slot(bytes, SLOT))
+    }
+
+    private fun put(out: ByteArray, at: Int, record: ByteArray?) {
+        if (record != null && record.size == RECORD) {
+            out[at] = 1
+            record.copyInto(out, at + 1)
+        } else {
+            randomBytes(RECORD).copyInto(out, at + 1)
+        }
+    }
+
+    private fun slot(bytes: ByteArray, at: Int): ByteArray? =
+        if (bytes[at].toInt() == 1) bytes.copyOfRange(at + 1, at + SLOT) else null
 }

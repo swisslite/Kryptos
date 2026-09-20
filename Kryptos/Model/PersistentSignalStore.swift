@@ -18,6 +18,8 @@ final class PersistentSignalStore: InMemorySignalProtocolStore {
         var kyberPreKeys: [String: Data] = [:]
         var sessions: [String: Data] = [:]
         var identities: [String: Data] = [:]
+        // Optional so that snapshots written before this field existed still decode.
+        var usedBaseKeys: Set<String>?
     }
 
     private struct GenerationProbe: Codable { var generation: UInt64? }
@@ -28,6 +30,7 @@ final class PersistentSignalStore: InMemorySignalProtocolStore {
         var kyberPreKeys: [String: Data] = [:]
         var sessions: [String: Data] = [:]
         var identities: [String: Data] = [:]
+        var usedBaseKeys: [String] = []
     }
 
     static func exportArchive(storageKey: String, cryptKey: SymmetricKey) -> Archive? {
@@ -36,7 +39,8 @@ final class PersistentSignalStore: InMemorySignalProtocolStore {
               let dec = try? AES.GCM.open(box, using: cryptKey),
               let s = try? JSONDecoder().decode(Snapshot.self, from: dec) else { return nil }
         return Archive(preKeys: s.preKeys, signedPreKeys: s.signedPreKeys, kyberPreKeys: s.kyberPreKeys,
-                       sessions: s.sessions, identities: s.identities)
+                       sessions: s.sessions, identities: s.identities,
+                       usedBaseKeys: Array(s.usedBaseKeys ?? []))
     }
 
     @discardableResult
@@ -48,6 +52,7 @@ final class PersistentSignalStore: InMemorySignalProtocolStore {
         s.kyberPreKeys = archive.kyberPreKeys
         s.sessions = archive.sessions
         s.identities = archive.identities
+        s.usedBaseKeys = archive.usedBaseKeys.isEmpty ? nil : Set(archive.usedBaseKeys)
         guard let json = try? JSONEncoder().encode(s),
               let box = try? AES.GCM.seal(json, using: cryptKey),
               let combined = box.combined else { return false }
@@ -70,7 +75,7 @@ final class PersistentSignalStore: InMemorySignalProtocolStore {
     }
 
     func matchesDisk(_ other: Data?) -> Bool {
-        guard !loadFailed else { return false }
+        guard !loadFailed, !needsReload else { return false }
         return diskDigest == other
     }
 
@@ -125,6 +130,7 @@ final class PersistentSignalStore: InMemorySignalProtocolStore {
 
     private var batchDepth = 0
     private var pendingWrite = false
+    private(set) var needsReload = false
 
     func batch<T>(_ body: () throws -> T) throws -> T {
         batchDepth += 1
@@ -134,8 +140,10 @@ final class PersistentSignalStore: InMemorySignalProtocolStore {
         } catch {
             batchDepth -= 1
             if batchDepth == 0, pendingWrite {
+                // The body changed the store and then failed. Drop the half-finished change
+                // instead of writing it, and rebuild from the last written snapshot.
                 pendingWrite = false
-                try? writeSnapshot()
+                needsReload = true
             }
             throw error
         }
@@ -225,14 +233,48 @@ final class PersistentSignalStore: InMemorySignalProtocolStore {
         return try super.loadKyberPreKey(id: id, context: context)
     }
 
+    override func markKyberPreKeyUsed(id: UInt32, signedPreKeyId: UInt32, baseKey: PublicKey,
+                                      context: StoreContext) throws {
+        let mark = Self.baseKeyMark(kyberId: id, signedPreKeyId: signedPreKeyId, baseKey: baseKey)
+        guard snap.usedBaseKeys?.contains(mark) != true else {
+            throw SignalError.invalidMessage("reused base key")
+        }
+        try super.markKyberPreKeyUsed(id: id, signedPreKeyId: signedPreKeyId, baseKey: baseKey, context: context)
+        snap.usedBaseKeys = (snap.usedBaseKeys ?? []).union([mark])
+        try persist()
+    }
+
+    private static func baseKeyMark(kyberId: UInt32, signedPreKeyId: UInt32, baseKey: PublicKey) -> String {
+        "\(kyberId)|\(signedPreKeyId)|\(SignalFormat.hex(baseKey.serialize()))"
+    }
+
+    private enum MarkPart {
+        static let kyber = 0
+        static let signed = 1
+    }
+
+    private func forgetUsedBaseKeys(part: Int, id: UInt32) -> Bool {
+        guard let marks = snap.usedBaseKeys, !marks.isEmpty else { return false }
+        let wanted = String(id)
+        let kept = marks.filter { $0.split(separator: "|", omittingEmptySubsequences: false)
+            .dropFirst(part).first.map(String.init) != wanted }
+        guard kept.count != marks.count else { return false }
+        snap.usedBaseKeys = kept.isEmpty ? nil : kept
+        return true
+    }
+
     func removeSignedPreKey(id: UInt32) {
         revokedSignedPreKeyIds.insert(id)
-        if snap.signedPreKeys.removeValue(forKey: String(id)) != nil { try? persist() }
+        let dropped = snap.signedPreKeys.removeValue(forKey: String(id)) != nil
+        let forgot = forgetUsedBaseKeys(part: MarkPart.signed, id: id)
+        if dropped || forgot { try? persist() }
     }
 
     func removeKyberPreKey(id: UInt32) {
         revokedKyberPreKeyIds.insert(id)
-        if snap.kyberPreKeys.removeValue(forKey: String(id)) != nil { try? persist() }
+        let dropped = snap.kyberPreKeys.removeValue(forKey: String(id)) != nil
+        let forgot = forgetUsedBaseKeys(part: MarkPart.kyber, id: id)
+        if dropped || forgot { try? persist() }
     }
 
     func removeAllSessionsAndPeerIdentities() throws {

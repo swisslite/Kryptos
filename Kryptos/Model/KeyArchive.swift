@@ -33,12 +33,23 @@ struct KeyArchive: Codable {
         var autoDelete: [String: Double]
         var pinned: [String]?
         var usedPreKeys: [String]?
+        var seenIncoming: [String]?
         var contacts: [ArchivedContact]
         var preKeys: [String: String]
         var signedPreKeys: [String: String]
         var kyberPreKeys: [String: String]
         var sessions: [String: String]
         var identities: [String: String]
+        var usedBaseKeys: [String]?
+        var chats: [String: [ArchivedMessage]]?
+    }
+
+    struct ArchivedMessage: Codable {
+        var id: String
+        var text: String
+        var mine: Bool
+        var date: Int64
+        var expiresAfter: Double?
     }
 
     struct ArchivedRetired: Codable {
@@ -72,6 +83,10 @@ struct KeyArchive: Codable {
     var isEmpty: Bool { profiles.isEmpty && pgpIdentities.isEmpty && pgpRecipients.isEmpty }
 
     var contactCount: Int { profiles.reduce(0) { $0 + $1.contacts.count } }
+
+    var messageCount: Int {
+        profiles.reduce(0) { $0 + ($1.chats?.values.reduce(0) { $0 + $1.count } ?? 0) }
+    }
 }
 
 enum KeyArchiveError: LocalizedError {
@@ -79,6 +94,7 @@ enum KeyArchiveError: LocalizedError {
     case unreadable
     case nothingToExport
     case writeFailed
+    case tooLarge
 
     var errorDescription: String? {
         switch self {
@@ -90,6 +106,8 @@ enum KeyArchiveError: LocalizedError {
             return String(localized: "There are no keys to export yet.")
         case .writeFailed:
             return String(localized: "Could not create the backup file.")
+        case .tooLarge:
+            return String(localized: "This backup is too large to be restored later. Turn off chat backup and try again.")
         }
     }
 }
@@ -108,6 +126,7 @@ extension KeyArchive {
         guard !isEmpty else { throw KeyArchiveError.nothingToExport }
         var plain = try JSONEncoder().encode(self)
         defer { plain.resetBytes(in: plain.startIndex ..< plain.endIndex) }
+        guard plain.count <= Deflate.maxOutput else { throw KeyArchiveError.tooLarge }
         let raw = try PasswordCipher.encrypt(plain, password: password)
         return WireFormat.token(raw)
     }

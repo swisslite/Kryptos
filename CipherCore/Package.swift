@@ -21,14 +21,16 @@ let package = Package(
             ]
         ),
         .target(
-            name: "CipherCore",
-            dependencies: ["CArgon2"],
-            path: "Sources/CipherCore"
+            name: "CZlib",
+            path: "Sources/CZlib",
+            linkerSettings: [
+                .linkedLibrary("z")
+            ]
         ),
-        .testTarget(
-            name: "CipherCoreTests",
-            dependencies: ["CipherCore"],
-            path: "Tests/CipherCoreTests"
+        .target(
+            name: "CipherCore",
+            dependencies: ["CArgon2", "CZlib"],
+            path: "Sources/CipherCore"
         )
     ]
 )

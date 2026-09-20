@@ -139,6 +139,7 @@ final class PGPService: ObservableObject {
             return
         }
         recipients = loadedRecipients
+        resealStoredBlobs(index)
 
         if index.identities.isEmpty, let data = Keychain.load(account: Self.legacySecret),
            let key = try? ObjectivePGP.readKeys(from: data).first {
@@ -162,6 +163,17 @@ final class PGPService: ObservableObject {
             generate(name: String(localized: "My key"), email: "", algo: .curve25519)
         } else {
             loadCurrent()
+        }
+    }
+
+    /// Blobs written before they were sealed are rewritten once, so the plain copy does not
+    /// survive on disk.
+    private func resealStoredBlobs(_ index: PGPIndex) {
+        if !SecureBlob.isSealed(Self.indexStoreKey), !index.identities.isEmpty {
+            _ = Self.saveIndex(index)
+        }
+        if !SecureBlob.isSealed(Self.recipientsStoreKey), !recipients.isEmpty {
+            saveRecipients()
         }
     }
 
@@ -205,16 +217,15 @@ final class PGPService: ObservableObject {
             guard seen.insert(entry.id).inserted,
                   let id = UUID(uuidString: entry.id), !entry.secret.isEmpty else { continue }
             let secret = Data(entry.secret.utf8)
-            guard (try? ObjectivePGP.readKeys(from: secret))?.first != nil else { continue }
+            guard let key = (try? ObjectivePGP.readKeys(from: secret))?.first else { continue }
             staged.append((PGPIdentity(id: id, name: entry.name, email: entry.email,
-                                       fingerprint: entry.fingerprint, algo: entry.algo,
+                                       fingerprint: Self.fingerprint(of: key),
+                                       algo: Self.restoredAlgo(entry.algo),
                                        createdAt: Date(timeIntervalSince1970: Double(entry.created) / 1000),
-                                       publicKey: entry.publicKey), secret))
+                                       publicKey: Self.exportPublicArmored(key)), secret))
         }
         guard !list.isEmpty else {
-            recipients = incoming.map {
-                PGPRecipient(name: $0.name, publicKey: $0.publicKey, fingerprint: $0.fingerprint)
-            }
+            recipients = Self.restoredRecipients(incoming)
             saveRecipients()
             return true
         }
@@ -231,9 +242,7 @@ final class PGPService: ObservableObject {
             Keychain.delete(account: Self.secretAccount(ident.id))
         }
 
-        recipients = incoming.map {
-            PGPRecipient(name: $0.name, publicKey: $0.publicKey, fingerprint: $0.fingerprint)
-        }
+        recipients = Self.restoredRecipients(incoming)
         saveRecipients()
 
         identities = restored
@@ -241,6 +250,23 @@ final class PGPService: ObservableObject {
         persistIndex()
         loadCurrent()
         return true
+    }
+
+    /// A backup file is untrusted input: the fingerprint shown next to a key has to come from the
+    /// key itself, not from the file.
+    nonisolated private static func restoredAlgo(_ stored: String) -> String {
+        PGPAlgo.matching(label: stored)?.token ?? "imported"
+    }
+
+    nonisolated private static func restoredRecipients(_ list: [KeyArchive.ArchivedPgpRecipient]) -> [PGPRecipient] {
+        var seen = Set<String>()
+        return list.compactMap { entry in
+            guard let key = (try? ObjectivePGP.readKeys(from: Data(entry.publicKey.utf8)))?.first else { return nil }
+            let fp = fingerprint(of: key)
+            guard fp.isEmpty || seen.insert(fp).inserted else { return nil }
+            return PGPRecipient(name: entry.name.isEmpty ? "Contact" : entry.name,
+                                publicKey: entry.publicKey, fingerprint: fp)
+        }
     }
 
     func resetAfterWipe() {
@@ -257,7 +283,7 @@ final class PGPService: ObservableObject {
     }
 
     private static func loadIndexStrict() -> PGPIndex? {
-        switch SharedStore.readStrict(indexStoreKey) {
+        switch SecureBlob.readStrict(indexStoreKey) {
         case .unavailable:
             return nil
         case .found(let d):
@@ -274,7 +300,7 @@ final class PGPService: ObservableObject {
     @discardableResult
     private static func saveIndex(_ index: PGPIndex) -> Bool {
         guard let d = try? JSONEncoder().encode(index) else { return false }
-        return SharedStore.write(indexStoreKey, d)
+        return SecureBlob.write(indexStoreKey, d)
     }
 
     @discardableResult
@@ -289,7 +315,7 @@ final class PGPService: ObservableObject {
     }
 
     private static func loadRecipientsStrict() -> [PGPRecipient]? {
-        switch SharedStore.readStrict(recipientsStoreKey) {
+        switch SecureBlob.readStrict(recipientsStoreKey) {
         case .unavailable:
             return nil
         case .found(let data):
@@ -297,7 +323,7 @@ final class PGPService: ObservableObject {
         case .absent:
             if let data = UserDefaults.standard.data(forKey: recipientsKey),
                let list = try? JSONDecoder().decode([PGPRecipient].self, from: data) {
-                if let d = try? JSONEncoder().encode(list) { SharedStore.write(recipientsStoreKey, d) }
+                if let d = try? JSONEncoder().encode(list) { SecureBlob.write(recipientsStoreKey, d) }
                 UserDefaults.standard.removeObject(forKey: recipientsKey)
                 return list
             }
@@ -306,7 +332,7 @@ final class PGPService: ObservableObject {
     }
     private func saveRecipients() {
         guard !storeUnavailable else { return }
-        if let data = try? JSONEncoder().encode(recipients) { SharedStore.write(Self.recipientsStoreKey, data) }
+        if let data = try? JSONEncoder().encode(recipients) { SecureBlob.write(Self.recipientsStoreKey, data) }
     }
 
     private func loadCurrent() {
@@ -550,7 +576,7 @@ final class PGPService: ObservableObject {
     }
 
     static func eraseAllStorage() {
-        for source in [SharedStore.read(indexStoreKey), UserDefaults.standard.data(forKey: indexKey)] {
+        for source in [SecureBlob.read(indexStoreKey), UserDefaults.standard.data(forKey: indexKey)] {
             guard let d = source, let index = try? JSONDecoder().decode(PGPIndex.self, from: d) else { continue }
             for ident in index.identities { Keychain.delete(account: secretAccount(ident.id)) }
         }

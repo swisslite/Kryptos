@@ -38,6 +38,16 @@ extension StegoMode {
     }
 }
 
+extension KeyboardConfig.Vibration {
+    var title: LocalizedStringKey {
+        switch self {
+        case .light: return "vibration.light"
+        case .medium: return "vibration.medium"
+        case .strong: return "vibration.strong"
+        }
+    }
+}
+
 extension KeyboardConfig.FieldSize {
     var title: LocalizedStringKey {
         switch self {
@@ -48,19 +58,30 @@ extension KeyboardConfig.FieldSize {
     }
 }
 
+extension KeyboardConfig.KeySize {
+    var title: LocalizedStringKey {
+        switch self {
+        case .small: return "keysize.small"
+        case .medium: return "keysize.medium"
+        case .large: return "keysize.large"
+        }
+    }
+}
+
 @MainActor
 final class AppSettings: ObservableObject {
     enum LanguageChoice: String, CaseIterable, Identifiable {
-        case auto, english, russian, german, chinese, persian
+        case auto, german, english, portuguese, russian, persian, chinese
         var id: String { rawValue }
-        var title: LocalizedStringKey {
+        var title: Text {
             switch self {
-            case .auto: return "Automatic (system language)"
-            case .english: return "English"
-            case .russian: return "Russian"
-            case .german: return "German"
-            case .chinese: return "Chinese"
-            case .persian: return "Persian"
+            case .auto: return Text("Automatic")
+            case .german: return Text(verbatim: "Deutsch")
+            case .english: return Text(verbatim: "English")
+            case .portuguese: return Text(verbatim: "Português (Brasil)")
+            case .russian: return Text(verbatim: "Русский")
+            case .persian: return Text(verbatim: "فارسی")
+            case .chinese: return Text(verbatim: "中文")
             }
         }
     }
@@ -78,6 +99,10 @@ final class AppSettings: ObservableObject {
     }
 
     @Published var keyboardHaptics: Bool {
+        didSet { persistKeyboard() }
+    }
+
+    @Published var keyboardVibration: KeyboardConfig.Vibration {
         didSet { persistKeyboard() }
     }
 
@@ -105,6 +130,10 @@ final class AppSettings: ObservableObject {
         didSet { persistKeyboard() }
     }
 
+    @Published var keyboardAutoCaps: Bool {
+        didSet { persistKeyboard() }
+    }
+
     @Published var keyboardComposeToggle: Bool {
         didSet { persistKeyboard() }
     }
@@ -114,6 +143,14 @@ final class AppSettings: ObservableObject {
     }
 
     @Published var keyboardFieldSize: KeyboardConfig.FieldSize {
+        didSet { persistKeyboard() }
+    }
+
+    @Published var keyboardKeySize: KeyboardConfig.KeySize {
+        didSet { persistKeyboard() }
+    }
+
+    @Published var keyboardKeyPreview: Bool {
         didSet { persistKeyboard() }
     }
 
@@ -159,6 +196,14 @@ final class AppSettings: ObservableObject {
     }
 
     @Published var lengthPadding: Bool {
+        didSet { persistPrivacy() }
+    }
+
+    @Published var backupChats: Bool {
+        didSet { persistPrivacy() }
+    }
+
+    @Published var clipboardClearOnDecrypt: Bool {
         didSet { persistPrivacy() }
     }
 
@@ -218,15 +263,19 @@ final class AppSettings: ObservableObject {
         chatStegoLanguage = LanguageChoice(rawValue: ChatStego.languageRaw) ?? .auto
         chatStegoMode = ChatStego.storedMode
         keyboardHaptics = KeyboardConfig.haptics
+        keyboardVibration = KeyboardConfig.vibration
         keyboardCompose = KeyboardConfig.compose
         keyboardSounds = KeyboardConfig.sounds
         keyboardAutoDecrypt = KeyboardConfig.autoDecrypt
         keyboardSuggestions = KeyboardConfig.suggestions
         keyboardEmoji = KeyboardConfig.emoji
         keyboardAutocorrect = KeyboardConfig.autocorrect
+        keyboardAutoCaps = KeyboardConfig.autoCaps
         keyboardComposeToggle = KeyboardConfig.composeToggle
         keyboardShield = KeyboardConfig.shield
         keyboardFieldSize = KeyboardConfig.fieldSize
+        keyboardKeySize = KeyboardConfig.keySize
+        keyboardKeyPreview = KeyboardConfig.keyPreview
         keyboardLanguages = KeyboardConfig.languages
         appLock = PrivacyConfig.appLock
         appLockCodeOnly = PrivacyConfig.appLockCodeOnly
@@ -234,7 +283,9 @@ final class AppSettings: ObservableObject {
         clipboardLocalOnly = PrivacyConfig.clipboardLocalOnly
         clipboardExpiry = PrivacyConfig.clipboardExpiry
         clipboardAutoDecrypt = PrivacyConfig.clipboardAutoDecrypt
+        clipboardClearOnDecrypt = PrivacyConfig.clipboardClearOnDecrypt
         lengthPadding = PrivacyConfig.lengthPadding
+        backupChats = PrivacyConfig.backupChats
         uiTheme = InterfaceConfig.theme
         uiLanguage = InterfaceConfig.language
         hiddenTabs = Set(InterfaceConfig.hiddenTabs.compactMap(AppTab.init(rawValue:)).filter(\.canHide))
@@ -248,15 +299,19 @@ final class AppSettings: ObservableObject {
         chatStegoLanguage = LanguageChoice(rawValue: ChatStego.languageRaw) ?? .auto
         chatStegoMode = ChatStego.storedMode
         keyboardHaptics = KeyboardConfig.haptics
+        keyboardVibration = KeyboardConfig.vibration
         keyboardCompose = KeyboardConfig.compose
         keyboardSounds = KeyboardConfig.sounds
         keyboardAutoDecrypt = KeyboardConfig.autoDecrypt
         keyboardSuggestions = KeyboardConfig.suggestions
         keyboardEmoji = KeyboardConfig.emoji
         keyboardAutocorrect = KeyboardConfig.autocorrect
+        keyboardAutoCaps = KeyboardConfig.autoCaps
         keyboardComposeToggle = KeyboardConfig.composeToggle
         keyboardShield = KeyboardConfig.shield
         keyboardFieldSize = KeyboardConfig.fieldSize
+        keyboardKeySize = KeyboardConfig.keySize
+        keyboardKeyPreview = KeyboardConfig.keyPreview
         keyboardLanguages = KeyboardConfig.languages
         langsExplicit = KeyboardConfig.storedLanguages != nil
         appLock = PrivacyConfig.appLock
@@ -265,7 +320,9 @@ final class AppSettings: ObservableObject {
         clipboardLocalOnly = PrivacyConfig.clipboardLocalOnly
         clipboardExpiry = PrivacyConfig.clipboardExpiry
         clipboardAutoDecrypt = PrivacyConfig.clipboardAutoDecrypt
+        clipboardClearOnDecrypt = PrivacyConfig.clipboardClearOnDecrypt
         lengthPadding = PrivacyConfig.lengthPadding
+        backupChats = PrivacyConfig.backupChats
         uiTheme = InterfaceConfig.theme
         uiLanguage = InterfaceConfig.language
         hiddenTabs = Set(InterfaceConfig.hiddenTabs.compactMap(AppTab.init(rawValue:)).filter(\.canHide))
@@ -277,20 +334,22 @@ final class AppSettings: ObservableObject {
     }
     private func persistKeyboard() {
         guard !loading else { return }
-        KeyboardConfig.save(haptics: keyboardHaptics, compose: keyboardCompose,
+        KeyboardConfig.save(haptics: keyboardHaptics, vibration: keyboardVibration, compose: keyboardCompose,
                             sounds: keyboardSounds, autoDecrypt: keyboardAutoDecrypt,
                             suggestions: keyboardSuggestions, emoji: keyboardEmoji,
                             autocorrect: keyboardAutocorrect, composeToggle: keyboardComposeToggle,
                             shield: keyboardShield,
                             languages: langsExplicit ? keyboardLanguages : nil,
-                            fieldSize: keyboardFieldSize)
+                            fieldSize: keyboardFieldSize, keySize: keyboardKeySize,
+                            keyPreview: keyboardKeyPreview, autoCaps: keyboardAutoCaps)
     }
     private func persistPrivacy() {
         guard !loading else { return }
         PrivacyConfig.save(appLock: appLock, shield: privacyShield,
                            clipboardLocalOnly: clipboardLocalOnly, clipboardExpiry: clipboardExpiry,
                            clipboardAutoDecrypt: clipboardAutoDecrypt, lengthPadding: lengthPadding,
-                           codeOnly: appLockCodeOnly)
+                           codeOnly: appLockCodeOnly, backupChats: backupChats,
+                           clipboardClearOnDecrypt: clipboardClearOnDecrypt)
     }
 
     var effectiveLanguage: StegoLanguage {
@@ -300,6 +359,7 @@ final class AppSettings: ObservableObject {
         case .german: return .german
         case .chinese: return .chinese
         case .persian: return .persian
+        case .portuguese: return .portuguese
         case .auto: return .forSystem()
         }
     }

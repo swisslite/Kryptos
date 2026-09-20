@@ -9,7 +9,8 @@ and built from source rather than vendored here.
 Common:
 
 - **Git**
-- **Rust** via [rustup](https://rustup.rs) — needed to build `libsignal` from source.
+- **Rust** via [rustup](https://rustup.rs) — needed to build `libsignal` from source. The exact
+  toolchain is pinned by libsignal's own `rust-toolchain` file (1.98.1) and rustup installs it.
 - **CMake**, the **Protocol Buffers compiler** (`protoc`) and **Clang** with `libclang`. `libsignal`
   compiles BoringSSL and generates protobuf code, so without these the build stops with raw compiler
   errors rather than a helpful message.
@@ -23,29 +24,29 @@ For iOS:
 
 For Android:
 
-- **JDK 17+** and the **Android SDK**, plus **NDK `26.1.10909125`** (referenced by the Gradle build).
+- **JDK 21** and the **Android SDK**, plus **NDK `30.0.16248370`** (referenced by the Gradle build).
+  The `libsignal` JNI libraries are built with **NDK `28.0.13004108`**, the one Signal's own CI uses.
 - The Gradle **wrapper** is included — use `./gradlew`, no system Gradle needed.
 - Rust Android targets: `rustup target add aarch64-linux-android armv7-linux-androideabi`
 
 ## 2. Fetch and build libsignal
 
 `libsignal` is AGPL-3.0 and is not committed to this repo. Fetch the exact pinned version
-(**v0.96.4**), apply the small Kryptos patch, and build the native artifacts:
+(**v0.102.2**), apply the small Kryptos patch, and build the native artifacts:
 
 ```bash
 scripts/setup-libsignal.sh --ios --android
 ```
 
-This clones `https://github.com/signalapp/libsignal` at `v0.96.4` into `ThirdParty/libsignal/`,
-applies [`patches/libsignal-v0.96.4-kryptos.patch`](patches/libsignal-v0.96.4-kryptos.patch), and
+This clones `https://github.com/signalapp/libsignal` at `v0.102.2` into `ThirdParty/libsignal/`,
+applies [`patches/libsignal-v0.102.2-kryptos.patch`](patches/libsignal-v0.102.2-kryptos.patch), and
 produces:
 
 - iOS: `ThirdParty/libsignal/target/aarch64-apple-ios{,-sim}/release/libsignal_ffi.a`
 - Android: `ThirdParty/libsignal/java/android/src/main/jniLibs/<abi>/libsignal_jni.so`
 
-The patch is two changes: an Android compile-compatibility cast in `ChatConnection.java`, and
-removing the `swift-docc-plugin` dependency so the Swift package resolves offline. Nothing about the
-cryptography is changed.
+The patch is one change: removing the `swift-docc-plugin` dependency so the Swift package resolves
+offline. Nothing about the cryptography is changed.
 
 You can run the script without flags to only fetch + patch, then build later.
 
@@ -55,23 +56,16 @@ You can run the script without flags to only fetch + patch, then build later.
 ./build-ipa.sh
 ```
 
-Runs the CipherCore unit tests, builds `Kryptos` for device (arm64, Release, **unsigned**), and
-writes `dist/Kryptos.ipa`. To install it: with a certificate of your own (a `.p12` plus a
+Builds `Kryptos` for device (arm64, Release, **unsigned**) and writes `dist/Kryptos.ipa`. To install it: with a certificate of your own (a `.p12` plus a
 provisioning profile) open the file in **Feather**, **ESign** or **Scarlet**; without one, use
 **AltStore** or **SideStore**, which sign with your ordinary Apple ID. Native Liquid Glass on
 iOS 26+, a close visual fallback below.
-
-Just the crypto engine:
-
-```bash
-cd CipherCore && swift test
-```
 
 ## 4. Build the Android app
 
 ```bash
 cd android
-./gradlew :app:testReleaseUnitTest :app:assembleRelease
+./gradlew :app:assembleRelease
 ```
 
 Output: `android/app/build/outputs/apk/release/app-release.apk`.
@@ -92,7 +86,7 @@ with its own key). To produce a signed sideload APK:
 ## 5. Reproducing the published builds
 
 The binaries distributed at <https://datakeeper.pages.dev/kryptos> are built exactly this way:
-`libsignal` at `v0.96.4` + the patch above, `versionName` **2.3** (`versionCode` 8). SHA-256
+`libsignal` at `v0.102.2` + the patch above, `versionName` **2.4** (`versionCode` 13). SHA-256
 checksums of the current release are shown on that page.
 
 ## Android security hardening (reference)

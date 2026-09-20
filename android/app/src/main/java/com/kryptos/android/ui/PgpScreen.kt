@@ -31,6 +31,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,8 +47,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kryptos.android.R
@@ -107,11 +111,14 @@ fun PgpScreen(modifier: Modifier = Modifier) {
                     Text(
                         current?.name ?: stringResource(R.string.my_key),
                         fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = K.textPrimary,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
                     )
                     Text(
                         current?.fingerprint ?: "",
-                        fontSize = 11.sp, fontFamily = FontFamily.Monospace,
-                        color = K.textSecondary, maxLines = 1,
+                        fontSize = 11.sp,
+                        color = K.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = monoValueStyle(),
                     )
                 }
                 Text("›", fontSize = 20.sp, color = K.accent)
@@ -223,7 +230,7 @@ fun PgpScreen(modifier: Modifier = Modifier) {
             GlassCard {
                 FieldLabel(stringResource(if (encrypting) R.string.label_encrypted_send else R.string.label_decrypted))
                 Text(
-                    result,
+                    if (encrypting) AnnotatedString(result) else linkedText(result, K.link),
                     fontSize = if (encrypting) 13.sp else 16.sp,
                     fontFamily = if (encrypting) FontFamily.Monospace else null,
                     color = K.textPrimary,
@@ -267,7 +274,8 @@ private fun KeyTile(title: String, icon: ImageVector, modifier: Modifier = Modif
         Text(
             title,
             fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-            letterSpacing = 0.4.sp, color = K.textPrimary, maxLines = 1,
+            letterSpacing = 0.4.sp, color = K.textPrimary,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -297,14 +305,23 @@ private fun RecipientMenuField(
                     ?: stringResource(if (recipients.isEmpty()) R.string.pgp_add_first else R.string.pgp_choose_recipient),
                 fontSize = 16.sp,
                 color = if (selectedName == null) K.textSecondary else K.textPrimary,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
                 modifier = Modifier.weight(1f),
             )
             Icon(Icons.Default.UnfoldMore, null, Modifier.size(18.dp), tint = K.textSecondary)
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            ObscuredTouchGuard()
             recipients.forEach { (id, name) ->
                 DropdownMenuItem(
-                    text = { Text(name, color = K.textPrimary) },
+                    text = {
+                        Text(
+                            name, color = K.textPrimary,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                        )
+                    },
                     onClick = { open = false; onPick(id) },
                 )
             }
@@ -358,7 +375,12 @@ private fun PgpKeysSheet(onDismiss: () -> Unit) {
                     )
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(ident.name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = K.textPrimary)
+                        Text(
+                            ident.name,
+                            fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = K.textPrimary,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                        )
                         FieldLabel(ident.algo)
                     }
                     if (ident.id != currentID) {
@@ -371,8 +393,9 @@ private fun PgpKeysSheet(onDismiss: () -> Unit) {
                 }
                 Text(
                     ident.fingerprint,
-                    fontSize = 11.sp, fontFamily = FontFamily.Monospace,
-                    color = K.textSecondary, maxLines = 2,
+                    fontSize = 11.sp,
+                    color = K.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    style = monoValueStyle(),
                 )
                 if (identities.size > 1) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -513,7 +536,9 @@ private fun PgpRecipientsSheet(onDismiss: () -> Unit) {
                     Text(
                         r.name,
                         fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
-                        color = K.textPrimary, modifier = Modifier.weight(1f),
+                        color = K.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+                        modifier = Modifier.weight(1f),
                     )
                     Icon(
                         Icons.Default.Delete, stringResource(R.string.remove),
@@ -526,8 +551,9 @@ private fun PgpRecipientsSheet(onDismiss: () -> Unit) {
                 if (r.fingerprint.isNotEmpty()) {
                     Text(
                         r.fingerprint,
-                        fontSize = 11.sp, fontFamily = FontFamily.Monospace,
-                        color = K.textSecondary, maxLines = 1,
+                        fontSize = 11.sp,
+                        color = K.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = monoValueStyle(),
                     )
                 }
             }

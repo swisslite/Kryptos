@@ -102,19 +102,21 @@ final class SharedSignalStore {
 
     func purgeExpired() {
         withLock {
-            for _ in 0 ..< Self.metaWriteAttempts {
-                guard let enc = SharedStore.read(metaKey),
-                      let box = try? AES.GCM.SealedBox(combined: enc),
-                      let dec = try? AES.GCM.open(box, using: cryptKey),
-                      var meta = try? JSONDecoder().decode(Meta.self, from: dec) else { return }
-                guard meta.purgeExpired() else { return }
-                guard let json = try? Self.metaEncoder.encode(meta),
-                      let sealed = try? AES.GCM.seal(json, using: cryptKey),
-                      let combined = sealed.combined else { return }
-                guard SharedStore.read(metaKey) == enc else { continue }
-                SharedStore.write(metaKey, combined)
-                DecryptPurgeMarker.bump()
-                return
+            SharedLock.withLock(metaKey) {
+                for _ in 0 ..< Self.metaWriteAttempts {
+                    guard let enc = SharedStore.read(metaKey),
+                          let box = try? AES.GCM.SealedBox(combined: enc),
+                          let dec = try? AES.GCM.open(box, using: cryptKey),
+                          var meta = try? JSONDecoder().decode(Meta.self, from: dec) else { return }
+                    guard meta.purgeExpired() else { return }
+                    guard let json = try? Self.metaEncoder.encode(meta),
+                          let sealed = try? AES.GCM.seal(json, using: cryptKey),
+                          let combined = sealed.combined else { return }
+                    guard SharedStore.read(metaKey) == enc else { continue }
+                    SharedStore.write(metaKey, combined)
+                    DecryptPurgeMarker.bump()
+                    return
+                }
             }
         }
     }
@@ -161,23 +163,28 @@ final class SharedSignalStore {
 
     private func appendMessage(_ text: String, mine: Bool, to fingerprint: String,
                                decryptedFrom armored: String? = nil, stego: Data? = nil) {
-        for _ in 0 ..< Self.metaWriteAttempts {
-            guard let enc = SharedStore.read(metaKey),
-                  let box = try? AES.GCM.SealedBox(combined: enc),
-                  let dec = try? AES.GCM.open(box, using: cryptKey),
-                  var meta = try? JSONDecoder().decode(Meta.self, from: dec) else { return }
-            let expired = meta.purgeExpired()
-            meta.messages[fingerprint, default: []].append(ChatMessage(text: text, mine: mine))
-            if let armored {
-                meta.rememberDecrypt(armored: armored, fingerprint: fingerprint, text: text, stego: .some(stego))
+        // The app writes the same history from its own process.
+        SharedLock.withLock(metaKey) {
+            for _ in 0 ..< Self.metaWriteAttempts {
+                guard let enc = SharedStore.read(metaKey),
+                      let box = try? AES.GCM.SealedBox(combined: enc),
+                      let dec = try? AES.GCM.open(box, using: cryptKey),
+                      var meta = try? JSONDecoder().decode(Meta.self, from: dec) else { return }
+                let expired = meta.purgeExpired()
+                meta.messages[fingerprint, default: []].append(
+                    ChatMessage(text: text, mine: mine, expiresAfter: meta.expiry(for: fingerprint)))
+                if let armored {
+                    meta.rememberDecrypt(armored: armored, fingerprint: fingerprint, text: text, stego: .some(stego))
+                    if !mine { meta.rememberIncoming(DecryptCacheKey.key(for: armored, stego: stego)) }
+                }
+                guard let json = try? Self.metaEncoder.encode(meta),
+                      let sealed = try? AES.GCM.seal(json, using: cryptKey),
+                      let combined = sealed.combined else { return }
+                guard SharedStore.read(metaKey) == enc else { continue }
+                SharedStore.write(metaKey, combined)
+                if expired { DecryptPurgeMarker.bump() }
+                return
             }
-            guard let json = try? Self.metaEncoder.encode(meta),
-                  let sealed = try? AES.GCM.seal(json, using: cryptKey),
-                  let combined = sealed.combined else { return }
-            guard SharedStore.read(metaKey) == enc else { continue }
-            SharedStore.write(metaKey, combined)
-            if expired { DecryptPurgeMarker.bump() }
-            return
         }
     }
 
@@ -186,21 +193,31 @@ final class SharedSignalStore {
         return try body()
     }
 
-    func cachedDecrypt(_ armored: String, stego: Data?? = nil) -> (contact: Contact, text: String)? {
+    private func loadMeta() -> Meta? {
         guard let enc = SharedStore.read(metaKey),
               let box = try? AES.GCM.SealedBox(combined: enc),
-              let dec = try? AES.GCM.open(box, using: cryptKey),
-              let meta = try? JSONDecoder().decode(Meta.self, from: dec),
+              let dec = try? AES.GCM.open(box, using: cryptKey) else { return nil }
+        return try? JSONDecoder().decode(Meta.self, from: dec)
+    }
+
+    func alreadySeen(_ armored: String, stego: Data?) -> Bool {
+        loadMeta()?.hasSeenIncoming(DecryptCacheKey.key(for: armored, stego: stego)) == true
+    }
+
+    func cachedDecrypt(_ armored: String, stego: Data?? = nil) -> (contact: Contact, text: String)? {
+        guard let meta = loadMeta(),
               let hit = meta.cachedDecrypt(for: armored, stego: stego) else { return nil }
         let contact = contacts.first { $0.fingerprint == hit.fingerprint }
             ?? Contact(fingerprint: hit.fingerprint, displayName: String(hit.fingerprint.prefix(8)))
         return (contact, hit.text)
     }
 
-    func decryptFromAnyContact(_ armored: String, stego: Data?? = nil) -> (contact: Contact, text: String)? {
+    func decryptFromAnyContact(_ armored: String, stego: Data?? = nil,
+                               wireStego: Data?? = nil) -> (contact: Contact, text: String)? {
         let cacheStego = stego ?? DecryptCacheKey.stegoPayload(armored)
         if let hit = cachedDecrypt(armored, stego: .some(cacheStego)) { return hit }
-        let wire = cacheStego ?? SignalWire.stegoPayload(armored)
+        guard !alreadySeen(armored, stego: cacheStego) else { return nil }
+        let wire = wireStego ?? (cacheStego ?? SignalWire.stegoPayload(armored))
         return withLock {
             var store = freshStore()
             for contact in contacts {
@@ -215,7 +232,7 @@ final class SharedSignalStore {
                     }
                     return (contact, text)
                 } catch {
-                    if store.hadStaleConflict { store = freshStore() }
+                    if store.hadStaleConflict || store.needsReload { store = freshStore() }
                 }
             }
             return nil

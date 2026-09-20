@@ -1,12 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-LIBSIGNAL_TAG="v0.96.4"
+LIBSIGNAL_TAG="v0.102.2"
 LIBSIGNAL_REPO="https://github.com/signalapp/libsignal"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DEST="$ROOT/ThirdParty/libsignal"
-PATCH="$ROOT/patches/libsignal-v0.96.4-kryptos.patch"
+PATCH="$ROOT/patches/libsignal-v0.102.2-kryptos.patch"
 
 if [ ! -d "$DEST/.git" ]; then
   echo "▸ Cloning libsignal $LIBSIGNAL_TAG …"

@@ -67,29 +67,50 @@ struct LockCode: Sendable {
 enum LockThrottle {
     private static let storeKey = "lock.failures"
     private static let cap = 1 << 20
-    private static let freeAttempts = 4
-    private static let maxDelay = 30
+    private static let freeAttempts = 5
+    private static let firstDelay = 60
+    private static let maxDelay = 300
+    private static let maxSteps = 4
 
+    private static let floorLock = NSLock()
+    private nonisolated(unsafe) static var floor = 0
+
+    /// The stored counter can come back as nothing when the blob is unreadable or a write failed.
+    /// Without this floor the lockout would restart at zero attempts in exactly that case.
     static var failures: Int {
-        guard let data = SharedStore.read(storeKey), data.count == 4 else { return 0 }
-        let value = data.withUnsafeBytes { UInt32(bigEndian: $0.loadUnaligned(as: UInt32.self)) }
-        return Int(min(value, UInt32(cap)))
+        var stored = 0
+        if let data = SharedStore.read(storeKey), data.count == 4 {
+            let value = data.withUnsafeBytes { UInt32(bigEndian: $0.loadUnaligned(as: UInt32.self)) }
+            stored = Int(min(value, UInt32(cap)))
+        }
+        floorLock.lock()
+        let known = floor
+        floorLock.unlock()
+        return max(stored, known)
     }
 
     static func delaySeconds(failures: Int) -> Int {
         let over = failures - freeAttempts
         guard over > 0 else { return 0 }
-        return min(maxDelay, 1 << min(over - 1, 5))
+        return min(maxDelay, firstDelay << min(over - 1, maxSteps))
     }
 
     static var pendingDelay: Int { delaySeconds(failures: failures) }
 
     static func recordFailure() {
-        let next = UInt32(min(failures + 1, cap)).bigEndian
-        SharedStore.write(storeKey, withUnsafeBytes(of: next) { Data($0) })
+        let next = min(failures + 1, cap)
+        floorLock.lock()
+        floor = max(floor, next)
+        floorLock.unlock()
+        SharedStore.write(storeKey, withUnsafeBytes(of: UInt32(next).bigEndian) { Data($0) })
     }
 
-    static func reset() { SharedStore.delete(storeKey) }
+    static func reset() {
+        floorLock.lock()
+        floor = 0
+        floorLock.unlock()
+        SharedStore.delete(storeKey)
+    }
 }
 
 enum LockCodes {

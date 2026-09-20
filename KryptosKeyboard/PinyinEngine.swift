@@ -64,7 +64,7 @@ final class PinyinEngine: @unchecked Sendable {
         let built = already ? nil : PinyinEngine.build()
         var stored: [String: Int]?
         if !hadPersonal {
-            if let data = SharedStore.read(PinyinEngine.storeKey) {
+            if let data = SecureBlob.read(PinyinEngine.storeKey) {
                 stored = try? JSONDecoder().decode([String: Int].self, from: data)
             }
         }
@@ -105,6 +105,18 @@ final class PinyinEngine: @unchecked Sendable {
         }
         personalDirty = true
         lock.unlock()
+    }
+
+    func evictTables() {
+        lock.lock()
+        defer { lock.unlock() }
+        guard loaded, !loadStarted else { return }
+        keyChars = []; keyStarts = []
+        initChars = []; initStarts = []
+        wordChars = []; wordStarts = []
+        ranks = []; byInitials = []
+        syllables = []
+        loaded = false
     }
 
     func forgetTypingSession() {
@@ -159,7 +171,7 @@ final class PinyinEngine: @unchecked Sendable {
         let snapshot = personal
         lock.unlock()
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
-        guard SharedStore.write(PinyinEngine.storeKey, data) else { return }
+        guard SecureBlob.write(PinyinEngine.storeKey, data) else { return }
         lock.lock()
         personalDirty = false
         storedCopyExists = true

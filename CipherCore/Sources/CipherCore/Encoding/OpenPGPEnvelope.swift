@@ -24,8 +24,6 @@ public enum OpenPGPEnvelope {
     private static let maxPackets = 4096
     private static let maxLengthHeaders = 65536
 
-    public static func isEncrypted(_ binary: Data) -> Bool { shape(of: binary).encrypted }
-
     public static func shape(of binary: Data) -> Shape {
         let bytes = [UInt8](binary)
         var index = 0

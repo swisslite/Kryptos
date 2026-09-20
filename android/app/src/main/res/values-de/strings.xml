@@ -91,12 +91,6 @@
     <string name="stego_letters_footer">Der kürzeste Modus — etwa halb so lang wie „Einfache Wörter“.</string>
     <string name="stego_letters_footer_han">Eine durchgehende Folge ohne Satzzeichen.</string>
     <string name="stego_smart_footer">Echte Sätze statt Wortsalat, dafür wird der Text länger.</string>
-    <string name="lang_auto">Automatisch (Systemsprache)</string>
-    <string name="lang_en">Englisch</string>
-    <string name="lang_ru">Russisch</string>
-    <string name="lang_de">Deutsch</string>
-    <string name="lang_zh">Chinesisch</string>
-    <string name="lang_fa">Persisch</string>
     <string name="settings_keyboard">Tastatur</string>
     <string name="settings_enable_keyboard">Kryptos-Tastatur aktivieren</string>
     <string name="settings_kb_autodecrypt">Zwischenablage in der Tastatur automatisch entschlüsseln</string>
@@ -157,7 +151,7 @@
     <string name="screen_section">Am Bildschirm</string>
     <string name="screen_decrypt_toggle">Am Bildschirm entschlüsseln</string>
     <string name="screen_block_screenshots">Screenshots blockieren</string>
-    <string name="screen_block_screenshots_desc">Während die Entschlüsselung am Bildschirm läuft, sind Screenshots und Bildschirmaufnahmen auf dem gesamten Gerät blockiert, damit entschlüsselter Text nie in einer Aufnahme landet.</string>
+    <string name="screen_block_screenshots_desc">Bei aktiver Entschlüsselung am Bildschirm werden Screenshots auf dem Gerät blockiert.</string>
     <string name="screen_decrypt_footer">Zeigt den entschlüsselten Text über dem Geheimtext in anderen Apps.</string>
     <string name="screen_decrypt_enable_service">Bedienungshilfe einschalten</string>
     <string name="screen_decrypt_keep_running">App nicht pausieren</string>
@@ -202,9 +196,9 @@
     <string name="quick_subtitle">Ein einfacher symmetrischer Modus: Du und dein Kontakt einigt euch auf ein gemeinsames Passwort und verschlüsselt bzw. entschlüsselt damit Text für jeden beliebigen Messenger. (Das ist nicht PGP — PGP hat einen eigenen Tab.)</string>
     <string name="label_message_text">Nachrichtentext</string>
     <string name="label_encrypted_block">Verschlüsselter Block</string>
-    <string name="label_ready">Fertig — schicke das deinem Kontakt</string>
+    <string name="label_ready">Fertig. Schicke das deinem Kontakt.</string>
     <string name="label_decrypted">Entschlüsselter Text</string>
-    <string name="copied_banner">Verschlüsselt und in die Zwischenablage kopiert — füge es bei deinem Kontakt ein.</string>
+    <string name="copied_banner">Verschlüsselt und kopiert. Schicke das deinem Kontakt.</string>
 
     <string name="label_cover_photo">Trägerfoto</string>
     <string name="label_stego_photo">Foto mit Geheimnis</string>
@@ -241,9 +235,9 @@
     <string name="empty_hint">Tauscht zuerst eure Schlüssel aus: Tippe oben rechts auf das QR-Symbol, um „Mein Schlüssel“ anzuzeigen, und lass deinen Kontakt ihn scannen. Tippe dann daneben auf +, um seinen Schlüssel hinzuzufügen. Ihr fügt euch beide einmal gegenseitig hinzu. Eine Schritt-für-Schritt-Anleitung mit Screenshots findest du unter „%1$s“.</string>
     <string name="chat_hint">Verschlüssle eine Nachricht, sende das Ergebnis über einen beliebigen Messenger und füge die Antwort hier zum Entschlüsseln ein.</string>
     <string name="chat_scroll_bottom">Zur neuesten Nachricht</string>
-    <string name="auto_delete_hint">Nachrichten verschwinden nach %1$s.</string>
-    <string name="sent_banner">Verschlüsselt &amp; kopiert — füge es bei deinem Kontakt ein.</string>
-    <string name="sent_banner_stego">Im Text versteckt &amp; kopiert — füge es bei deinem Kontakt ein.</string>
+    <string name="auto_delete_hint">Neue Nachrichten verschwinden nach %1$s.</string>
+    <string name="sent_banner">Verschlüsselt und kopiert. Schicke das deinem Kontakt.</string>
+    <string name="sent_banner_stego">Im Text versteckt und kopiert. Schicke das deinem Kontakt.</string>
     <string name="clipboard_empty">Die Zwischenablage ist leer.</string>
     <string name="decrypt_failed">Entschlüsseln fehlgeschlagen — falscher Kontakt, oder die Nachricht wurde bereits einmal gelesen. Wenn jede NEUE Nachricht dieses Kontakts fehlschlägt, schicke ihm deinen Schlüssel erneut und lass ihn dich neu hinzufügen.</string>
     <string name="decrypt_prekey_used">Diese Nachricht wurde mit einem Schlüssel verschlüsselt, der bereits benutzt wurde oder abgelaufen ist. Schicke deinen Schlüssel erneut und bitte deinen Kontakt, dich noch einmal hinzuzufügen.</string>
@@ -275,6 +269,10 @@
 
     <string name="kb_clear">Leeren</string>
     <string name="settings_kb_haptics">Vibration bei Tastendruck</string>
+    <string name="settings_kb_vibration">Vibrationsstärke</string>
+    <string name="vibration_light">Leicht</string>
+    <string name="vibration_medium">Mittel</string>
+    <string name="vibration_strong">Stark</string>
     <string name="settings_kb_sounds">Tastentöne</string>
     <string name="settings_kb_compose">Nachrichtenfeld in der Tastatur</string>
     <string name="settings_kb_compose_toggle">Feldtaste auf der Tastatur</string>
@@ -285,11 +283,20 @@
     <string name="field_size_large">Groß</string>
     <string name="settings_kb_compose_desc">Das Feld lässt dich außerhalb des Messengers tippen, er behält also keinen Entwurf. Die Taste schaltet es direkt auf der Tastatur um.</string>
 
+    <string name="kb_keys_section">Tasten</string>
+    <string name="settings_kb_keysize">Schriftgröße der Tasten</string>
+    <string name="settings_kb_keypreview">Taste beim Tippen vergrößern</string>
+    <string name="key_text_small">Klein</string>
+    <string name="key_text_medium">Mittel</string>
+    <string name="key_text_large">Groß</string>
+    <string name="kb_keys_footer">Größe der Buchstaben und Beschriftungen auf den Tasten. Der vergrößerte Buchstabe erscheint über der gedrückten Taste; ist das aus, wird die Taste nur hervorgehoben.</string>
+
     <string name="kb_typing">Texteingabe</string>
     <string name="kb_field_section">Nachrichtenfeld</string>
     <string name="settings_kb_suggestions">Wortvorschläge</string>
     <string name="settings_kb_autocorrect">Autokorrektur</string>
-    <string name="settings_kb_emoji">Emoji-Taste</string>
+    <string name="settings_kb_autocaps">Automatische Großschreibung</string>
+    <string name="settings_kb_emoji">Komma- und Emoji-Taste</string>
     <string name="settings_kb_punct">Taste für Punkt und Komma</string>
     <string name="settings_kb_punct_double">Doppeltippen für ein Komma</string>
     <string name="kb_voice_section">Spracheingabe</string>
@@ -359,6 +366,8 @@
     <string name="backup_title">Schlüssel-Backup</string>
     <string name="backup_intro">Die Datei enthält deine Schlüssel, verschlüsselt mit dem Passwort, das du hier wählst. Kryptos speichert es nicht.</string>
     <string name="backup_warning">Der Nachrichtenverlauf ist nicht enthalten.</string>
+    <string name="backup_chats">Chats sichern</string>
+    <string name="backup_chats_on">Deine Chats kommen in die Sicherungsdatei, mit demselben Passwort verschlüsselt.</string>
     <string name="backup_export_header">Exportieren</string>
     <string name="backup_password">Backup-Passwort</string>
     <string name="backup_repeat">Passwort wiederholen</string>
@@ -374,6 +383,7 @@
     <string name="backup_unreadable">Dieses Backup konnte nicht gelesen werden — falsches Passwort, oder die Datei ist kein Kryptos-Schlüssel-Backup.</string>
     <string name="backup_too_short">Verwende mindestens 8 Zeichen für das Backup-Passwort.</string>
     <string name="backup_nothing">Es gibt noch keine Schlüssel zum Exportieren.</string>
+    <string name="backup_too_large">Diese Sicherung ist zu groß, um später wiederhergestellt zu werden. Schalte die Chat-Sicherung aus und versuche es erneut.</string>
     <string name="backup_write_failed">Die Backup-Datei konnte nicht erstellt werden.</string>
     <string name="backup_read_failed">Die Datei konnte nicht gelesen werden.</string>
     <string name="backup_confirm_title">Schlüssel wiederherstellen?</string>
@@ -434,7 +444,9 @@
     <string name="faq_q22">Gilt der Post-Quanten-Schutz für jede Nachricht?</string>
     <string name="faq_a22">Ja. Kryptos baut auf libsignal auf, wo der Post-Quanten-Ratchet SPQR seit Version 0.83.0 dauerhaft aktiv ist: Der Schlüssel jeder Nachricht wird mit Post-Quanten-Material abgeleitet, nicht nur der Handshake. Ein- oder ausschalten lässt er sich nicht — weder in Kryptos noch in der Bibliothek.</string>
     <string name="faq_q23">Die Entschlüsselung am Bildschirm hat von selbst aufgehört</string>
-    <string name="faq_a23">Das Telefon kann eine App pausieren, die es für ungenutzt hält. Android schaltet dann die Bedienungshilfe von Kryptos ab und stellt die Systemtastatur wieder her. Schalten Sie den Dienst hier wieder ein und wählen Sie die Kryptos-Tastatur in den System-Eingabeeinstellungen erneut aus. Damit es sich nicht wiederholt, öffnen Sie die App-Info und deaktivieren Sie das Pausieren bei Nichtnutzung; auf Samsung nehmen Sie Kryptos zusätzlich aus der Liste der schlafenden Apps in der Gerätewartung heraus.</string>
+    <string name="faq_a23">Das Telefon kann eine App pausieren, die es für ungenutzt hält. Android schaltet dann die Bedienungshilfe von Kryptos ab und stellt die Systemtastatur wieder her. Schalte den Dienst hier wieder ein und wähle die Kryptos-Tastatur in den System-Eingabeeinstellungen erneut aus. Damit es sich nicht wiederholt, öffne die App-Info und deaktiviere das Pausieren bei Nichtnutzung; auf Samsung nimm Kryptos zusätzlich aus der Liste der schlafenden Apps in der Gerätewartung heraus.</string>
+    <string name="faq_q24">Was passiert, wenn ich die Displaysperre vom Telefon entferne?</string>
+    <string name="faq_a24">Alle Schlüssel, Kontakte und Unterhaltungen in Kryptos gehen endgültig verloren. Wenn auf dem Telefon eine PIN, ein Passwort oder ein Muster eingerichtet ist, verschlüsselt Kryptos seine Daten mit einem Schlüssel, der nur bei entsperrtem Telefon funktioniert. Wird die Displaysperre entfernt, zerstört Android diesen Schlüssel, und auch erneutes Einrichten der Sperre bringt ihn nicht zurück. Erstelle deshalb vor dem Entfernen der Displaysperre in den Einstellungen ein Schlüssel-Backup.</string>
     <string name="faq_q4">Warum lässt sich eine Nachricht kein zweites Mal entschlüsseln?</string>
     <string name="faq_a4">Das ist kein Fehler, sondern Forward Secrecy: Der Schlüssel jeder Nachricht wird in dem Moment zerstört, in dem sie gelesen wird, damit alte Korrespondenz selbst dann nicht wiederherstellbar ist, wenn jemand dein Telefon an sich nimmt. Bereits geöffnete Nachrichten bleiben im Chatverlauf.</string>
     <string name="faq_q5">Es heißt, das Entschlüsseln sei fehlgeschlagen. Was nun?</string>
@@ -452,7 +464,7 @@
     <string name="faq_q11">Wozu sind Profile da?</string>
     <string name="faq_a11">Ein Profil ist ein eigenes Schlüsselpaar mit eigenen Kontakten. Du kannst mehrere davon führen und zwischen ihnen wechseln — etwa um Beruf und Privatleben zu trennen.</string>
     <string name="faq_q12">Wie stark ist die Verschlüsselung?</string>
-    <string name="faq_a12">Die Chats verwenden Signals eigene Bibliothek libsignal — dasselbe Protokoll wie Signal selbst, einschließlich des post-quantensicheren Handshakes. Der Passwort-Modus und die Fotos verwenden Argon2id und AES-256-GCM. Kryptos enthält keine selbstgebaute Kryptografie.</string>
+    <string name="faq_a12">Die Chats verwenden Signals eigene Bibliothek libsignal — dasselbe Protokoll wie Signal selbst, mit Post-Quanten-Schutz in jeder Nachricht, nicht nur im Handshake. Der Passwort-Modus und die Fotos verwenden Argon2id und AES-256-GCM. Kryptos enthält keine selbstgebaute Kryptografie.</string>
     <string name="faq_q13">Braucht mein Kontakt ebenfalls Kryptos?</string>
     <string name="faq_a13">Ja — nichts außer Kryptos kann die Nachricht entschlüsseln. Welches Telefon ihr jeweils benutzt, spielt dabei aber keine Rolle: Die iPhone- und die Android-Version sind vollständig kompatibel, Schlüssel und Nachrichten funktionieren in beide Richtungen.</string>
     <string name="faq_q14">Kann ich über Kryptos ein Foto oder eine Datei senden?</string>
@@ -461,8 +473,8 @@
     <string name="faq_a15">Sie löschen die Unterhaltung innerhalb von Kryptos nach der von dir gewählten Zeit — auf deinem Gerät und auf dem deines Kontakts, sofern er dasselbe eingestellt hat. Was sie nicht erreichen können, ist der Geheimtext, der bereits im Messenger liegt: Den kann nur der Messenger selbst entfernen.</string>
     <string name="faq_q16">Was passiert, wenn ich die App lösche oder mein Telefon verliere?</string>
     <string name="faq_a16">Die Schlüssel liegen auf dem Gerät und sonst nirgends, das Löschen der App zerstört sie also endgültig, und es bleibt nichts übrig, womit sich noch entschlüsseln ließe. Die einzige Absicherung ist, vorher in den Einstellungen ein Schlüssel-Backup zu erstellen. Die Kehrseite derselben Eigenschaft: Wer das Telefon findet, bekommt ebenfalls nichts.</string>
-    <string name="faq_q17">Stellt das Schlüssel-Backup auch meine Nachrichten wieder her?</string>
-    <string name="faq_a17">Nein, und das ist Absicht. Die Datei enthält nur deine Schlüssel, deine Kontakte und deine PGP-Schlüssel — der Nachrichtenverlauf wird nie hineingeschrieben. Nach dem Wiederherstellen auf einem neuen Telefon schreibst du mit denselben Leuten weiter, die alten Nachrichten kommen aber nicht zurück.</string>
+    <string name="faq_q17">Stellt das Schlüssel-Backup meine Nachrichten wieder her?</string>
+    <string name="faq_a17">Nur wenn beim Erstellen der Datei „Chats sichern“ eingeschaltet war. Sonst enthält die Datei nur deine Schlüssel, deine Kontakte und deine PGP-Schlüssel.</string>
     <string name="faq_q18">Warum fragt die App nach der Kamera?</string>
     <string name="faq_a18">Ausschließlich, um einen Kontaktschlüssel von einem QR-Code zu scannen. Sonst wird die Kamera nirgends verwendet, und eine Ablehnung macht nichts kaputt — du kannst den Schlüssel stattdessen jederzeit als Text einfügen.</string>
     <string name="faq_q19">Landen meine Schlüssel und Nachrichten in der Cloud-Sicherung des Telefons?</string>
@@ -483,6 +495,7 @@
     <string name="kb_a11y_backspace">Rücktaste</string>
     <string name="kb_a11y_enter">Eingabetaste</string>
     <string name="kb_a11y_shift">Umschalttaste</string>
+    <string name="kb_a11y_language">Sprachen und Tastaturen</string>
     <string name="kb_a11y_zwnj">Halbes Leerzeichen</string>
     <string name="kb_a11y_emoji">Emoji</string>
     <string name="kb_a11y_hidden">Verstecktes Zeichen</string>

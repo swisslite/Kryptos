@@ -151,7 +151,7 @@ struct StegoView: View {
                 Label(busy ? "Working…" : "Hide in photo", systemImage: busy ? "hourglass" : "eye.slash.fill")
             }
             .buttonStyle(PrimaryButtonStyle())
-            .disabled(busy)
+            .disabled(busy || password.count < Kryptos.minPasswordLength)
         }
         .glassCard()
     }
@@ -188,7 +188,7 @@ struct StegoView: View {
     private func revealedCard(_ text: String) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             fieldLabel("HIDDEN MESSAGE")
-            Text(text).font(.kBody()).foregroundStyle(KTheme.textPrimary).textSelection(.enabled)
+            SelectableLinkedText(text: text, color: KTheme.textPrimaryUI, linkColor: KTheme.linkUI)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .glassCard()

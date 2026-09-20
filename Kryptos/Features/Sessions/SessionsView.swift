@@ -32,12 +32,9 @@ struct SessionsView: View {
                                             autoDelete: signal.autoDeleteInterval(for: contact.fingerprint) != nil,
                                             pinned: signal.pinned.contains(contact.fingerprint),
                                             onPin: { signal.setPinned(!signal.pinned.contains($0.fingerprint), for: $0) },
-                                            renameTarget: $renameTarget,
-                                            renameText: $renameText,
-                                            clearTarget: $confirmClearChat,
-                                            deleteTarget: $confirmDeleteContact,
-                                            onClear: { signal.clearChat($0) },
-                                            onDelete: { signal.removeContact($0) })
+                                            onRename: { renameText = $0.displayName; renameTarget = $0 },
+                                            onClear: { confirmDeleteContact = nil; confirmClearChat = $0 },
+                                            onDelete: { confirmClearChat = nil; confirmDeleteContact = $0 })
                             }
                         }
                     }
@@ -62,8 +59,10 @@ struct SessionsView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Text(signal.currentProfile?.name ?? "Chats").font(.kHeadline()).foregroundStyle(KTheme.textPrimary)
+                                .lineLimit(1)
                             Image(systemName: "chevron.down").font(.caption2).foregroundStyle(KTheme.textSecondary)
                         }
+                        .frame(maxWidth: KTheme.barTitleWidth)
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -89,16 +88,25 @@ struct SessionsView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showMyKey) { MyKeyView() }
-            .sheet(isPresented: $showAdd) { AddContactView() }
-            .sheet(isPresented: $showProfiles) { ProfilesView() }
+            .sheet(isPresented: $showMyKey) { MyKeyView().softScrollEdges() }
+            .sheet(isPresented: $showAdd) { AddContactView().softScrollEdges() }
+            .sheet(isPresented: $showProfiles) { ProfilesView().softScrollEdges() }
             .alert("Rename contact",
-                   isPresented: Binding(get: { renameTarget != nil },
-                                        set: { if !$0 { renameTarget = nil } }),
+                   isPresented: presenting($renameTarget),
                    presenting: renameTarget) { target in
                 TextField("Name", text: $renameText)
                 Button("Save") { signal.renameContact(target, to: renameText) }
                 Button("Cancel", role: .cancel) {}
+            }
+            .confirmationDialog("Delete this conversation? This can't be undone.",
+                                isPresented: presenting($confirmClearChat), titleVisibility: .visible,
+                                presenting: confirmClearChat) { target in
+                Button("Clear chat", role: .destructive) { signal.clearChat(target) }
+            }
+            .confirmationDialog("Delete this contact and your conversation? Their key and session are erased from this device; your own key stays. This can't be undone.",
+                                isPresented: presenting($confirmDeleteContact), titleVisibility: .visible,
+                                presenting: confirmDeleteContact) { target in
+                Button("Delete contact & chat", role: .destructive) { signal.removeContact(target) }
             }
         }
         .onAppear { signal.reloadCurrentFromDisk() }
@@ -111,6 +119,11 @@ struct SessionsView: View {
             confirmClearChat = nil
             confirmDeleteContact = nil
         }
+    }
+
+    private func presenting(_ target: Binding<Contact?>) -> Binding<Bool> {
+        Binding(get: { target.wrappedValue != nil },
+                set: { if !$0 { target.wrappedValue = nil } })
     }
 
     private var orderedContacts: [Contact] {
@@ -190,43 +203,33 @@ private struct ContactCell: View {
     let autoDelete: Bool
     let pinned: Bool
     let onPin: (Contact) -> Void
-    @Binding var renameTarget: Contact?
-    @Binding var renameText: String
-    @Binding var clearTarget: Contact?
-    @Binding var deleteTarget: Contact?
+    let onRename: (Contact) -> Void
     let onClear: (Contact) -> Void
     let onDelete: (Contact) -> Void
 
-    var body: some View {
-        NavigationLink { ChatView(contact: contact) } label: { row }
-            .buttonStyle(.plain)
-            .contextMenu {
-                Button { onPin(contact) } label: {
-                    Label(pinned ? "Unpin chat" : "Pin chat", systemImage: pinned ? "pin.slash" : "pin")
-                }
-                Button { renameText = contact.displayName; renameTarget = contact } label: {
-                    Label("Rename", systemImage: "pencil")
-                }
-                Button(role: .destructive) { deleteTarget = nil; clearTarget = contact } label: {
-                    Label("Clear chat", systemImage: "trash")
-                }
-                Button(role: .destructive) { clearTarget = nil; deleteTarget = contact } label: {
-                    Label("Delete contact & chat", systemImage: "person.badge.minus")
-                }
-            }
-            .confirmationDialog("Delete this conversation? This can't be undone.",
-                                isPresented: presenting($clearTarget), titleVisibility: .visible) {
-                Button("Clear chat", role: .destructive) { onClear(contact) }
-            }
-            .confirmationDialog("Delete this contact and your conversation? Their key and session are erased from this device; your own key stays. This can't be undone.",
-                                isPresented: presenting($deleteTarget), titleVisibility: .visible) {
-                Button("Delete contact & chat", role: .destructive) { onDelete(contact) }
-            }
-    }
+    private let shape = RoundedRectangle(cornerRadius: KTheme.corner, style: .continuous)
 
-    private func presenting(_ target: Binding<Contact?>) -> Binding<Bool> {
-        Binding(get: { target.wrappedValue?.fingerprint == contact.fingerprint },
-                set: { if !$0 { target.wrappedValue = nil } })
+    var body: some View {
+        NavigationLink { ChatView(contact: contact) } label: {
+            row
+                .contentShape(shape)
+                .contentShape(.contextMenuPreview, shape)
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button { onPin(contact) } label: {
+                Label(pinned ? "Unpin chat" : "Pin chat", systemImage: pinned ? "pin.slash" : "pin")
+            }
+            Button { onRename(contact) } label: {
+                Label("Rename", systemImage: "pencil")
+            }
+            Button(role: .destructive) { onClear(contact) } label: {
+                Label("Clear chat", systemImage: "trash")
+            }
+            Button(role: .destructive) { onDelete(contact) } label: {
+                Label("Delete contact & chat", systemImage: "person.badge.minus")
+            }
+        }
     }
 
     private var row: some View {
@@ -241,7 +244,7 @@ private struct ContactCell: View {
                     .font(.kHeadline()).foregroundStyle(KTheme.accent)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(contact.displayName).font(.kHeadline()).foregroundStyle(KTheme.textPrimary)
+                Text(contact.displayName).font(.kHeadline()).foregroundStyle(KTheme.textPrimary).lineLimit(1)
                 Text(contact.safetyNumber).font(.kMono()).foregroundStyle(KTheme.textSecondary).lineLimit(1)
             }
             Spacer(minLength: 0)

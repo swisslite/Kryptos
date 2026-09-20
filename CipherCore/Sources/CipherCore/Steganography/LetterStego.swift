@@ -63,7 +63,7 @@ public enum LetterStego {
         case .russian: return russian
         case .chinese: return chinese
         case .persian: return persian
-        case .english, .german: return english
+        case .english, .german, .portuguese: return english
         }
     }
 
@@ -113,8 +113,6 @@ public enum LetterStego {
         let tail = count % a.blockChars
         return tail == 0 || a.bytesForChars[tail] != nil
     }
-
-    public static func looksLikeStego(_ text: String) -> Bool { decode(text) != nil }
 
     private static func pack(_ bytes: [UInt8], _ a: Alphabet) -> String {
         var out = ""

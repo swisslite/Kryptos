@@ -15,6 +15,12 @@
             "value": "نخست یک مخاطب انتخاب کنید"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primeiro escolha um contato"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -43,6 +49,12 @@
             "value": "پاک کردن"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limpar"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -69,6 +81,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کلیپ‌بورد خالی است."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A área de transferência está vazia."
           }
         },
         "ru": {
@@ -100,6 +118,12 @@
             "value": "فیلد نوشتن"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Campo de mensagem"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -126,6 +150,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "مخاطب"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contato"
           }
         },
         "ru": {
@@ -156,6 +186,12 @@
             "value": "رمزگشایی نشد — نمایه و مخاطب را بررسی کنید"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível descriptografar — confira o perfil e o contato"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -182,6 +218,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "رمزگشایی نشد — نمایه یا مخاطب دیگری است، یا پیام آسیب دیده"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível descriptografar — outro perfil ou contato, ou a mensagem está danificada"
           }
         },
         "ru": {
@@ -212,6 +254,12 @@
             "value": "رمزگذاری نشد"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível criptografar"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -238,6 +286,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "رمزگشایی‌شده · %@"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descriptografado · %@"
           }
         },
         "ru": {
@@ -268,6 +322,12 @@
             "value": "رمزگذاری‌شده برای %@"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criptografado para %@"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -296,6 +356,12 @@
             "value": "متنی وارد کنید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digite algum texto."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -306,6 +372,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "请输入文本。"
+          }
+        }
+      }
+    },
+    "Links open in the Kryptos app.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Links öffnen sich in der Kryptos-App."
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "پیوندها در برنامه Kryptos باز می‌شوند."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os links abrem no app Kryptos."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ссылки открываются в приложении Kryptos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "链接在 Kryptos 应用中打开。"
           }
         }
       }
@@ -323,6 +423,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "قفل است — Kryptos را باز کنید و قفلش را بردارید"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bloqueado — abra o Kryptos e desbloqueie"
           }
         },
         "ru": {
@@ -354,6 +460,12 @@
             "value": "قفل است — برای استفاده از رمزگذاری قفل را باز کنید"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bloqueado — desbloqueie para usar a criptografia"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -380,6 +492,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "این نمایه مخاطبی ندارد"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum contato neste perfil"
           }
         },
         "ru": {
@@ -410,6 +528,12 @@
             "value": "پیامی نیست — آن را در فیلد بچسبانید یا کپی کنید"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhuma mensagem — cole no campo ou copie"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -436,6 +560,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "هنوز ایموجی اخیری نیست — از پایین یک دسته انتخاب کنید"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum emoji recente ainda — escolha uma categoria abaixo"
           }
         },
         "ru": {
@@ -467,6 +597,12 @@
             "value": "در فیلد گذرواژه در دسترس نیست"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indisponível em um campo de senha"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -495,6 +631,12 @@
             "value": "برنامه Kryptos را باز کنید و یک مخاطب اضافه کنید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abra o app Kryptos e adicione um contato."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -521,6 +663,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "چسباندن"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colar"
           }
         },
         "ru": {
@@ -552,6 +700,12 @@
             "value": "این برنامه اجازه نمی‌دهد صفحه‌کلید فیلد را پاک کند — به‌جای آن در برنامه Kryptos رمزگذاری کنید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este app não deixa o teclado limpar o campo — criptografe no app Kryptos."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -578,6 +732,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "برای رمزگذاری، «دسترسی کامل» را در تنظیمات صفحه‌کلید روشن کنید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para criptografar, ative o “Acesso Completo” nos ajustes do teclado."
           }
         },
         "ru": {
@@ -608,6 +768,12 @@
             "value": "بنویسید یا متن را بچسبانید — پیام‌رسان تا پیش از رمزگذاری آن را نمی‌بیند"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digite ou cole o texto — o mensageiro não vai vê-lo até que esteja criptografado"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -635,6 +801,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "قفل Kryptos را باز کنید"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desbloquear o Kryptos"
           }
         },
         "ru": {

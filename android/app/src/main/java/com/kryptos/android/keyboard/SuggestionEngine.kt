@@ -48,16 +48,28 @@ object SuggestionEngine {
         }
 
         fun complete(prefix: String, limit: Int): List<String> {
-            if (prefix.isEmpty()) return emptyList()
-            val best = ArrayList<Pair<String, Int>>(32)
+            if (prefix.isEmpty() || limit <= 0) return emptyList()
+            val words = arrayOfNulls<String>(limit)
+            val ranks = IntArray(limit) { Int.MAX_VALUE }
+            var kept = 0
             var i = lowerBound(prefix)
             while (i < sorted.size && sorted[i].startsWith(prefix)) {
                 val w = sorted[i]
-                if (w.length > prefix.length) best.add(w to (rank[w] ?: Int.MAX_VALUE))
                 i++
+                if (w.length <= prefix.length) continue
+                val r = rank[w] ?: Int.MAX_VALUE
+                if (kept == limit && r >= ranks[limit - 1]) continue
+                var at = if (kept < limit) kept else limit - 1
+                while (at > 0 && ranks[at - 1] > r) {
+                    ranks[at] = ranks[at - 1]
+                    words[at] = words[at - 1]
+                    at--
+                }
+                ranks[at] = r
+                words[at] = w
+                if (kept < limit) kept++
             }
-            best.sortBy { it.second }
-            return best.take(limit).map { it.first }
+            return List(kept) { words[it]!! }
         }
     }
 
@@ -240,6 +252,7 @@ object SuggestionEngine {
     private val EN_ROWS = listOf("qwertyuiop", "asdfghjkl", "zxcvbnm")
     private val DE_ROWS = listOf("qwertzuiopü", "asdfghjklöä", "yxcvbnmß")
     private val FA_ROWS = listOf("ضصثقفغعهخحجچ", "شسیبلاتنمکگ", "ظطژزرذدپوآ")
+    private val PT_ROWS = EN_ROWS
 
     private fun buildConfusable(groups: List<String>): Set<String> {
         val out = HashSet<String>()
@@ -271,30 +284,36 @@ object SuggestionEngine {
     private val EN_NEIGHBORS = buildNeighbors(EN_ROWS)
     private val DE_NEIGHBORS = buildNeighbors(DE_ROWS)
     private val FA_NEIGHBORS = buildNeighbors(FA_ROWS)
+    private val PT_NEIGHBORS = buildNeighbors(PT_ROWS)
 
     private val RU_CONFUSABLE = setOf("еи", "ие", "ао", "оа", "ея", "яе", "ьъ", "ъь")
     private val FA_CONFUSABLE = buildConfusable(listOf("سصث", "زذضظ", "تط", "هح", "قغ", "اآ", "یئ", "وؤ"))
     private val DE_CONFUSABLE = setOf("äa", "aä", "öo", "oö", "üu", "uü", "ßs", "sß", "ei", "ie")
+    private val PT_CONFUSABLE = buildConfusable(listOf("aáàâã", "eéê", "ií", "oóôõ", "uú", "cç", "sç", "sz", "gj"))
     private const val EN_VOWELS = "aeiou"
     private const val DE_VOWELS = "aeiouäöü"
+    private const val PT_VOWELS = "aeiouáàâãéêíóôõú"
 
     private val FA_ALPHABET = "آابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهیءئؤ".toCharArray()
     private val RU_ALPHABET = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя".toCharArray()
     private val EN_ALPHABET = "abcdefghijklmnopqrstuvwxyz".toCharArray()
     private val DE_ALPHABET = "abcdefghijklmnopqrstuvwxyzäöüß".toCharArray()
+    private val PT_ALPHABET = "abcdefghijklmnopqrstuvwxyzáàâãçéêíóôõú".toCharArray()
 
     private const val START_TOKEN = "^"
     private val RU_COMMON = listOf("привет", "да", "нет", "спасибо", "как", "хорошо", "я", "что")
     private val EN_COMMON = listOf("hi", "yes", "no", "thanks", "how", "okay", "i", "the")
     private val DE_COMMON = listOf("hallo", "ja", "nein", "danke", "wie", "gut", "ich", "das")
     private val FA_COMMON = listOf("سلام", "بله", "نه", "ممنون", "چطوری", "خوبم", "من", "که")
+    private val PT_COMMON = listOf("oi", "sim", "não", "obrigado", "como", "bom", "eu", "que")
 
-val SUPPORTED_LANGUAGES = setOf("en", "ru", "de", "fa")
+val SUPPORTED_LANGUAGES = setOf("en", "ru", "de", "fa", "pt")
 
     private fun alphabetOf(code: String) = when (code) {
         "ru" -> RU_ALPHABET
         "de" -> DE_ALPHABET
         "fa" -> FA_ALPHABET
+        "pt" -> PT_ALPHABET
         else -> EN_ALPHABET
     }
 
@@ -302,6 +321,7 @@ val SUPPORTED_LANGUAGES = setOf("en", "ru", "de", "fa")
         "ru" -> RU_NEIGHBORS
         "de" -> DE_NEIGHBORS
         "fa" -> FA_NEIGHBORS
+        "pt" -> PT_NEIGHBORS
         else -> EN_NEIGHBORS
     }
 
@@ -309,6 +329,7 @@ val SUPPORTED_LANGUAGES = setOf("en", "ru", "de", "fa")
         "ru" -> RU_COMMON
         "de" -> DE_COMMON
         "fa" -> FA_COMMON
+        "pt" -> PT_COMMON
         else -> EN_COMMON
     }
 
@@ -316,12 +337,14 @@ val SUPPORTED_LANGUAGES = setOf("en", "ru", "de", "fa")
         "ru" -> RU_CONFUSABLE
         "de" -> DE_CONFUSABLE
         "fa" -> FA_CONFUSABLE
+        "pt" -> PT_CONFUSABLE
         else -> emptySet()
     }
 
     private fun vowelsOf(code: String) = when (code) {
         "ru", "fa" -> ""
         "de" -> DE_VOWELS
+        "pt" -> PT_VOWELS
         else -> EN_VOWELS
     }
 
@@ -442,7 +465,7 @@ private fun isLatin(code: String) = code != "ru" && code != "fa"
     }
 
     @Synchronized fun migrateLegacyPlaintext() {
-        val prefs = SecureStore.prefs()
+        val prefs = SecureStore.legacyPrefs()
         val words = prefs.getString(PREF_WORDS, null)
         val bigrams = prefs.getString(PREF_BIGRAMS, null)
         if (words == null && bigrams == null) return
@@ -513,7 +536,7 @@ private fun isLatin(code: String) = code != "ru" && code != "fa"
         runCatching {
             SecureStore.delete(STORE_WORDS)
             SecureStore.delete(STORE_BIGRAMS)
-            SecureStore.prefs().edit().remove(PREF_WORDS).remove(PREF_BIGRAMS).commit()
+            SecureStore.legacyPrefs().edit().remove(PREF_WORDS).remove(PREF_BIGRAMS).commit()
         }
     }
 
@@ -823,8 +846,14 @@ private fun isLatin(code: String) = code != "ru" && code != "fa"
         return out
     }
 
-    fun suggest(prefix: String, previous: String?, language: String, limit: Int = 3): List<String> {
-        if (prefix.isEmpty()) return predictEmpty(previous, language, limit)
+    fun suggest(
+        prefix: String,
+        previous: String?,
+        language: String,
+        limit: Int = 3,
+        capitalizeAtStart: Boolean = true,
+    ): List<String> {
+        if (prefix.isEmpty()) return predictEmpty(previous, language, limit, capitalizeAtStart)
         val folded = prefix.lowercase()
         val lang = langFor(folded.first(), language) ?: return emptyList()
         val prevNorm = previous?.let { normalize(it) }
@@ -923,14 +952,19 @@ private fun isLatin(code: String) = code != "ru" && code != "fa"
         return best.map { it.first }
     }
 
-    @Synchronized private fun predictEmpty(previous: String?, language: String, limit: Int): List<String> {
+    @Synchronized private fun predictEmpty(
+        previous: String?,
+        language: String,
+        limit: Int,
+        capitalize: Boolean,
+    ): List<String> {
         val atStart = previous == null
         val prevNorm = previous?.let { normalize(it) }
         val out = LinkedHashSet<String>()
         fun add(raw: String) {
             if (raw == prevNorm) return
             if (!matchesScript(raw, language)) return
-            out.add(if (atStart) raw.replaceFirstChar { it.uppercaseChar() } else raw)
+            out.add(if (atStart && capitalize) raw.replaceFirstChar { it.uppercaseChar() } else raw)
         }
         if (atStart) {
             continuationsOfUser(START_TOKEN, limit * 2).forEach { add(it) }
@@ -978,7 +1012,7 @@ private fun isLatin(code: String) = code != "ru" && code != "fa"
     fun autocorrect(word: String, previous: String?, language: String, deep: Boolean = true): String? {
         val folded = word.lowercase()
         if (!folded.all { it.isLetter() || it == '\'' || it == '-' || it == '’' }) return null
-        if (folded == "i" && word != "I") {
+        if (folded == "i" && word != "I" && codeFor('i', language) == "en") {
             synchronized(this) { if ((userWords["i"] ?: 0) >= 2) return null }
             return "I"
         }
@@ -1000,7 +1034,7 @@ private fun isLatin(code: String) = code != "ru" && code != "fa"
         val typedRank = lang.dict.rank[folded]
         val inVocab = typedRank != null
         if (!inVocab && lang.lex?.contains(folded) == true) return null
-        if (inVocab && (typedRank!! < AC_RARE_RANK || folded.length < 4 || personalUses > 0)) return null
+        if (inVocab && (typedRank < AC_RARE_RANK || folded.length < 4 || personalUses > 0)) return null
 
         val typedBase = if (inVocab) base(folded, lang, prevNorm) else OOV_LM
         val margin = if (inVocab) AC_MARGIN_IN_VOCAB else AC_MARGIN_OOV

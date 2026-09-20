@@ -83,7 +83,7 @@ struct QuickEncryptView: View {
                     Label(busy ? "Working…" : mode.title, systemImage: busy ? "hourglass" : mode.icon)
                 }
                 .buttonStyle(PrimaryButtonStyle())
-                .disabled(busy)
+                .disabled(busy || (mode == .encrypt && passphrase.count < Kryptos.minPasswordLength))
             }
         }
         .glassCard()
@@ -91,13 +91,18 @@ struct QuickEncryptView: View {
 
     private var outputCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            fieldLabel(mode == .encrypt ? "READY — PASTE THIS TO YOUR CONTACT" : "DECRYPTED TEXT")
+            fieldLabel(mode == .encrypt ? "READY. SEND IT TO YOUR CONTACT." : "DECRYPTED TEXT")
             ScrollView {
-                Text(output)
-                    .font(mode == .encrypt ? .kMono() : .kBody())
-                    .foregroundStyle(KTheme.textPrimary)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                if mode == .encrypt {
+                    Text(output)
+                        .font(.kMono())
+                        .foregroundStyle(KTheme.textPrimary)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    SelectableLinkedText(text: output, color: KTheme.textPrimaryUI, linkColor: KTheme.linkUI)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             .frame(maxHeight: 200)
 

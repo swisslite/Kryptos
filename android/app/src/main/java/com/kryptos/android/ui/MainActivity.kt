@@ -6,10 +6,12 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.text.InputType
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.InterceptPlatformTextInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.PlatformTextInputInterceptor
 import androidx.compose.ui.platform.PlatformTextInputMethodRequest
 import androidx.activity.compose.setContent
@@ -88,6 +90,7 @@ import com.kryptos.android.R
 import com.kryptos.android.AppLanguage
 import com.kryptos.android.KryptosApp
 import com.kryptos.android.core.CachePurge
+import com.kryptos.android.keyboard.kryptosKeyboardSelected
 import com.kryptos.android.pgp.PgpService
 import com.kryptos.android.security.AppLock
 import com.kryptos.android.security.ClipboardGuard
@@ -123,6 +126,27 @@ class MainActivity : FragmentActivity() {
 
     private var appliedLanguage: String? = null
 
+    private val boot = mutableStateOf(BootState.Loading)
+
+    @Volatile private var booting = false
+
+    private fun startBoot() {
+        if (SignalService.isReady) {
+            boot.value = BootState.Ready
+            return
+        }
+        if (booting) return
+        booting = true
+        boot.value = BootState.Loading
+        KryptosApp.scope.launch {
+            val ok = runCatching { SignalService.ensureInitialized() }.isSuccess
+            withContext(Dispatchers.Main) {
+                booting = false
+                boot.value = if (ok) BootState.Ready else BootState.Broken
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         appliedLanguage = AppSettingsStore.storedLanguage()
@@ -135,24 +159,13 @@ class MainActivity : FragmentActivity() {
                 android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT,
             ),
         )
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
         if (android.os.Build.VERSION.SDK_INT >= 29) {
             window.isNavigationBarContrastEnforced = false
-            window.isStatusBarContrastEnforced = false
         }
         applyShield()
         hardenWindow()
         if (savedInstanceState == null || !AppLock.hasLaunched) AppLock.onLaunch(this)
-        val boot = mutableStateOf(if (SignalService.isReady) BootState.Ready else BootState.Loading)
-        if (boot.value != BootState.Ready) {
-            KryptosApp.scope.launch {
-                val ok = runCatching { SignalService.ensureInitialized() }.isSuccess
-                withContext(Dispatchers.Main) {
-                    boot.value = if (ok) BootState.Ready else BootState.Broken
-                }
-            }
-        }
+        startBoot()
         KryptosApp.scope.launch { runCatching { PgpService.ensureInitialized() } }
 
         setContent {
@@ -249,6 +262,7 @@ class MainActivity : FragmentActivity() {
             recreate()
             return
         }
+        if (boot.value != BootState.Ready) startBoot()
         AppLock.onForeground(this)
         ClipboardGuard.flushPending(this)
         KryptosApp.scope.launch { runCatching { SignalService.purgeExpiredMessages() } }
@@ -256,7 +270,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onPause() {
         super.onPause()
-        if (!isChangingConfigurations) AppLock.onBackground()
+        if (!isChangingConfigurations) AppLock.onBackground(this)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -302,6 +316,7 @@ class MainActivity : FragmentActivity() {
         if (android.os.Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(false)
         if (android.os.Build.VERSION.SDK_INT >= 29) {
             runCatching {
+                @Suppress("DEPRECATION")
                 getSystemService(android.view.contentcapture.ContentCaptureManager::class.java)
                     ?.setContentCaptureEnabled(false)
             }
@@ -319,17 +334,39 @@ class MainActivity : FragmentActivity() {
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun NoKeyboardLearning(content: @Composable () -> Unit) {
-    val interceptor = remember {
+    val context = LocalContext.current
+    val interceptor = remember(context) {
         PlatformTextInputInterceptor { request, nextHandler ->
             val guarded = PlatformTextInputMethodRequest { outAttrs ->
                 val connection = request.createInputConnection(outAttrs)
                 outAttrs.imeOptions = outAttrs.imeOptions or EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
+                if (isPasswordEditor(outAttrs.inputType) || !kryptosKeyboardSelected(context)) {
+                    outAttrs.inputType = withoutSuggestions(outAttrs.inputType)
+                }
                 connection
             }
             nextHandler.startInputMethod(guarded)
         }
     }
     InterceptPlatformTextInput(interceptor, content)
+}
+
+private fun isPasswordEditor(inputType: Int): Boolean {
+    val variation = inputType and InputType.TYPE_MASK_VARIATION
+    return when (inputType and InputType.TYPE_MASK_CLASS) {
+        InputType.TYPE_CLASS_TEXT ->
+            variation == InputType.TYPE_TEXT_VARIATION_PASSWORD ||
+                variation == InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD ||
+                variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD
+        InputType.TYPE_CLASS_NUMBER -> variation == InputType.TYPE_NUMBER_VARIATION_PASSWORD
+        else -> false
+    }
+}
+
+private fun withoutSuggestions(inputType: Int): Int {
+    if (inputType and InputType.TYPE_MASK_CLASS != InputType.TYPE_CLASS_TEXT) return inputType
+    return (inputType or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) and
+        InputType.TYPE_TEXT_FLAG_AUTO_CORRECT.inv()
 }
 
 object ClipScanMemory {
@@ -607,6 +644,7 @@ fun shareText(context: Context, text: String) {
 private fun StorageRecoveryScreen(onReset: () -> Unit) {
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
+    var confirming by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize()) {
         ScreenBackground()
         Column(
@@ -633,11 +671,25 @@ private fun StorageRecoveryScreen(onReset: () -> Unit) {
                 Modifier.fillMaxWidth(),
                 danger = true,
                 enabled = !busy,
-            ) {
-                busy = true
-                scope.launch(Dispatchers.Default + NonCancellable) {
-                    onReset()
-                    withContext(Dispatchers.Main) { busy = false }
+            ) { confirming = !confirming }
+            if (confirming) {
+                Spacer(Modifier.height(14.dp))
+                Banner(stringResource(R.string.wipe_all_warning), BannerKind.Error)
+                Spacer(Modifier.height(10.dp))
+                SecondaryButton(
+                    stringResource(R.string.settings_wipe_all),
+                    Modifier.fillMaxWidth(),
+                    danger = true,
+                    enabled = !busy,
+                ) {
+                    busy = true
+                    scope.launch(Dispatchers.Default + NonCancellable) {
+                        onReset()
+                        withContext(Dispatchers.Main) {
+                            busy = false
+                            confirming = false
+                        }
+                    }
                 }
             }
         }

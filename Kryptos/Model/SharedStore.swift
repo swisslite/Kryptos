@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import Security
 
 enum KeychainProbe {
@@ -48,6 +49,111 @@ enum KeychainProbe {
         }
         guard status == errSecSuccess, let attrs = result as? [String: Any] else { return nil }
         return attrs[kSecAttrAccessGroup as String] as? String
+    }
+}
+
+/// Advisory lock shared by the app and the keyboard. Best effort: when the lock cannot be taken
+/// within the timeout the work runs anyway, exactly as it did before the lock existed.
+enum SharedLock {
+    static func withLock<T>(_ name: String, timeout: TimeInterval = 2, _ body: () throws -> T) rethrows -> T {
+        let url = AppGroup.container.appendingPathComponent("kryptos-\(name).lock")
+        let descriptor = open(url.path, O_CREAT | O_RDWR, 0o600)
+        guard descriptor >= 0 else { return try body() }
+        var held = false
+        let deadline = Date().addingTimeInterval(timeout)
+        while true {
+            if flock(descriptor, LOCK_EX | LOCK_NB) == 0 {
+                held = true
+                break
+            }
+            if Date() >= deadline { break }
+            usleep(5_000)
+        }
+        defer {
+            if held { flock(descriptor, LOCK_UN) }
+            close(descriptor)
+        }
+        return try body()
+    }
+}
+
+/// Small blobs that describe what the person typed or who they write to. They are sealed with
+/// AES-GCM under a key kept in the store as key material, the same way chat history is handled,
+/// instead of sitting in the container as readable JSON.
+enum SecureBlob {
+    private static let keyName = "blobkey"
+    private static let version: UInt8 = 1
+    private static let lock = NSLock()
+    private nonisolated(unsafe) static var cachedKey: SymmetricKey?
+
+    static func readStrict(_ name: String) -> SharedStore.ReadResult {
+        switch SharedStore.readStrict(name) {
+        case .absent:
+            return .absent
+        case .unavailable:
+            return .unavailable
+        case .found(let raw):
+            guard raw.first == version else { return .found(raw) }
+            guard let key = key(create: false),
+                  let box = try? AES.GCM.SealedBox(combined: raw.dropFirst()),
+                  let plain = try? AES.GCM.open(box, using: key) else { return .unavailable }
+            return .found(plain)
+        }
+    }
+
+    static func read(_ name: String) -> Data? {
+        guard case .found(let data) = readStrict(name) else { return nil }
+        return data
+    }
+
+    @discardableResult
+    static func write(_ name: String, _ data: Data) -> Bool {
+        guard let key = key(create: true),
+              let box = try? AES.GCM.seal(data, using: key),
+              let combined = box.combined else { return false }
+        return SharedStore.write(name, Data([version]) + combined)
+    }
+
+    /// False when the blob is still in the plain form written by a build that did not seal it.
+    static func isSealed(_ name: String) -> Bool {
+        guard case .found(let raw) = SharedStore.readStrict(name) else { return true }
+        return raw.first == version
+    }
+
+    static func forgetKey() {
+        lock.lock()
+        cachedKey = nil
+        lock.unlock()
+    }
+
+    private static func key(create: Bool) -> SymmetricKey? {
+        lock.lock()
+        let known = cachedKey
+        lock.unlock()
+        if let known { return known }
+
+        let resolved: SymmetricKey?
+        switch SharedStore.readStrict(keyName) {
+        case .found(let raw) where raw.count == 32:
+            resolved = SymmetricKey(data: raw)
+        case .unavailable:
+            return nil
+        case .found, .absent:
+            guard create else { return nil }
+            resolved = SharedLock.withLock(keyName) { () -> SymmetricKey? in
+                if case .found(let raw) = SharedStore.readStrict(keyName), raw.count == 32 {
+                    return SymmetricKey(data: raw)
+                }
+                let fresh = SymmetricKey(size: .bits256)
+                guard SharedStore.write(keyName, fresh.withUnsafeBytes { Data($0) }) else { return nil }
+                return fresh
+            }
+        }
+        guard let resolved else { return nil }
+        lock.lock()
+        cachedKey = resolved
+        lock.unlock()
+        return resolved
     }
 }
 
@@ -158,31 +264,50 @@ enum SharedStore {
     }
 
     @discardableResult
-    static func write(_ name: String, _ data: Data, keyMaterial: Bool = false) -> Bool {
+    static func write(_ name: String, _ data: Data) -> Bool {
         switch backend {
         case .keychain(let group): return kcSave(data, name: name, group: group)
-        case .appGroupFile:        return writeFile(data, to: fileURL(name, base: AppGroup.container), keyMaterial: keyMaterial)
-        case .localFile:           return writeFile(data, to: fileURL(name, base: localBase), keyMaterial: keyMaterial)
+        case .appGroupFile:        return writeFile(data, to: fileURL(name, base: AppGroup.container))
+        case .localFile:           return writeFile(data, to: fileURL(name, base: localBase))
         }
     }
 
-    static func writeFile(_ data: Data, to url: URL, keyMaterial: Bool = false) -> Bool {
-        let protection: Data.WritingOptions = keyMaterial
-            ? .completeFileProtection
-            : .completeFileProtectionUntilFirstUserAuthentication
-        guard (try? data.write(to: url, options: [.atomic, protection])) != nil else { return false }
+    static func writeFile(_ data: Data, to url: URL) -> Bool {
+        guard (try? data.write(to: url, options: [.atomic, .completeFileProtection])) != nil else { return false }
         excludeFromBackup(url)
         return true
     }
 
-    static func excludeStoredFilesFromBackup() {
+    private static let storedPrefixes = ["kryptos-", "kcfallback-", "signal-"]
+
+    private static func storedFiles() -> [URL] {
         let fm = FileManager.default
-        let prefixes = ["kryptos-", "kcfallback-", "signal-"]
+        var found: [URL] = []
         for base in [AppGroup.container, localBase] {
             guard let files = try? fm.contentsOfDirectory(at: base, includingPropertiesForKeys: nil) else { continue }
-            for url in files where prefixes.contains(where: { url.lastPathComponent.hasPrefix($0) }) {
-                excludeFromBackup(url)
-            }
+            found += files.filter { url in storedPrefixes.contains { url.lastPathComponent.hasPrefix($0) } }
+        }
+        return found
+    }
+
+    static func excludeStoredFilesFromBackup() {
+        for url in storedFiles() { excludeFromBackup(url) }
+    }
+
+    /// Anything written before the app required an unlocked device still carries the weaker class,
+    /// so raise both the keychain items and the files once at start.
+    static func hardenStoredItems() {
+        let update: [String: Any] = [kSecAttrAccessible as String: accessibility]
+        var q: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                kSecAttrService as String: kcService]
+        SecItemUpdate(q as CFDictionary, update as CFDictionary)
+        if let group = sharedKeychainGroup() {
+            q[kSecAttrAccessGroup as String] = group
+            SecItemUpdate(q as CFDictionary, update as CFDictionary)
+        }
+        let fm = FileManager.default
+        for url in storedFiles() {
+            try? fm.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: url.path)
         }
     }
 
@@ -260,6 +385,7 @@ enum SharedStore {
 
     private static let sharedGroupSuffix = ".*"
     private static let kcService = "com.kryptos.shared"
+    private static var accessibility: CFString { kSecAttrAccessibleWhenUnlockedThisDeviceOnly }
 
     private static func kcBase(_ name: String, group: String) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
@@ -272,12 +398,12 @@ enum SharedStore {
     private static func kcSave(_ data: Data, name: String, group: String) -> Bool {
         var item = kcBase(name, group: group)
         item[kSecValueData as String] = data
-        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        item[kSecAttrAccessible as String] = accessibility
         let status = SecItemAdd(item as CFDictionary, nil)
         if status == errSecSuccess { return true }
         guard status == errSecDuplicateItem else { return false }
         let update: [String: Any] = [kSecValueData as String: data,
-                                     kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly]
+                                     kSecAttrAccessible as String: accessibility]
         return SecItemUpdate(kcBase(name, group: group) as CFDictionary, update as CFDictionary) == errSecSuccess
     }
 

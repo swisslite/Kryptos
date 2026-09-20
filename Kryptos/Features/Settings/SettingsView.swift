@@ -158,7 +158,7 @@ private struct PrivacySettingsView: View {
                                  removeLabel: "Remove app passcode",
                                  removeConfirm: "Remove the app passcode? Unlocking goes back to Face ID or your device passcode; without them the app lock turns off.",
                                  savedMessage: "App passcode saved.", removedMessage: "App passcode removed.",
-                                 appCodeSet: appCodeSet,
+                                 appCodeSet: $appCodeSet,
                                  setHeader: "Set a passcode", changeHeader: "Change the passcode")
                 } label: {
                     HStack {
@@ -176,7 +176,7 @@ private struct PrivacySettingsView: View {
                                  removeLabel: "Remove panic password",
                                  removeConfirm: "Remove the panic password? Typing it will no longer erase anything.",
                                  savedMessage: "Panic password saved.", removedMessage: "Panic password removed.",
-                                 appCodeSet: appCodeSet,
+                                 appCodeSet: $appCodeSet,
                                  setHeader: "Set a password", changeHeader: "Change the password")
                 } label: {
                     HStack {
@@ -193,6 +193,7 @@ private struct PrivacySettingsView: View {
 
             Section {
                 Toggle("Auto-decrypt copied messages", isOn: $settings.clipboardAutoDecrypt)
+                Toggle("Clear clipboard after decrypting", isOn: $settings.clipboardClearOnDecrypt)
                 Toggle("This device only", isOn: $settings.clipboardLocalOnly)
                 Picker("Auto-clear clipboard", selection: $settings.clipboardExpiry) {
                     Text("Off").tag(0.0)
@@ -263,7 +264,7 @@ private struct LockCodeView: View {
     let removeConfirm: LocalizedStringKey
     let savedMessage: LocalizedStringKey
     let removedMessage: LocalizedStringKey
-    let appCodeSet: Bool
+    @Binding var appCodeSet: Bool
     let setHeader: LocalizedStringKey
     let changeHeader: LocalizedStringKey
 
@@ -398,7 +399,7 @@ private struct StegoSettingsView: View {
                 Toggle("Steganography for Chats", isOn: $settings.chatStegoEnabled)
                 if settings.chatStegoEnabled {
                     Picker("Cover language", selection: $settings.chatStegoLanguage) {
-                        ForEach(AppSettings.LanguageChoice.allCases) { Text($0.title).tag($0) }
+                        ForEach(AppSettings.LanguageChoice.allCases) { $0.title.tag($0) }
                     }
                     Picker("Mode", selection: $settings.chatStegoMode) {
                         ForEach(StegoMode.allCases) { Text($0.title).tag($0) }
@@ -482,8 +483,23 @@ private struct KeyboardSettingsView: View {
             }
 
             Section {
+                Picker("Key text size", selection: $settings.keyboardKeySize) {
+                    ForEach(KeyboardConfig.KeySize.allCases, id: \.self) { size in
+                        Text(size.title).tag(size)
+                    }
+                }
+                .pickerStyle(.menu)
+                Toggle("Enlarge key on press", isOn: $settings.keyboardKeyPreview)
+            } header: {
+                Text("keys.section")
+            } footer: {
+                Text("Size of the letters and labels drawn on the keys. The enlarged letter appears above the key you press; with it off the key only lights up.")
+            }
+
+            Section {
                 Toggle("Word suggestions", isOn: $settings.keyboardSuggestions)
                 Toggle("Auto-correction", isOn: $settings.keyboardAutocorrect)
+                Toggle("Auto-capitalization", isOn: $settings.keyboardAutoCaps)
                 Toggle("Emoji key", isOn: $settings.keyboardEmoji)
                 Button("Forget learned words", role: .destructive) { confirmForget = true }
                     .confirmationDialog("Forget the words the keyboard has learned from your typing? The built-in dictionaries stay.",
@@ -498,6 +514,14 @@ private struct KeyboardSettingsView: View {
 
             Section {
                 Toggle("Key vibration", isOn: $settings.keyboardHaptics)
+                if settings.keyboardHaptics {
+                    Picker("Vibration strength", selection: $settings.keyboardVibration) {
+                        ForEach(KeyboardConfig.Vibration.allCases, id: \.self) { level in
+                            Text(level.title).tag(level)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                }
                 Toggle("Key sounds", isOn: $settings.keyboardSounds)
             } header: {
                 Text("Feedback")
@@ -527,17 +551,18 @@ private struct KeyboardSettingsView: View {
     private var languagesSummary: String {
         keyboardLanguageCatalog
             .filter { settings.keyboardLanguages.contains($0.code) }
-            .map { String(localized: $0.title) }
+            .map { $0.title }
             .joined(separator: ", ")
     }
 }
 
-private let keyboardLanguageCatalog: [(code: String, title: String.LocalizationValue)] = [
+private let keyboardLanguageCatalog: [(code: String, title: String)] = [
+    ("de", "Deutsch"),
     ("en", "English"),
-    ("ru", "Russian"),
-    ("de", "German"),
-    ("zh", "Chinese"),
-    ("fa", "Persian")
+    ("pt", "Português (Brasil)"),
+    ("ru", "Русский"),
+    ("fa", "فارسی"),
+    ("zh", "中文")
 ]
 
 private struct KeyboardLanguagesView: View {
@@ -547,7 +572,7 @@ private struct KeyboardLanguagesView: View {
         List {
             Section {
                 ForEach(keyboardLanguageCatalog, id: \.code) { lang in
-                    Toggle(String(localized: lang.title), isOn: binding(for: lang.code))
+                    Toggle(lang.title, isOn: binding(for: lang.code))
                         .disabled(settings.keyboardLanguages == [lang.code])
                 }
             } footer: {
@@ -591,6 +616,7 @@ private struct KeyBackupView: View {
     @EnvironmentObject private var signal: SignalService
     @EnvironmentObject private var pgp: PGPService
     @EnvironmentObject private var lock: LockGate
+    @EnvironmentObject private var settings: AppSettings
 
     @State private var exportPassword = ""
     @State private var exportConfirm = ""
@@ -610,9 +636,15 @@ private struct KeyBackupView: View {
     var body: some View {
         List {
             Section {
-                Text("The file holds your keys, encrypted with the password you choose here. Kryptos keeps no copy of it.")
+                Toggle("Back up chats", isOn: $settings.backupChats)
             } footer: {
-                Text("Your message history is not included.")
+                Text(settings.backupChats
+                     ? "Your chats go into the backup file, encrypted with the same password."
+                     : "Your message history is not included.")
+            }
+
+            Section {
+                Text("The file holds your keys, encrypted with the password you choose here. Kryptos keeps no copy of it.")
             }
 
             Section {
@@ -706,10 +738,12 @@ private struct KeyBackupView: View {
             return
         }
         let secret = exportPassword
+        let withChats = settings.backupChats
         busy = true
         Task { @MainActor in
             await Task.yield()
-            guard let profiles = signal.archivedProfiles(), let pgpKeys = pgp.archivedIdentities() else {
+            guard let profiles = signal.archivedProfiles(includeChats: withChats),
+                  let pgpKeys = pgp.archivedIdentities() else {
                 busy = false
                 failExport(String(localized: "Could not create the backup file."))
                 return

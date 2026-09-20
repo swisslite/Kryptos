@@ -9,42 +9,68 @@ import javax.crypto.spec.SecretKeySpec
 
 object WireFormat {
     const val SALT_LENGTH = 8
-    private val INFO = "kryptos/wire/v2".toByteArray(Charsets.UTF_8)
+    private const val MARKER = 0x03
+    private val INFO = "kryptos/wire/v3".toByteArray(Charsets.UTF_8)
+    private val PAIR_INFO = "kryptos/wire/pair/v1".toByteArray(Charsets.UTF_8)
     private const val MIN_TOKEN_BYTES = 24
     private const val MIN_TOKEN_CHARS = 32
     private const val MAX_TOKEN_CHARS = 2_000_000
     private const val KNOWN_HEADER_BITS = 0x0F or 0x10 or 0x20
 
-    fun wrap(body: ByteArray, type: Int, deflate: Boolean, padded: Boolean, pairKey: ByteArray): String =
-        wrap(body, type, deflate, padded, pairKey, randomBytes(SALT_LENGTH))
-
-    fun wrap(body: ByteArray, type: Int, deflate: Boolean, padded: Boolean, pairKey: ByteArray, salt: ByteArray): String {
-        val inner = if (padded) Padding.frame(body) else body
-        val plain = ByteArray(1 + inner.size)
-        plain[0] = ((type and 0x0F) or (if (deflate) 0x10 else 0x00) or (if (padded) 0x20 else 0x00)).toByte()
-        inner.copyInto(plain, 1)
-        val (key, iv) = derive(pairKey, salt)
-        val masked = ctr(key, iv, plain)
-        return base64UrlEncode(salt + masked)
+    sealed class Opened {
+        class Message(val type: Int, val deflate: Boolean, val body: ByteArray) : Opened()
+        object Unsupported : Opened()
+        object Absent : Opened()
     }
 
-    data class Unwrapped(val type: Int, val deflate: Boolean, val body: ByteArray)
+    fun pairSecret(agreement: ByteArray, a: String, b: String): ByteArray =
+        hkdfSha256(agreement, (if (a <= b) a + b else b + a).toByteArray(Charsets.UTF_8), PAIR_INFO, 32)
 
-    fun unwrap(text: String, pairKey: ByteArray): Unwrapped? {
-        val raw = rawBytes(text) ?: return null
-        if (raw.size <= SALT_LENGTH) return null
+    fun sealedSize(ciphertext: Int, padded: Boolean): Int =
+        SALT_LENGTH + 2 + (if (padded) Padding.target(4 + ciphertext) else ciphertext)
+
+    fun fitsStego(ciphertext: Int, padded: Boolean): Boolean =
+        sealedSize(ciphertext, padded) <= TextStego.MAX_PAYLOAD_BYTES
+
+    fun seal(body: ByteArray, type: Int, deflate: Boolean, padded: Boolean, pairKey: ByteArray): ByteArray =
+        seal(body, type, deflate, padded, pairKey, randomBytes(SALT_LENGTH))
+
+    fun seal(body: ByteArray, type: Int, deflate: Boolean, padded: Boolean, pairKey: ByteArray, salt: ByteArray): ByteArray {
+        val inner = if (padded) Padding.frame(body) else body
+        val plain = ByteArray(2 + inner.size)
+        plain[0] = MARKER.toByte()
+        plain[1] = ((type and 0x0F) or (if (deflate) 0x10 else 0x00) or (if (padded) 0x20 else 0x00)).toByte()
+        inner.copyInto(plain, 2)
+        val (key, iv) = derive(pairKey, salt)
+        return salt + ctr(key, iv, plain)
+    }
+
+    fun open(raw: ByteArray, pairKey: ByteArray): Opened {
+        if (raw.size <= SALT_LENGTH + 1) return Opened.Absent
         val salt = raw.copyOfRange(0, SALT_LENGTH)
         val masked = raw.copyOfRange(SALT_LENGTH, raw.size)
         val (key, iv) = derive(pairKey, salt)
         val plain = ctr(key, iv, masked)
-        if (plain.isEmpty()) return null
-        val header = plain[0].toInt() and 0xFF
-        if (header and KNOWN_HEADER_BITS.inv() != 0) return null
+        if (plain.size < 2) return Opened.Absent
+        if ((plain[0].toInt() and 0xFF) != MARKER) return Opened.Absent
+        val header = plain[1].toInt() and 0xFF
+        if (header and KNOWN_HEADER_BITS.inv() != 0) return Opened.Unsupported
         val type = header and 0x0F
-        if (type != 2 && type != 3) return null
-        val inner = plain.copyOfRange(1, plain.size)
-        val body = if (header and 0x20 != 0) (Padding.unframe(inner) ?: return null) else inner
-        return Unwrapped(type, header and 0x10 != 0, body)
+        if (type != 2 && type != 3) return Opened.Unsupported
+        val inner = plain.copyOfRange(2, plain.size)
+        val body = if (header and 0x20 != 0) (Padding.unframe(inner) ?: return Opened.Absent) else inner
+        return Opened.Message(type, header and 0x10 != 0, body)
+    }
+
+    fun wrap(body: ByteArray, type: Int, deflate: Boolean, padded: Boolean, pairKey: ByteArray): String =
+        wrap(body, type, deflate, padded, pairKey, randomBytes(SALT_LENGTH))
+
+    fun wrap(body: ByteArray, type: Int, deflate: Boolean, padded: Boolean, pairKey: ByteArray, salt: ByteArray): String =
+        base64UrlEncode(seal(body, type, deflate, padded, pairKey, salt))
+
+    fun unwrap(text: String, pairKey: ByteArray): Opened {
+        val raw = rawBytes(text) ?: return Opened.Absent
+        return open(raw, pairKey)
     }
 
     fun token(raw: ByteArray): String = base64UrlEncode(raw)

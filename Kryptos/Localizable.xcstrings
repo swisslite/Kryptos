@@ -16,6 +16,12 @@
             "value": "%lld نمایه، %lld مخاطب، %lld کلید PGP"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld perfis, %lld contatos, %lld chaves PGP"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -42,6 +48,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "۱ روز"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 dia"
           }
         },
         "ru": {
@@ -72,6 +84,12 @@
             "value": "۱ ساعت"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 hora"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -98,6 +116,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "۱ دقیقه"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 min"
           }
         },
         "ru": {
@@ -128,6 +152,12 @@
             "value": "۱ هفته"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 semana"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -154,6 +184,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "۳۰ ثانیه"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 s"
           }
         },
         "ru": {
@@ -184,6 +220,12 @@
             "value": "۳۰ ثانیه"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 segundos"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -210,6 +252,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "۵ دقیقه"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 min"
           }
         },
         "ru": {
@@ -240,6 +288,12 @@
             "value": "۵ دقیقه"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 minutos"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -268,6 +322,12 @@
             "value": "۸ ساعت"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "8 horas"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -294,6 +354,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "یک کلید کاملاً تازه برای این نمایه ساخته می‌شود. همه مخاطبان و گفت‌وگوهای آن ناخوانا می‌شوند و باید از نو برپا شوند."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma chave totalmente nova é criada para este perfil. Todos os contatos e conversas dele ficam ilegíveis e precisam ser configurados de novo."
           }
         },
         "ru": {
@@ -325,6 +391,12 @@
             "value": "هر نمایه یک جفت‌کلید جداگانه با مخاطبان خودش است. چند تا بسازید تا کارها از هم جدا بمانند. **شماره امنیتی** شما عمومی است (به اشتراک گذاشتنش بی‌خطر است و تنها برای تأیید مخاطب به کار می‌رود)؛ کلید خصوصی شما هرگز از این دستگاه بیرون نمی‌رود."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um perfil é um par de chaves separado, com os próprios contatos. Crie vários para manter as coisas separadas. Seu **número de segurança** é público (pode ser compartilhado, serve apenas para verificar um contato); sua chave privada nunca sai deste aparelho."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -352,6 +424,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "هر نمایه یک جفت‌کلید جداگانه با مخاطبان خودش است. می‌توانید چند تا داشته باشید و میانشان جابه‌جا شوید — مثلاً برای جدا نگه داشتن کار از زندگی شخصی."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um perfil é um par de chaves separado, com os próprios contatos. Você pode manter vários e alternar entre eles — para separar trabalho e vida pessoal, por exemplo."
           }
         },
         "ru": {
@@ -383,6 +461,12 @@
             "value": "یک گذرواژه مشترک: استخراج کلید با Argon2id و سپس AES-256-GCM از Apple CryptoKit."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma senha compartilhada: derivação de chave Argon2id e depois AES-256-GCM do CryptoKit da Apple."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -409,6 +493,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "حالت متقارن ساده: شما و مخاطبتان روی یک گذرواژه مشترک توافق می‌کنید و بعد متن را برای هر پیام‌رسانی رمزگذاری یا رمزگشایی می‌کنید. (این PGP نیست — PGP زبانه خودش را دارد.)"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um modo simétrico simples: você e seu contato combinam uma senha compartilhada e depois criptografam e descriptografam texto para qualquer mensageiro. (Isto não é PGP — o PGP está na aba dele.)"
           }
         },
         "ru": {
@@ -440,6 +530,12 @@
             "value": "یک رشته پیوسته بدون نشانه‌گذاری."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma sequência única e contínua, sem pontuação."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -466,6 +562,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "درباره برنامه"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sobre"
           }
         },
         "ru": {
@@ -496,6 +598,12 @@
             "value": "افزودن"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -522,6 +630,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "نخست یک گیرنده اضافه کنید"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primeiro adicione um destinatário"
           }
         },
         "ru": {
@@ -552,6 +666,12 @@
             "value": "افزودن مخاطب"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar contato"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -578,6 +698,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کلید او را اضافه کنید"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicione a chave dele"
           }
         },
         "ru": {
@@ -608,6 +734,12 @@
             "value": "الگوریتم"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Algoritmo"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -634,6 +766,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "رمز برنامه"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Código do app"
           }
         },
         "ru": {
@@ -664,6 +802,12 @@
             "value": "زبان برنامه"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idioma do app"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -690,6 +834,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "قفل برنامه"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bloqueio do app"
           }
         },
         "ru": {
@@ -721,6 +871,12 @@
             "value": "رمز برنامه"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Código de acesso do app"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -748,6 +904,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "رمز برنامه برداشته شد."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Código de acesso do app removido."
           }
         },
         "ru": {
@@ -779,6 +941,12 @@
             "value": "رمز برنامه ذخیره شد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Código de acesso do app salvo."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -805,6 +973,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ظاهر"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aparência"
           }
         },
         "ru": {
@@ -836,6 +1010,12 @@
             "value": "دست‌کم ۴ نویسه. باید با گذرواژه اضطراری فرق داشته باشد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No mínimo 4 caracteres. Precisa ser diferente da senha de pânico."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -862,6 +1042,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "دست‌کم ۴ نویسه. چیزی بگذارید که هرگز اتفاقی تایپ نکنید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No mínimo 4 caracteres. Escolha algo que você nunca digitaria por acidente."
           }
         },
         "ru": {
@@ -892,6 +1078,12 @@
             "value": "دست‌کم ۸ نویسه. فایل و گذرواژه را جدا از هم نگه دارید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No mínimo 8 caracteres. Guarde o arquivo e a senha separados."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -902,6 +1094,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "至少 8 个字符。请将文件和密码分开保管。"
+          }
+        }
+      }
+    },
+    "Auto-capitalization": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatische Großschreibung"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بزرگ‌نویسی خودکار"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maiúsculas automáticas"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Автоматические заглавные"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动大写"
           }
         }
       }
@@ -918,6 +1144,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پاک‌سازی خودکار کلیپ‌بورد"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limpar a área de transferência automaticamente"
           }
         },
         "ru": {
@@ -948,6 +1180,12 @@
             "value": "تصحیح خودکار"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correção automática"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -974,6 +1212,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "رمزگشایی خودکار پیام‌های کپی‌شده"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descriptografar automaticamente as mensagens copiadas"
           }
         },
         "ru": {
@@ -1004,6 +1248,12 @@
             "value": "رمزگشایی خودکار هنگام باز شدن"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descriptografar ao abrir"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1032,6 +1282,12 @@
             "value": "خودکار"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automático"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1042,34 +1298,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "自动"
-          }
-        }
-      }
-    },
-    "Automatic (system language)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Automatisch (Systemsprache)"
-          }
-        },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "خودکار (زبان سیستم)"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Автоматически (язык системы)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自动（跟随系统语言）"
           }
         }
       }
@@ -1088,6 +1316,12 @@
             "value": "حالت خودکار از سیستم پیروی می‌کند. زبان تازه از راه‌اندازی بعدی Kryptos اعمال می‌شود."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automático segue o sistema. Um novo idioma passa a valer na próxima vez que o Kryptos abrir."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1098,6 +1332,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "“自动”跟随系统。更改语言将在下次启动 Kryptos 时生效。"
+          }
+        }
+      }
+    },
+    "Back up chats": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chats sichern"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "پشتیبان‌گیری از گفتگوها"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incluir as conversas no backup"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включать переписку"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "备份聊天记录"
           }
         }
       }
@@ -1115,6 +1383,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "فایل پشتیبان ساخته شد."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arquivo de backup criado."
           }
         },
         "ru": {
@@ -1146,6 +1420,12 @@
             "value": "گذرواژه پشتیبان"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senha do backup"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1172,6 +1452,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "نام مخاطب"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOME DO CONTATO"
           }
         },
         "ru": {
@@ -1202,6 +1488,12 @@
             "value": "عکس پوششی"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FOTO DE COBERTURA"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1228,6 +1520,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ساختن کلید تازه"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CRIAR UMA CHAVE NOVA"
           }
         },
         "ru": {
@@ -1258,6 +1556,12 @@
             "value": "نمایه کنونی"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PERFIL ATUAL"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1284,6 +1588,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "دسترسی به دوربین خاموش است، بنابراین اسکنر QR باز نمی‌شود. در تنظیمات به دوربین اجازه دهید یا کلید را به‌صورت متن بچسبانید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O acesso à câmera está desligado, então o leitor de QR não abre. Permita a câmera nos Ajustes ou cole a chave como texto."
           }
         },
         "ru": {
@@ -1314,6 +1624,12 @@
             "value": "می‌توانم عکس یا فایلی را با Kryptos بفرستم؟"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posso enviar uma foto ou um arquivo pelo Kryptos?"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1340,6 +1656,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "می‌توانم یک کلید را روی دو گوشی به کار ببرم؟"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posso usar uma chave em dois telefones?"
           }
         },
         "ru": {
@@ -1370,6 +1692,12 @@
             "value": "آیا پیام‌رسان می‌تواند پیام‌هایم را بخواند؟"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O mensageiro consegue ler minhas mensagens?"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1396,6 +1724,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "انصراف"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelar"
           }
         },
         "ru": {
@@ -1426,6 +1760,12 @@
             "value": "تغییر رمز"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alterar o código de acesso"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1454,6 +1794,12 @@
             "value": "تغییر گذرواژه"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alterar a senha"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1480,6 +1826,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "گفت‌وگوها"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversas"
           }
         },
         "ru": {
@@ -1511,6 +1863,12 @@
             "value": "گفت‌وگوها روی libsignal رسمی کار می‌کنند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As conversas rodam na libsignal oficial."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1525,30 +1883,36 @@
         }
       }
     },
-    "Chats use Signal's own libsignal library — the same protocol as Signal itself, post-quantum handshake included. Password mode and photos use Argon2id and AES-256-GCM. Kryptos contains no home-made cryptography.": {
+    "Chats use Signal's own libsignal library — the same protocol as Signal itself, with post-quantum protection on every message, not just the handshake. Password mode and photos use Argon2id and AES-256-GCM. Kryptos contains no home-made cryptography.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Die Chats verwenden Signals eigene Bibliothek libsignal — dasselbe Protokoll wie Signal selbst, einschließlich des post-quantensicheren Handshakes. Der Passwort-Modus und die Fotos verwenden Argon2id und AES-256-GCM. Kryptos enthält keine selbstgebaute Kryptografie."
+            "value": "Die Chats verwenden Signals eigene Bibliothek libsignal — dasselbe Protokoll wie Signal selbst, mit Post-Quanten-Schutz in jeder Nachricht, nicht nur im Handshake. Der Passwort-Modus und die Fotos verwenden Argon2id und AES-256-GCM. Kryptos enthält keine selbstgebaute Kryptografie."
           }
         },
         "fa": {
           "stringUnit": {
             "state": "translated",
-            "value": "گفت‌وگوها از کتابخانه libsignal خود Signal استفاده می‌کنند — همان پروتکل خود Signal، همراه با دست‌دادن پساکوانتومی. حالت گذرواژه و عکس‌ها از Argon2id و AES-256-GCM استفاده می‌کنند. در Kryptos هیچ رمزنگاری دست‌سازی وجود ندارد."
+            "value": "گفت‌وگوها از کتابخانه libsignal خود Signal استفاده می‌کنند — همان پروتکل خود Signal، با محافظت پساکوانتومی در هر پیام، نه فقط در دست‌دادن. حالت گذرواژه و عکس‌ها از Argon2id و AES-256-GCM استفاده می‌کنند. در Kryptos هیچ رمزنگاری دست‌سازی وجود ندارد."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As conversas usam a biblioteca libsignal do próprio Signal — o mesmo protocolo do Signal, com proteção pós-quântica em toda mensagem, não apenas no handshake. O modo senha e as fotos usam Argon2id e AES-256-GCM. O Kryptos não contém nenhuma criptografia caseira."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Диалоги используют официальную библиотеку libsignal — тот же протокол, что и в самом Signal, вместе с постквантовым рукопожатием. Режим «Пароль» и фотографии используют Argon2id и AES-256-GCM. Собственной криптографии в Kryptos нет."
+            "value": "Диалоги используют официальную библиотеку libsignal — тот же протокол, что и в самом Signal, с постквантовой защитой в каждом сообщении, а не только в рукопожатии. Режим «Пароль» и фотографии используют Argon2id и AES-256-GCM. Собственной криптографии в Kryptos нет."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“对话”使用 Signal 自己的 libsignal 库，协议与 Signal 本身完全相同，并包含抗量子握手。密码模式和照片使用 Argon2id 与 AES-256-GCM。Kryptos 不含任何自制的密码学实现。"
+            "value": "“对话”使用 Signal 自己的 libsignal 库，协议与 Signal 本身完全相同，抗量子保护覆盖每一条消息，而不只是握手。密码模式和照片使用 Argon2id 与 AES-256-GCM。Kryptos 不含任何自制的密码学实现。"
           }
         }
       }
@@ -1568,6 +1932,12 @@
             "value": "پیش از ارسال، نشانی را بررسی کنید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confira o endereço antes de enviar."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1578,34 +1948,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "转账前请核对地址。"
-          }
-        }
-      }
-    },
-    "Chinese": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chinesisch"
-          }
-        },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "چینی"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Китайский"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "中文"
           }
         }
       }
@@ -1623,6 +1965,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "انتخاب فایل پشتیبان"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolher um arquivo de backup"
           }
         },
         "ru": {
@@ -1653,6 +2001,12 @@
             "value": "انتخاب فایل (PNG، JPG و مانند آن)"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolher um arquivo (PNG, JPG…)"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1679,6 +2033,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "انتخاب عکس"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolher uma foto"
           }
         },
         "ru": {
@@ -1709,6 +2069,12 @@
             "value": "نخست یک عکس انتخاب کنید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha uma foto primeiro."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1735,6 +2101,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "یک گیرنده انتخاب کنید"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha um destinatário"
           }
         },
         "ru": {
@@ -1765,6 +2137,12 @@
             "value": "یک گیرنده انتخاب کنید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha um destinatário."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1791,6 +2169,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "رمزگذاری نامتقارن کلاسیک همراه با امضا، سازگار با دیگر ابزارهای PGP."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criptografia assimétrica clássica com assinaturas, compatível com outras ferramentas PGP."
           }
         },
         "ru": {
@@ -1821,6 +2205,12 @@
             "value": "پاک کردن همه گفت‌وگوها"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limpar todas as conversas"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1849,6 +2239,12 @@
             "value": "پاک کردن گفت‌وگو"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limpar conversa"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1859,6 +2255,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "清空对话"
+          }
+        }
+      }
+    },
+    "Clear clipboard after decrypting": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zwischenablage nach dem Entschlüsseln leeren"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "پاک کردن کلیپ‌بورد پس از رمزگشایی"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limpar a área de transferência depois de descriptografar"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Очищать буфер после расшифровки"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解密后清空剪贴板"
           }
         }
       }
@@ -1875,6 +2305,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کلیپ‌بورد"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Área de transferência"
           }
         },
         "ru": {
@@ -1905,6 +2341,12 @@
             "value": "کلیپ‌بورد خالی است."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A área de transferência está vazia."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1931,6 +2373,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "برای اعمال، Kryptos را ببندید"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feche o Kryptos para aplicar"
           }
         },
         "ru": {
@@ -1961,6 +2409,12 @@
             "value": "رمزها روی صفحه قفل نوشته می‌شوند. بدون قفل برنامه آن صفحه نمی‌آید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os códigos são digitados na tela de bloqueio. Sem o bloqueio do app, ela nunca aparece."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -1989,6 +2443,12 @@
             "value": "تکمیل واژه و تصحیح خودکار از واژه‌نامه‌های برون‌خط. در فیلدهای گذرواژه خاموش است."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Complementos e correção automática a partir de dicionários offline. Desligados em campos de senha."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2015,6 +2475,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "مخاطبان"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contatos"
           }
         },
         "ru": {
@@ -2046,6 +2512,12 @@
             "value": "ادامه"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continuar"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2074,6 +2546,12 @@
             "value": "کپی شد"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiado"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2100,6 +2578,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کپی"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiar"
           }
         },
         "ru": {
@@ -2131,6 +2615,12 @@
             "value": "کپی نشانی"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiar endereço"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2157,6 +2647,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کپی کلید"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiar chave"
           }
         },
         "ru": {
@@ -2188,6 +2684,12 @@
             "value": "کد QR ساخته نشد — به‌جای آن نشانی را کپی کنید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível gerar o QR code — copie o endereço."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2214,6 +2716,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "تصویر ساخته نشد."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível montar a imagem."
           }
         },
         "ru": {
@@ -2245,6 +2753,12 @@
             "value": "فایل پشتیبان ساخته نشد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível criar o arquivo de backup."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2272,6 +2786,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "این مخاطب حذف نشد — دوباره تلاش کنید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível excluir este contato — tente de novo."
           }
         },
         "ru": {
@@ -2302,6 +2822,12 @@
             "value": "پیام رمزگذاری نشد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível criptografar a mensagem."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2328,6 +2854,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کلید ساخته نشد."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível gerar a chave."
           }
         },
         "ru": {
@@ -2358,6 +2890,12 @@
             "value": "پیام پنهان نشد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível esconder a mensagem."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2384,6 +2922,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پیام پردازش نشد."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível processar a mensagem."
           }
         },
         "ru": {
@@ -2414,6 +2958,12 @@
             "value": "فایل خوانده نشد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível ler o arquivo."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2440,6 +2990,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "عکس خوانده نشد."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível ler a foto."
           }
         },
         "ru": {
@@ -2471,6 +3027,12 @@
             "value": "این پشتیبان خوانده نشد — یا گذرواژه اشتباه است یا فایل، پشتیبان کلیدهای Kryptos نیست."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível ler este backup — senha errada, ou o arquivo não é um backup de chaves do Kryptos."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2498,6 +3060,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کلیدها از این پشتیبان بازیابی نشدند."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível restaurar as chaves deste backup."
           }
         },
         "ru": {
@@ -2529,6 +3097,12 @@
             "value": "رمز ذخیره نشد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível salvar o código."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2558,6 +3132,12 @@
             "value": "کلید در Keychain ذخیره نشد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível salvar a chave no Chaveiro."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2584,6 +3164,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "زبان متن پوششی"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idioma da cobertura"
           }
         },
         "ru": {
@@ -2615,6 +3201,12 @@
             "value": "ساختن فایل پشتیبان"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criar arquivo de backup"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2641,6 +3233,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Curve25519 (سریع، پیشنهادی)"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Curve25519 (rápida, recomendada)"
           }
         },
         "ru": {
@@ -2671,6 +3269,12 @@
             "value": "متن رمزگشایی‌شده"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TEXTO DESCRIPTOGRAFADO"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2697,6 +3301,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "تیره"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escuro"
           }
         },
         "ru": {
@@ -2727,6 +3337,12 @@
             "value": "رمزگشایی"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descriptografar"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2753,6 +3369,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "رمزگشایی شد، اما امضا بررسی‌نشده است — فرستنده را به گیرندگان اضافه کنید تا بررسی شود."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descriptografado, mas a assinatura não foi verificada — adicione o remetente em Destinatários para verificar."
           }
         },
         "ru": {
@@ -2783,6 +3405,12 @@
             "value": "حذف"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2809,6 +3437,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "حذف مخاطب و گفت‌وگو"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir contato e conversa"
           }
         },
         "ru": {
@@ -2839,6 +3473,12 @@
             "value": "حذف مخاطبان و گفت‌وگوها"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir contatos e conversas"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2865,6 +3505,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "همه مخاطبان و گفت‌وگوها حذف شوند؟ کلید و نشست آن‌ها از این دستگاه پاک می‌شود؛ کلید خودتان می‌ماند. بازگشتی در کار نیست."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir todos os contatos e conversas? As chaves e sessões deles são apagadas deste aparelho; a sua própria chave continua. Isso não pode ser desfeito."
           }
         },
         "ru": {
@@ -2895,6 +3541,12 @@
             "value": "همه گفت‌وگوها حذف شوند؟ مخاطبان می‌مانند و تاریخچه پیام‌ها حذف می‌شود. بازگشتی در کار نیست."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir todas as conversas? Os contatos continuam, o histórico de mensagens é excluído. Isso não pode ser desfeito."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2921,6 +3573,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "حذف پیام"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir mensagem"
           }
         },
         "ru": {
@@ -2951,6 +3609,12 @@
             "value": "نمایه حذف شود؟"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir perfil?"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -2977,6 +3641,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "این مخاطب و گفت‌وگویتان حذف شوند؟ کلید و نشست او از این دستگاه پاک می‌شود؛ کلید خودتان می‌ماند. بازگشتی در کار نیست."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir este contato e a sua conversa com ele? A chave e a sessão dele são apagadas deste aparelho; a sua própria chave continua. Isso não pode ser desfeito."
           }
         },
         "ru": {
@@ -3007,6 +3677,12 @@
             "value": "این گفت‌وگو حذف شود؟ بازگشتی در کار نیست."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir esta conversa? Isso não pode ser desfeito."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -3033,6 +3709,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "این کلید برای همیشه حذف شود؟"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir esta chave para sempre?"
           }
         },
         "ru": {
@@ -3063,6 +3745,12 @@
             "value": "توسعه‌دهنده"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desenvolvedor"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -3089,6 +3777,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پیام‌های ناپدیدشونده"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mensagens temporárias"
           }
         },
         "ru": {
@@ -3119,6 +3813,12 @@
             "value": "آیا کلیدها و پیام‌هایم در پشتیبان ابری گوشی می‌افتند؟"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minhas chaves e mensagens vão parar no backup na nuvem do telefone?"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -3145,6 +3845,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "آیا به اینترنت نیاز دارد؟"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Precisa de conexão com a internet?"
           }
         },
         "ru": {
@@ -3175,6 +3881,12 @@
             "value": "مخاطب من هم باید Kryptos داشته باشد؟"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meu contato também precisa do Kryptos?"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -3189,30 +3901,36 @@
         }
       }
     },
-    "Does the key backup restore my messages too?": {
+    "Does the key backup restore my messages?": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Stellt das Schlüssel-Backup auch meine Nachrichten wieder her?"
+            "value": "Stellt das Schlüssel-Backup meine Nachrichten wieder her?"
           }
         },
         "fa": {
           "stringUnit": {
             "state": "translated",
-            "value": "آیا پشتیبان کلیدها پیام‌هایم را هم برمی‌گرداند؟"
+            "value": "آیا پشتیبان کلیدها پیام‌هایم را برمی‌گرداند؟"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O backup de chaves restaura minhas mensagens?"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Резервная копия ключей восстановит и переписку?"
+            "value": "Резервная копия ключей восстановит переписку?"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "密钥备份也会恢复我的消息吗？"
+            "value": "密钥备份会恢复我的消息吗？"
           }
         }
       }
@@ -3229,6 +3947,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "تمام"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
           }
         },
         "ru": {
@@ -3259,6 +3983,12 @@
             "value": "بلوک رمزشده"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BLOCO CRIPTOGRAFADO"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -3285,6 +4015,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "رمزگذاری شد — این را بفرستید"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CRIPTOGRAFADO — ENVIE ISTO"
           }
         },
         "ru": {
@@ -3315,6 +4051,12 @@
             "value": "ایمیل"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-mail"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -3343,6 +4085,12 @@
             "value": "ایمیل (اختیاری)"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-mail (opcional)"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -3369,6 +4117,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کلید ایموجی"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tecla de emoji"
           }
         },
         "ru": {
@@ -3400,6 +4154,12 @@
             "value": "فعال کردن صفحه‌کلید و دسترسی کامل"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ative o teclado e o Acesso Completo"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -3426,6 +4186,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "رمزگذاری"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criptografar"
           }
         },
         "ru": {
@@ -3456,6 +4222,12 @@
             "value": "پیامی را رمزگذاری کنید، نتیجه را با هر پیام‌رسانی بفرستید و پاسخ او را برای رمزگشایی اینجا بچسبانید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criptografe uma mensagem, envie o resultado por qualquer mensageiro e cole a resposta dele aqui para descriptografar."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -3482,6 +4254,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "همه‌جا رمزگذاری کنید. از هر مسیری حرف بزنید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criptografe em qualquer lugar. Converse por qualquer canal."
           }
         },
         "ru": {
@@ -3512,6 +4290,12 @@
             "value": "رمزگذاری شد"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criptografado"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -3526,58 +4310,36 @@
         }
       }
     },
-    "Encrypted & copied — paste it to your contact.": {
+    "Encrypted and copied. Send it to your contact.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verschlüsselt & kopiert — füge es bei deinem Kontakt ein."
+            "value": "Verschlüsselt und kopiert. Schicke das deinem Kontakt."
           }
         },
         "fa": {
           "stringUnit": {
             "state": "translated",
-            "value": "رمزگذاری و کپی شد — آن را برای مخاطبتان بچسبانید."
+            "value": "رمزگذاری و کپی شد. آن را برای مخاطبتان بفرستید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criptografado e copiado. Envie para o seu contato."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Зашифровано и скопировано — вставьте собеседнику."
+            "value": "Зашифровано и скопировано. Отправьте собеседнику."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已加密并复制，粘贴给联系人即可。"
-          }
-        }
-      }
-    },
-    "Encrypted and copied to the clipboard — paste it to your contact.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verschlüsselt und in die Zwischenablage kopiert — füge es bei deinem Kontakt ein."
-          }
-        },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "رمزگذاری شد و در کلیپ‌بورد کپی شد — آن را برای مخاطبتان بچسبانید."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Зашифровано и скопировано в буфер — вставьте собеседнику."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已加密并复制到剪贴板，粘贴给联系人即可。"
+            "value": "已加密并复制。发送给联系人。"
           }
         }
       }
@@ -3596,6 +4358,12 @@
             "value": "رمزگذاری"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criptografia"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -3610,30 +4378,37 @@
         }
       }
     },
-    "English": {
+    "Enlarge key on press": {
+      "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Englisch"
+            "value": "Taste beim Tippen vergrößern"
           }
         },
         "fa": {
           "stringUnit": {
             "state": "translated",
-            "value": "انگلیسی"
+            "value": "بزرگ‌نمایی کلید هنگام فشردن"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ampliar a tecla ao pressionar"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Английский"
+            "value": "Увеличение клавиши при нажатии"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "英语"
+            "value": "按下时放大按键"
           }
         }
       }
@@ -3650,6 +4425,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "یک گذرواژه وارد کنید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digite uma senha."
           }
         },
         "ru": {
@@ -3678,6 +4459,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "متنی وارد کنید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digite algum texto."
           }
         },
         "ru": {
@@ -3709,6 +4496,12 @@
             "value": "همه داده‌ها پاک شوند؟ نمایه‌ها و کلیدهای خصوصی شما، کلید مخاطبان، همه گفت‌وگوها، کلیدهای PGP و همه تنظیمات نابود می‌شوند و برنامه بسته می‌شود. این کار بازگشتنی نیست."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apagar TODOS os dados? Seus perfis e chaves privadas, as chaves dos contatos, todas as conversas, as chaves PGP e todas as configurações serão destruídos e o app vai fechar. Isso não pode ser desfeito."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -3735,6 +4528,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پاک کردن همه‌چیز"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apagar tudo"
           }
         },
         "ru": {
@@ -3766,6 +4565,12 @@
             "value": "هرچه در ادامه می‌آید یک بار انجام می‌شود، همان وقتی که مخاطب تازه‌ای اضافه می‌کنید — پس از آن فقط برای هم می‌نویسید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tudo o que vem abaixo é feito uma vez só, ao adicionar um contato novo — depois disso vocês simplesmente se escrevem."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -3792,6 +4597,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "نمونه خروجی"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exemplo do resultado"
           }
         },
         "ru": {
@@ -3823,6 +4634,12 @@
             "value": "برای شروع کلیدها را رد و بدل کنید: نشان QR (بالا سمت راست) را بزنید تا **کلید من** باز شود و مخاطبتان آن را اسکن کند. سپس منوی **…** (بالا سمت چپ) را باز کنید و **افزودن مخاطب** را بزنید تا کلید او را اضافه کنید. هرکدام یک بار دیگری را اضافه می‌کند. راهنمای گام‌به‌گام همراه با تصویر در «[راهنمای استفاده](kryptos://howto)» است."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Troque chaves para começar: toque no ícone de QR (canto superior esquerdo) para mostrar **Minha chave** e deixe seu contato escanear. Depois abra o menu **…** (canto superior direito) e escolha **Adicionar contato** para adicionar a chave dele. Cada um adiciona o outro uma vez. Um guia passo a passo com imagens está em “[Como usar](kryptos://howto)”."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -3850,6 +4667,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "تهیه پشتیبان"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportar"
           }
         },
         "ru": {
@@ -3880,6 +4703,12 @@
             "value": "شناسه چهره و رمز دستگاه در دسترس نیستند: روی این دستگاه رمزی تنظیم نشده است."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Face ID e o código do aparelho estão indisponíveis: este aparelho não tem código definido."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -3906,6 +4735,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Face ID یا رمز دستگاه"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Face ID ou código"
           }
         },
         "ru": {
@@ -3936,6 +4771,12 @@
             "value": "بازخورد"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resposta ao toque"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -3962,6 +4803,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "دکمه فیلد روی صفحه‌کلید"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Botão do campo no teclado"
           }
         },
         "ru": {
@@ -3993,6 +4840,12 @@
             "value": "اندازه فیلد"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tamanho do campo"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -4019,6 +4872,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "فراموش کردن واژه‌های آموخته‌شده"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esquecer palavras aprendidas"
           }
         },
         "ru": {
@@ -4049,6 +4908,12 @@
             "value": "واژه‌هایی که صفحه‌کلید از تایپ شما آموخته فراموش شوند؟ واژه‌نامه‌های داخلی می‌مانند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esquecer as palavras que o teclado aprendeu com a sua digitação? Os dicionários integrados continuam."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -4075,6 +4940,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کاملاً برون‌خط"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Totalmente offline"
           }
         },
         "ru": {
@@ -4105,6 +4976,12 @@
             "value": "کاملاً برون‌خط: بدون سرور، بدون حساب کاربری، بدون تحلیل رفتار. کلیدها هرگز از دستگاه بیرون نمی‌روند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Totalmente offline: sem servidores, sem contas, sem análise de uso. As chaves nunca saem do aparelho."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -4131,6 +5008,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ساختن کلید"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerar chave"
           }
         },
         "ru": {
@@ -4161,6 +5044,12 @@
             "value": "در حال ساختن جفت‌کلید PGP شما…"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerando seu par de chaves PGP…"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -4189,6 +5078,12 @@
             "value": "در حال ساختن…"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerando…"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -4203,34 +5098,6 @@
         }
       }
     },
-    "German": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deutsch"
-          }
-        },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "آلمانی"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Немецкий"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "德语"
-          }
-        }
-      }
-    },
     "GitHub": {
       "localizations": {
         "de": {
@@ -4240,6 +5107,12 @@
           }
         },
         "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub"
+          }
+        },
+        "pt": {
           "stringUnit": {
             "state": "translated",
             "value": "GitHub"
@@ -4274,6 +5147,12 @@
             "value": "نمایه گیت‌هاب"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perfil no GitHub"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -4300,6 +5179,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کلید را به مخاطبتان بدهید"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entregue a chave ao seu contato"
           }
         },
         "ru": {
@@ -4330,6 +5215,12 @@
             "value": "این کلید عمومی را به هرکس بدهید که می‌خواهد برایتان پیام PGP بفرستد یا شما را به‌عنوان گیرنده اضافه کند (تا بتواند امضایتان را بررسی کند)."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entregue esta chave pública a quem quiser lhe enviar mensagens PGP, ou a quem for adicionar você como destinatário (para poder verificar sua assinatura)."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -4356,6 +5247,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "به گفت‌وگوها برگردید، منوی … را در بالا سمت چپ بزنید و «افزودن مخاطب» را انتخاب کنید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volte para Conversas, toque no menu … no canto superior direito e escolha Adicionar contato."
           }
         },
         "ru": {
@@ -4386,6 +5283,12 @@
             "value": "خوب است بدانید"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bom saber"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -4412,6 +5315,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پیام پنهان"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MENSAGEM ESCONDIDA"
           }
         },
         "ru": {
@@ -4442,6 +5351,12 @@
             "value": "بگذارید مخاطبتان این کد QR را اسکن کند، یا متن کلید زیر را از هر راهی برایش بفرستید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Peça ao seu contato para escanear este QR code, ou envie o texto da chave abaixo por qualquer canal."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -4470,6 +5385,12 @@
             "value": "بگذارید مخاطبتان این کد QR را اسکن کند، یا متن کلید زیر را از هر راهی برایش بفرستید. این کلید عمومی شماست — به اشتراک گذاشتنش بی‌خطر است. کلید خصوصی شما هرگز از این دستگاه بیرون نمی‌رود."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Peça ao seu contato para escanear este QR code, ou envie o texto da chave abaixo por qualquer canal. Esta é a sua chave PÚBLICA — pode ser compartilhada sem risco. Sua chave privada nunca sai deste aparelho."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -4484,30 +5405,36 @@
         }
       }
     },
-    "Hidden in text & copied — paste it to your contact.": {
+    "Hidden in text and copied. Send it to your contact.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Im Text versteckt & kopiert — füge es bei deinem Kontakt ein."
+            "value": "Im Text versteckt und kopiert. Schicke das deinem Kontakt."
           }
         },
         "fa": {
           "stringUnit": {
             "state": "translated",
-            "value": "در متن پنهان و کپی شد — آن را برای مخاطبتان بچسبانید."
+            "value": "در متن پنهان و کپی شد. آن را برای مخاطبتان بفرستید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escondido em texto e copiado. Envie para o seu contato."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Спрятано в тексте и скопировано — вставьте собеседнику."
+            "value": "Спрятано в тексте и скопировано. Отправьте собеседнику."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已隐藏在文本中并复制，粘贴给联系人即可。"
+            "value": "已隐藏在文本中并复制。发送给联系人。"
           }
         }
       }
@@ -4524,6 +5451,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پنهان کردن"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultar"
           }
         },
         "ru": {
@@ -4554,6 +5487,12 @@
             "value": "پنهان کردن کد QR"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultar QR code"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -4580,6 +5519,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "یک پیام رمزگذاری‌شده را درون عکسی معمولی پنهان کنید. آن را به‌صورت فایل بفرستید (نه به‌صورت عکس فشرده) تا داده پنهان سالم بماند."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esconda uma mensagem criptografada dentro de uma foto comum. Envie como arquivo (não como foto comprimida) para que os dados escondidos sobrevivam."
           }
         },
         "ru": {
@@ -4610,6 +5555,12 @@
             "value": "پنهان کردن محتوا هنگام جابه‌جایی میان برنامه‌ها"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultar o conteúdo ao alternar de app"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -4636,6 +5587,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پنهان کردن در عکس"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esconder na foto"
           }
         },
         "ru": {
@@ -4666,6 +5623,12 @@
             "value": "پیام از پیش رمزگذاری‌شده را درون یک عکس معمولی یا رشته‌ای از واژه‌های روزمره پنهان می‌کند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esconde a mensagem já criptografada dentro de uma foto comum ou de uma sequência de palavras do dia a dia."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -4692,6 +5655,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پنهان کردن پیام در عکس"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esconder uma mensagem em uma foto"
           }
         },
         "ru": {
@@ -4722,6 +5691,12 @@
             "value": "رمزگذاری چقدر قوی است؟"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quão forte é a criptografia?"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -4748,6 +5723,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "راهنمای استفاده"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Como usar"
           }
         },
         "ru": {
@@ -4778,6 +5759,12 @@
             "value": "گذرواژه پشتیبان کلیدهایم را فراموش کرده‌ام"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esqueci a senha do meu backup de chaves"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -4806,6 +5793,12 @@
             "value": "پیامی را در عکس پنهان کردم و باز نمی‌شود"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escondi uma mensagem em uma foto e ela não abre"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -4832,6 +5825,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "اگر رد و بدل کردن کلیدها برایتان دردسر است، به‌جایش روی یک گذرواژه مشترک توافق کنید. در زبانه گذرواژه، گذرواژه و متن را وارد کنید تا بلوکی بگیرید که با همان گذرواژه باز می‌شود. ساده‌تر است، اما دقیقاً به اندازه گذرواژه‌ای که انتخاب کرده‌اید قوی است و به اندازه راهی که آن را رسانده‌اید امن."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se trocar chaves for trabalho demais, combine com ele uma senha compartilhada. Na aba Senha, informe a senha e o texto, e você recebe um bloco que é aberto com a mesma senha. Mais simples, mas é exatamente tão forte quanto a senha escolhida e tão seguro quanto a forma como você a passou adiante."
           }
         },
         "ru": {
@@ -4863,6 +5862,12 @@
             "value": "بازیابی"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importar"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -4890,6 +5895,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "در Kryptos به تنظیمات — صفحه‌کلید بروید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Kryptos, abra Configurações — Teclado."
           }
         },
         "ru": {
@@ -4920,6 +5931,12 @@
             "value": "رابط کاربری"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interface"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -4946,6 +5963,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "آیا محافظت پساکوانتومی روی هر پیام هست؟"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A proteção pós-quântica vale para toda mensagem?"
           }
         },
         "ru": {
@@ -4976,6 +5999,12 @@
             "value": "دست‌دادن پساکوانتومی (PQXDH با Kyber) را با خود می‌برد که حدود دو کیلوبایت است. این کار یک بار انجام می‌شود؛ به‌محض اینکه مخاطبتان پاسخ بدهد، پیام‌ها چند برابر کوتاه‌تر می‌شوند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ela leva o handshake pós-quântico (PQXDH com Kyber), que tem cerca de dois kilobytes. Ele é enviado uma vez só; assim que seu contato responder, as mensagens ficam muitas vezes mais curtas."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5002,6 +6031,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "این اثر انگشت کلید است. آن را از راهی دیگر با مخاطبتان بسنجید — مثلاً بلند بخوانیدش. اگر شماره‌ها یکی بودند، بی‌گمان کسی در میانه نیست."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ele é a impressão digital da chave. Compare com seu contato por algum outro canal — leia em voz alta, por exemplo. Se os números baterem, com certeza não há ninguém no meio."
           }
         },
         "ru": {
@@ -5032,6 +6067,12 @@
             "value": "گذرواژه دومی برای صفحه قفل است. به‌جای رمز همیشگی آن را بنویسید تا برنامه بی‌سروصدا و برگشت‌ناپذیر همه کلیدها، پیام‌ها و تنظیمات را نابود کند و بعد چنان باز شود که انگار همین حالا نصب شده است. آن را در تنظیمات — حریم خصوصی می‌سازید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "É uma segunda senha para a tela de bloqueio. Digite-a no lugar do seu código normal e o app destrói em silêncio e de forma irreversível todas as chaves, mensagens e configurações, depois abre como se tivesse acabado de ser instalado. Você a configura em Configurações — Privacidade."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5058,6 +6099,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "می‌گوید رمزگشایی نشد. حالا چه کنم؟"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diz que não conseguiu descriptografar. E agora?"
           }
         },
         "ru": {
@@ -5089,6 +6136,12 @@
             "value": "به برنامه‌ای که انتخاب می‌کنید داده می‌شود و برگه اشتراک‌گذاری سیستم پیش‌نمایشی از آن نشان می‌دهد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ele vai para o app que você escolher, e a janela de compartilhamento do sistema mostra uma prévia dele."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5116,6 +6169,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پشتیبان کلیدها"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup das chaves"
           }
         },
         "ru": {
@@ -5147,6 +6206,12 @@
             "value": "تبادل کلید"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Troca de chaves"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5173,6 +6238,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کلید نمایه"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chave do perfil"
           }
         },
         "ru": {
@@ -5203,6 +6274,12 @@
             "value": "کلید اسکن شد"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chave escaneada"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5231,6 +6308,12 @@
             "value": "صدای کلیدها"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Som das teclas"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5241,6 +6324,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "按键声音"
+          }
+        }
+      }
+    },
+    "Key text size": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schriftgröße der Tasten"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اندازه متن کلیدها"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tamanho do texto das teclas"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Размер текста клавиш"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按键文字大小"
           }
         }
       }
@@ -5257,6 +6375,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "لرزش کلیدها"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vibração das teclas"
           }
         },
         "ru": {
@@ -5287,6 +6411,12 @@
             "value": "صفحه‌کلید"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teclado"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5313,6 +6443,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کلیدها"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaves"
           }
         },
         "ru": {
@@ -5344,6 +6480,12 @@
             "value": "کلیدها بازیابی شدند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaves restauradas."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5370,6 +6512,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "برنامه Kryptos پیام را همان‌جا روی دستگاه شما رمزگذاری می‌کند. متن رمزشده حاصل را مثل یک متن معمولی می‌فرستید — با هر پیام‌رسانی، با پیامک یا با ایمیل. هرچه آن را حمل کند تنها یک بلوک از نویسه‌ها می‌بیند و تنها کسی که کلید درست را دارد می‌تواند بخواندش. برنامه هیچ‌وقت به اینترنت نیاز ندارد."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Kryptos criptografa a mensagem no seu próprio aparelho. Você envia o texto cifrado resultante como texto comum — em qualquer mensageiro, por SMS ou por e-mail. Quem transporta a mensagem vê apenas um bloco de caracteres, e só quem tem a chave certa consegue ler. O app nunca precisa de conexão com a internet."
           }
         },
         "ru": {
@@ -5401,6 +6549,12 @@
             "value": "استفاده از Kryptos در برنامه‌های دیگر"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kryptos em outros apps"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5427,6 +6581,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "برنامه Kryptos ابزاری برای گفت‌وگوی خصوصی است که از راه هر پیام‌رسانی کار می‌کند. شما پیام را می‌نویسید، Kryptos آن را روی دستگاه خودتان رمزگذاری می‌کند و نتیجه را با واتساپ، تلگرام، پیامک یا هر چیز دیگری می‌فرستید. تنها Kryptos مخاطب شما می‌تواند آن را بخواند؛ پیام‌رسان همیشه فقط متن رمزشده را می‌بیند."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Kryptos é uma ferramenta de comunicação privada que funciona através de qualquer mensageiro. Você escreve uma mensagem, o Kryptos a criptografa no seu aparelho e você envia o resultado pelo WhatsApp, Telegram, SMS — o que for. Só o Kryptos do seu contato consegue ler; o mensageiro nunca vê nada além de texto cifrado."
           }
         },
         "ru": {
@@ -5458,6 +6618,12 @@
             "value": "برنامه Kryptos رایگان است، بدون تبلیغ و بدون ردیابی. اگر به کارتان می‌آید، می‌توانید از توسعه آن حمایت کنید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Kryptos é gratuito, sem anúncios e sem rastreamento. Se ele é útil para você, você pode apoiar o desenvolvimento."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5484,6 +6650,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "برنامه Kryptos قفل است"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Kryptos está bloqueado"
           }
         },
         "ru": {
@@ -5514,6 +6686,12 @@
             "value": "صفحه‌کلید Kryptos"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teclado Kryptos"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5542,6 +6720,12 @@
             "value": "نشان Kryptos روی صفحه‌کلید"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marca do Kryptos no teclado"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5568,6 +6752,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "زبان‌ها"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idiomas"
           }
         },
         "ru": {
@@ -5599,6 +6789,12 @@
             "value": "بزرگ"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grande"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5626,6 +6822,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "گزینه «رمزگشایی خودکار هنگام باز شدن» را روشن بگذارید. آن‌گاه هر وقت پیام رمزگذاری‌شده‌ای در کلیپ‌بورد باشد، صفحه‌کلید Kryptos به‌محض باز شدن رمزگشایی‌اش می‌کند — پیام را در هر پیام‌رسانی کپی کنید تا همان‌جا آشکار شود."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deixe “Descriptografar ao abrir” ligado. Assim, sempre que houver uma mensagem criptografada na área de transferência, o teclado Kryptos a descriptografa no instante em que abre — copie a mensagem em qualquer mensageiro e ela é revelada ali mesmo."
           }
         },
         "ru": {
@@ -5656,6 +6858,12 @@
             "value": "بگذارید مخاطبتان آن را اسکن کند تا شما را اضافه کند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deixe seu contato escanear para adicionar você."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5682,6 +6890,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "روشن"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claro"
           }
         },
         "ru": {
@@ -5713,6 +6927,12 @@
             "value": "رمزهای صفحه قفل"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Códigos da tela de bloqueio"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5739,6 +6959,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "قفل است — Kryptos را باز کنید و قفلش را بردارید"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bloqueado — abra o Kryptos e desbloqueie"
           }
         },
         "ru": {
@@ -5769,6 +6995,12 @@
             "value": "متن پیام"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TEXTO DA MENSAGEM"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5795,6 +7027,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "مدیریت"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerenciar"
           }
         },
         "ru": {
@@ -5826,6 +7064,12 @@
             "value": "مدیریت نمایه‌ها…"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerenciar perfis…"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5852,6 +7096,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پنهان کردن طول پیام"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mascarar o tamanho da mensagem"
           }
         },
         "ru": {
@@ -5883,6 +7133,12 @@
             "value": "متوسط"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Médio"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5909,6 +7165,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پیام"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mensagem"
           }
         },
         "ru": {
@@ -5939,6 +7201,12 @@
             "value": "پیام رمزگشایی شد"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mensagem descriptografada"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -5965,6 +7233,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "فیلد پیام"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Campo de mensagem"
           }
         },
         "ru": {
@@ -5995,6 +7269,12 @@
             "value": "فیلد پیام در صفحه‌کلید"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Campo de mensagem no teclado"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6005,34 +7285,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "键盘内的消息输入框"
-          }
-        }
-      }
-    },
-    "Messages disappear after %@.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nachrichten verschwinden nach %@."
-          }
-        },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "پیام‌ها پس از %@ ناپدید می‌شوند."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сообщения исчезают через %@."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "消息将在 %@ 后消失。"
           }
         }
       }
@@ -6049,6 +7301,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "فراداده"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metadados"
           }
         },
         "ru": {
@@ -6079,6 +7337,12 @@
             "value": "حالت"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modo"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6105,6 +7369,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کلید من"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minha chave"
           }
         },
         "ru": {
@@ -6135,6 +7405,12 @@
             "value": "کلیدهای من"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minhas chaves"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6161,6 +7437,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "نام"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NOME"
           }
         },
         "ru": {
@@ -6191,6 +7473,12 @@
             "value": "نام"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6219,6 +7507,12 @@
             "value": "نام (مثلاً سارا)"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome (por exemplo, Alice)"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6229,6 +7523,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "名称（例如 Alice）"
+          }
+        }
+      }
+    },
+    "New messages disappear after %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Nachrichten verschwinden nach %@."
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "پیام‌های جدید پس از %@ ناپدید می‌شوند."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As mensagens novas somem depois de %@."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Новые сообщения исчезают через %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新消息将在 %@ 后消失。"
           }
         }
       }
@@ -6246,6 +7574,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "رمز تازه"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Novo código de acesso"
           }
         },
         "ru": {
@@ -6277,6 +7611,12 @@
             "value": "گذرواژه تازه"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nova senha"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6303,6 +7643,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "نام تازه نمایه"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome do novo perfil"
           }
         },
         "ru": {
@@ -6333,6 +7679,12 @@
             "value": "در این متن پیام Kryptos پیدا نشد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhuma mensagem do Kryptos encontrada no texto."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6359,6 +7711,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "هیچ کلید PGP انتخاب نشده است."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhuma chave PGP está selecionada."
           }
         },
         "ru": {
@@ -6389,6 +7747,12 @@
             "value": "هیچ پیام PGP پیدا نشد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhuma mensagem PGP encontrada."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6415,6 +7779,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "هنوز گفت‌وگویی نیست"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhuma conversa ainda"
           }
         },
         "ru": {
@@ -6446,6 +7816,12 @@
             "value": "پیامی پیدا نشد — یا گذرواژه اشتباه است یا این عکس چیزی ندارد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhuma mensagem encontrada — senha errada, ou esta foto não carrega nada."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6472,6 +7848,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "نه — به دستش تنها متنی می‌رسد که از پیش رمزگذاری شده است. با این حال می‌بیند که چیزی فرستاده‌اید، به چه کسی و تقریباً چه اندازه. این فراداده است و Kryptos پنهانش نمی‌کند؛ دست‌کم می‌توانید طول پیام را در تنظیمات — حریم خصوصی بپوشانید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não — ele só recebe um texto que já está criptografado. Ainda assim ele vê que você enviou algo, para quem e mais ou menos quanto. Isso são metadados, e o Kryptos não os esconde; você pode ao menos mascarar o tamanho em Configurações — Privacidade."
           }
         },
         "ru": {
@@ -6502,6 +7884,12 @@
             "value": "نه، Kryptos تنها متن را رمزگذاری می‌کند. زبانه عکس کار دیگری می‌کند: یک پیام متنی را درون تصویر پنهان می‌کند، نه اینکه خود تصویر را امن بفرستد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não, o Kryptos criptografa apenas texto. A aba Foto faz outra coisa: ela esconde uma mensagem de texto dentro de uma imagem, em vez de enviar a imagem em si com segurança."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6512,34 +7900,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "不能，Kryptos 只加密文本。“照片”标签页做的是另一件事：把一条文本消息藏进图片里，而不是安全地发送图片本身。"
-          }
-        }
-      }
-    },
-    "No, and that is deliberate. The file carries only your keys, your contacts and your PGP keys — message history is never written into it. After restoring on a new phone you carry on with the same people, but the old messages do not come back.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nein, und das ist Absicht. Die Datei enthält nur deine Schlüssel, deine Kontakte und deine PGP-Schlüssel — der Nachrichtenverlauf wird nie hineingeschrieben. Nach dem Wiederherstellen auf einem neuen Telefon schreibst du mit denselben Leuten weiter, die alten Nachrichten kommen aber nicht zurück."
-          }
-        },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "نه، و این عمدی است. فایل تنها کلیدها، مخاطبان و کلیدهای PGP شما را دارد — تاریخچه پیام‌ها هرگز در آن نوشته نمی‌شود. پس از بازیابی روی گوشی تازه با همان آدم‌ها ادامه می‌دهید، اما پیام‌های قدیمی برنمی‌گردند."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Нет, и это сделано намеренно. В файл попадают только ваши ключи, контакты и PGP-ключи — история сообщений в него не записывается вообще. После восстановления на новом телефоне вы продолжите переписку с теми же людьми, но старые сообщения не вернутся."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "不会，这是有意为之。文件只包含你的密钥、联系人和 PGP 密钥，绝不会写入消息记录。在新手机上恢复后，你可以继续与同样的人聊天，但旧消息不会回来。"
           }
         }
       }
@@ -6556,6 +7916,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "نه. هر گفت‌وگو از یک دستگاه پیش می‌رود: زنجیره کلیدهایش نمی‌تواند هم‌زمان در دو جا جلو برود. کلیدها را با پشتیبان کلیدها به گوشی تازه ببرید و از آن پس تنها از همان گوشی استفاده کنید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não. Uma conversa roda a partir de um aparelho: a cadeia de chaves dela não pode avançar em dois lugares ao mesmo tempo. Leve suas chaves para o telefone novo com um backup de chaves e use só aquele telefone."
           }
         },
         "ru": {
@@ -6587,6 +7953,12 @@
             "value": "نه. برنامه Kryptos نه سرور دارد و نه حساب کاربری، و هیچ‌وقت اتصال شبکه‌ای باز نمی‌کند. رمزگذاری تماماً روی خود دستگاه انجام می‌شود و رساندن پیام بر عهده همان پیام‌رسانی است که از پیش استفاده می‌کنید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não. O Kryptos não tem servidores nem contas, e nunca abre uma conexão de rede. A criptografia acontece inteiramente no aparelho, e a entrega fica por conta do mensageiro que você já usa."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6615,6 +7987,12 @@
             "value": "نه. کلیدها در Keychain با نشان «فقط همین دستگاه» ذخیره می‌شوند، پس در پشتیبان iCloud یا پشتیبان رایانه نمی‌افتند. هرچیز دیگری هم دقیقاً با همان کلیدها رمزگذاری شده است، پس حتی اگر نسخه‌ای از آن پشتیبان‌گیری شود، هیچ‌جای دیگری خواندنی نیست."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não. As chaves ficam no Chaveiro marcadas como somente-neste-aparelho, então elas não vão para um backup no iCloud nem no computador. Todo o resto é criptografado exatamente com essas chaves, então, mesmo que uma cópia fosse parar em um backup, ela seria ilegível em qualquer outro lugar."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6641,6 +8019,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "به‌طور معمول در فیلد ورودی خود پیام‌رسان می‌نویسید، پس پیام‌رسان هر حرف را پیش از هر رمزگذاری می‌بیند — و بیشتر پیام‌رسان‌ها آنچه نوشته‌اید را به‌عنوان پیش‌نویس ذخیره می‌کنند. این فیلد را روشن کنید تا به‌جای آن داخل صفحه‌کلید Kryptos بنویسید: تا وقتی قفل را نزده‌اید پیام‌رسان اصلاً چیزی دریافت نمی‌کند و بعد هم تنها متن رمزشده آماده را می‌گیرد. آنچه می‌نویسید داخل صفحه‌کلید می‌ماند، هرگز روی حافظه نوشته نمی‌شود و همراه بقیه داده‌هایتان با پاک کردن از میان می‌رود. تنظیم جداگانه «دکمه فیلد روی صفحه‌کلید» دکمه‌ای کنار قفل می‌گذارد تا بتوانید بدون باز کردن تنظیمات، فیلد را روشن کنید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Normalmente você digita no campo de entrada do próprio mensageiro, então ele vê cada letra antes de qualquer criptografia — e a maioria dos mensageiros salva o que você digitou como rascunho. Ligue este campo e você passa a digitar dentro do teclado Kryptos: o mensageiro não recebe absolutamente nada até você tocar no cadeado, e então recebe só o texto cifrado pronto. O que você está digitando fica dentro do teclado, nunca é gravado no armazenamento e some junto com o resto dos seus dados quando você os apaga. A configuração separada “Botão do campo no teclado” coloca um botão ao lado do cadeado para você ligar o campo sem abrir as Configurações."
           }
         },
         "ru": {
@@ -6672,6 +8056,12 @@
             "value": "تنظیم نشده"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6698,6 +8088,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "خاموش"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desligado"
           }
         },
         "ru": {
@@ -6729,6 +8125,12 @@
             "value": "روشن"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ligado"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6757,6 +8159,12 @@
             "value": "در زبانه گفت‌وگوها، نشان QR را در بالا سمت راست بزنید. این کار «کلید من» را باز می‌کند — کلید عمومی شما که به اشتراک گذاشتنش بی‌خطر است."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na aba Conversas, toque no ícone de QR no canto superior esquerdo. Isso abre Minha chave — a sua chave pública, que pode ser compartilhada sem risco."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6783,6 +8191,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "در زبانه عکس، پیام درون یک تصویر معمولی پنهان می‌شود: عکسی انتخاب کنید، گذرواژه بگذارید و متن را بنویسید. نتیجه را به‌صورت فایل (سند) بفرستید — اگر به‌صورت عکس معمولی فرستاده شود، پیام‌رسان دوباره فشرده‌اش می‌کند و داده پنهان از بین می‌رود."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na aba Foto, uma mensagem é escondida dentro de uma imagem comum: escolha uma foto, defina uma senha e escreva o texto. Envie o resultado como arquivo (documento) — enviado como foto normal, o mensageiro recomprime a imagem e os dados escondidos são destruídos."
           }
         },
         "ru": {
@@ -6814,6 +8228,12 @@
             "value": "پس از راه‌اندازی صفحه‌کلید (بخش «استفاده از Kryptos در برنامه‌های دیگر» را ببینید)، می‌توانید بدون بیرون رفتن از برنامه دیگر رمزگذاری کنید. متن را بنویسید، قفل را بزنید و در فیلد تنها متن رمزشده می‌ماند. پیام دریافتی کپی‌شده را خود صفحه‌کلید رمزگشایی می‌کند و در تابلویی بالای کلیدها نشان می‌دهد — متن ساده هرگز به پیام‌رسان نمی‌رسد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Depois que o teclado estiver configurado (veja “Kryptos em outros apps”), você pode criptografar sem sair do outro app. Escreva o texto, toque no cadeado, e só o texto cifrado fica no campo. Uma mensagem recebida que você copiou é descriptografada pelo próprio teclado e mostrada em um painel acima das teclas — o texto legível nunca chega ao mensageiro."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6824,6 +8244,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "键盘设置好之后（见“在其他应用中使用 Kryptos”），你无需离开当前应用即可加密。输入文本、点按锁形图标，输入框里就只剩密文。复制来的来信由键盘自行解密，并显示在按键上方的面板中——明文永远不会进入通讯软件。"
+          }
+        }
+      }
+    },
+    "Only if “Back up chats” was on when the file was made. Otherwise the file carries only your keys, your contacts and your PGP keys.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur wenn beim Erstellen der Datei „Chats sichern“ eingeschaltet war. Sonst enthält die Datei nur deine Schlüssel, deine Kontakte und deine PGP-Schlüssel."
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فقط اگر هنگام ساختن فایل «پشتیبان‌گیری از گفتگوها» روشن بوده باشد. در غیر این صورت فایل تنها کلیدها، مخاطبان و کلیدهای PGP شما را دارد."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Só se a opção “Incluir as conversas no backup” estava ligada quando o arquivo foi criado. Caso contrário, o arquivo leva apenas suas chaves, seus contatos e suas chaves PGP."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Только если при создании файла был включён переключатель «Включать переписку». Иначе в файл попадают только ваши ключи, контакты и PGP-ключи."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只有在创建文件时开启了“备份聊天记录”才会。否则文件只包含你的密钥、联系人和 PGP 密钥。"
           }
         }
       }
@@ -6840,6 +8294,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "تنها برای اسکن کلید مخاطب از روی کد QR. دوربین هیچ‌جای دیگری به کار نمی‌رود و رد کردن این دسترسی چیزی را خراب نمی‌کند — همیشه می‌توانید کلید را به‌صورت متن بچسبانید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Só para escanear a chave de um contato a partir de um QR code. A câmera não é usada em nenhum outro lugar, e recusar o acesso não quebra nada — você sempre pode colar a chave como texto."
           }
         },
         "ru": {
@@ -6870,6 +8330,12 @@
             "value": "افزودن مخاطب را باز کنید"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abra Adicionar contato"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6898,6 +8364,12 @@
             "value": "باز کردن تنظیمات برنامه"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir os Ajustes do app"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6924,6 +8396,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "مخاطب را باز کنید، پیام را بنویسید و بفرستید: Kryptos آن را رمزگذاری می‌کند و نتیجه را بی‌درنگ در کلیپ‌بورد می‌گذارد، پس کافی است در پیام‌رسان بچسبانیدش. وقتی پاسخی رسید، آن را کپی کنید و به Kryptos برگردید — برنامه متن رمزشده خودش را در کلیپ‌بورد می‌شناسد و متن رمزگشایی‌شده را خودبه‌خود نشان می‌دهد."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abra o contato, escreva uma mensagem e envie: o Kryptos criptografa e coloca o resultado na área de transferência na hora, então você só precisa colar no mensageiro. Quando chegar uma resposta, copie e volte ao Kryptos — o app reconhece o próprio texto cifrado na área de transferência e mostra o texto descriptografado sozinho."
           }
         },
         "ru": {
@@ -6955,6 +8433,12 @@
             "value": "برنامه تنظیمات iOS را باز کنید، Kryptos را در فهرست برنامه‌ها پیدا کنید و «صفحه‌کلیدها» را بزنید. در همان صفحه می‌توانید «چسباندن از برنامه‌های دیگر» را روی «اجازه دادن» بگذارید تا iOS دیگر هر بار که پیام کپی‌شده خوانده می‌شود نپرسد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abra o app Ajustes do iOS, encontre o Kryptos na lista de apps e toque em Teclados. Na mesma tela você pode definir “Colar de Outros Apps” como Permitir, para o iOS parar de perguntar toda vez que uma mensagem copiada é lida."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -6982,6 +8466,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "باز کردن تنظیمات صفحه‌کلید iOS"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abra os ajustes de teclado do iOS"
           }
         },
         "ru": {
@@ -7013,6 +8503,12 @@
             "value": "باز کردن تنظیمات صفحه‌کلید"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abra as configurações do teclado"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7041,6 +8537,12 @@
             "value": "کلیدتان را باز کنید"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abra sua chave"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7064,6 +8566,12 @@
           }
         },
         "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OpenPGP — ObjectivePGP"
+          }
+        },
+        "pt": {
           "stringUnit": {
             "state": "translated",
             "value": "OpenPGP — ObjectivePGP"
@@ -7097,6 +8605,12 @@
             "value": "برنامه Kryptos را روی صفحه قفل باز می‌کند. می‌تواند تنها راه ورود باشد، بدون Face ID."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre o Kryptos na tela de bloqueio. Ele pode ser a única forma de entrar, sem Face ID."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7125,6 +8639,12 @@
             "value": "گذرواژه"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SENHA"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7148,6 +8668,12 @@
           }
         },
         "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PGP"
+          }
+        },
+        "pt": {
           "stringUnit": {
             "state": "translated",
             "value": "PGP"
@@ -7181,6 +8707,12 @@
             "value": "پیام PGP"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MENSAGEM PGP"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7207,6 +8739,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "عکس دارای راز"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FOTO COM UM SEGREDO"
           }
         },
         "ru": {
@@ -7237,6 +8775,12 @@
             "value": "عکس با پیام پنهان"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FOTO COM MENSAGEM ESCONDIDA"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7265,6 +8809,12 @@
             "value": "نمایه‌ها"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PERFIS"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7291,6 +8841,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "گفت‌وگوها و گذرواژه را تا اندازه‌های ثابت پر می‌کند. روی عکس و PGP اعمال نمی‌شود."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preenche Conversas e Senha até tamanhos fixos. Não vale para fotos nem para PGP."
           }
         },
         "ru": {
@@ -7322,6 +8878,12 @@
             "value": "گذرواژه اضطراری"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senha de pânico"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7349,6 +8911,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "گذرواژه اضطراری برداشته شد."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senha de pânico removida."
           }
         },
         "ru": {
@@ -7380,6 +8948,12 @@
             "value": "گذرواژه اضطراری ذخیره شد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senha de pânico salva."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7407,6 +8981,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "رمز"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Código de acesso"
           }
         },
         "ru": {
@@ -7437,6 +9017,12 @@
             "value": "گذرواژه"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senha"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7463,6 +9049,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "حالت گذرواژه"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modo senha"
           }
         },
         "ru": {
@@ -7494,6 +9086,12 @@
             "value": "حالت گذرواژه — Argon2id"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modo senha — Argon2id"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7522,6 +9120,12 @@
             "value": "چسباندن"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colar"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7532,34 +9136,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "粘贴"
-          }
-        }
-      }
-    },
-    "Persian": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Persisch"
-          }
-        },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "فارسی"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Персидский"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "波斯语"
           }
         }
       }
@@ -7576,6 +9152,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "عکس"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto"
           }
         },
         "ru": {
@@ -7606,6 +9188,12 @@
             "value": "سنجاق کردن گفت‌وگو"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fixar conversa"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7634,6 +9222,12 @@
             "value": "حریم خصوصی"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacidade"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7660,6 +9254,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "نمایه %lld"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perfil %lld"
           }
         },
         "ru": {
@@ -7691,6 +9291,12 @@
             "value": "نمایه‌ها"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perfis"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7717,6 +9323,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کد QR در دسترس نیست — از «کپی کلید» یا «اشتراک‌گذاری» در پایین استفاده کنید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QR indisponível — use Copiar chave ou Compartilhar abaixo."
           }
         },
         "ru": {
@@ -7747,6 +9359,12 @@
             "value": "پرسش و پاسخ"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perguntas e respostas"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7773,6 +9391,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پرسش، پیشنهاد یا گزارش ایراد دارید؟ خوشحال می‌شوم بشنوم."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dúvidas, ideias ou um bug? Vou ficar feliz em receber sua mensagem."
           }
         },
         "ru": {
@@ -7803,6 +9427,12 @@
             "value": "سریع"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rápido"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7817,30 +9447,36 @@
         }
       }
     },
-    "READY — PASTE THIS TO YOUR CONTACT": {
+    "READY. SEND IT TO YOUR CONTACT.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "FERTIG — SCHICKE DAS DEINEM KONTAKT"
+            "value": "FERTIG. SCHICKE DAS DEINEM KONTAKT."
           }
         },
         "fa": {
           "stringUnit": {
             "state": "translated",
-            "value": "آماده — این را برای مخاطبتان بچسبانید"
+            "value": "آماده. آن را برای مخاطبتان بفرستید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PRONTO. ENVIE PARA O SEU CONTATO."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "ГОТОВО — ВСТАВЬТЕ ЭТО СОБЕСЕДНИКУ"
+            "value": "ГОТОВО. ОТПРАВЬТЕ СОБЕСЕДНИКУ."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已就绪 — 把它粘贴给联系人"
+            "value": "已就绪。发送给联系人。"
           }
         }
       }
@@ -7857,6 +9493,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "گیرنده"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DESTINATÁRIO"
           }
         },
         "ru": {
@@ -7887,6 +9529,12 @@
             "value": "RSA 3072 (سازگار)"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RSA 3072 (compatível)"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7913,6 +9561,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "RSA 4096 (قوی‌ترین)"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RSA 4096 (mais forte)"
           }
         },
         "ru": {
@@ -7943,6 +9597,12 @@
             "value": "حروف تصادفی"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letras aleatórias"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -7969,6 +9629,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "جمله‌های واقعی به‌جای مشتی واژه پراکنده، به بهای متنی بلندتر."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frases de verdade em vez de uma salada de palavras, ao custo de um texto mais longo."
           }
         },
         "ru": {
@@ -7999,6 +9665,12 @@
             "value": "گیرندگان"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Destinatários"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8025,6 +9697,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ساخت دوباره"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recriar"
           }
         },
         "ru": {
@@ -8055,6 +9733,12 @@
             "value": "ساخت کلید تازه"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recriar a chave"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8081,6 +9765,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "این کلید از نو ساخته شود؟ کلید عمومی‌ای که پیش‌تر به اشتراک گذاشته‌اید از کار می‌افتد."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recriar esta chave? A chave pública que você compartilhou antes vai parar de funcionar."
           }
         },
         "ru": {
@@ -8112,6 +9802,12 @@
             "value": "کلید این نمایه از نو ساخته شود؟"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recriar este perfil?"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8139,6 +9835,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "برداشتن"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover"
           }
         },
         "ru": {
@@ -8170,6 +9872,12 @@
             "value": "برداشتن رمز برنامه"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover o código de acesso do app"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8199,6 +9907,12 @@
             "value": "برداشتن گذرواژه اضطراری"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover a senha de pânico"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8225,6 +9939,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "رمز برنامه برداشته شود؟ باز کردن قفل به Face ID یا رمز دستگاه برمی‌گردد؛ بدون آن‌ها قفل برنامه خاموش می‌شود."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover o código de acesso do app? O desbloqueio volta a ser por Face ID ou pelo código do aparelho; sem eles, o bloqueio do app é desligado."
           }
         },
         "ru": {
@@ -8256,6 +9976,12 @@
             "value": "گذرواژه اضطراری برداشته شود؟ نوشتن آن دیگر چیزی را پاک نمی‌کند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover a senha de pânico? Digitá-la não vai mais apagar nada."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8283,6 +10009,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "این گیرنده برداشته شود؟ کلید عمومی او از این دستگاه حذف می‌شود."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover este destinatário? A chave pública dele é excluída deste aparelho."
           }
         },
         "ru": {
@@ -8313,6 +10045,12 @@
             "value": "تغییر نام"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renomear"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8341,6 +10079,12 @@
             "value": "تغییر نام مخاطب"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renomear contato"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8367,6 +10111,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "تغییر نام نمایه"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renomear perfil"
           }
         },
         "ru": {
@@ -8398,6 +10148,12 @@
             "value": "تکرار رمز"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repetir o código de acesso"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8425,6 +10181,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "تکرار گذرواژه"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repetir a senha"
           }
         },
         "ru": {
@@ -8456,6 +10218,12 @@
             "value": "کلیدهای این دستگاه با کلیدهای پشتیبان جایگزین شوند؟ کلیدهای کنونی از میان می‌روند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Substituir as chaves deste aparelho pelas do backup? As chaves que estão aqui agora vão sumir."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8483,6 +10251,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "بازیابی کلیدها"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restaurar chaves"
           }
         },
         "ru": {
@@ -8513,6 +10287,12 @@
             "value": "بازیابی، کلیدهای کنونی این دستگاه را جایگزین می‌کند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restaurar substitui as chaves que estão agora neste aparelho."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8539,6 +10319,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "آشکار کردن"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revelar"
           }
         },
         "ru": {
@@ -8569,6 +10355,12 @@
             "value": "آشکار کردن پیام"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revelar mensagem"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8579,34 +10371,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "读取消息"
-          }
-        }
-      }
-    },
-    "Russian": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Russisch"
-          }
-        },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "روسی"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Русский"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "俄语"
           }
         }
       }
@@ -8623,6 +10387,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "شماره امنیتی"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NÚMERO DE SEGURANÇA"
           }
         },
         "ru": {
@@ -8653,6 +10423,12 @@
             "value": "پیام محرمانه"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MENSAGEM SECRETA"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8679,6 +10455,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ذخیره"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvar"
           }
         },
         "ru": {
@@ -8710,6 +10492,12 @@
             "value": "ذخیره رمز"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvar código de acesso"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8737,6 +10525,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ذخیره گذرواژه"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvar senha"
           }
         },
         "ru": {
@@ -8767,6 +10561,12 @@
             "value": "در تاریخچه گفت‌وگو ذخیره شد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvo no histórico da conversa."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8793,6 +10593,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "اسکن کد QR"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escanear QR"
           }
         },
         "ru": {
@@ -8823,6 +10629,12 @@
             "value": "رفتن به آخرین پیام"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ir para a mensagem mais recente"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8849,6 +10661,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "حافظه امن الان در دسترس نیست. کمی بعد دوباره تلاش کنید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O armazenamento seguro está indisponível agora. Tente de novo em um instante."
           }
         },
         "ru": {
@@ -8879,6 +10697,12 @@
             "value": "امنیت"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segurança"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8907,6 +10731,12 @@
             "value": "آن را به‌صورت سند یا فایل بفرستید. ارسال به‌صورت عکس معمولی آن را دوباره فشرده می‌کند و داده پنهان از بین می‌رود."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envie como documento ou arquivo. Enviar como foto normal recomprime a imagem e destrói os dados escondidos."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8933,6 +10763,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "فرستادن و گرفتن"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar e receber"
           }
         },
         "ru": {
@@ -8964,6 +10800,12 @@
             "value": "تنظیم شده"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sim"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -8990,6 +10832,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "تنظیم رمز"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Definir um código de acesso"
           }
         },
         "ru": {
@@ -9021,6 +10869,12 @@
             "value": "تنظیم گذرواژه"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Definir uma senha"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9047,6 +10901,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "تنظیمات"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurações"
           }
         },
         "ru": {
@@ -9077,6 +10937,12 @@
             "value": "اشتراک‌گذاری"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compartilhar"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9105,6 +10971,12 @@
             "value": "اشتراک‌گذاری به‌صورت فایل"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compartilhar como arquivo"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9131,6 +11003,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "اشتراک‌گذاری کلید"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compartilhar chave"
           }
         },
         "ru": {
@@ -9162,6 +11040,12 @@
             "value": "متن رمزگشایی‌شده به اشتراک گذاشته شود؟"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compartilhar o texto descriptografado?"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9188,6 +11072,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "نمایش کد QR"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar QR code"
           }
         },
         "ru": {
@@ -9218,6 +11108,12 @@
             "value": "نشان را در نوار بالای کلیدها نمایش می‌دهد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra a marca na barra acima das teclas."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9244,6 +11140,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پروتکل Signal — کتابخانه رسمی libsignal"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Protocolo Signal — libsignal oficial"
           }
         },
         "ru": {
@@ -9274,6 +11176,12 @@
             "value": "موتور Signal"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motor Signal"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9300,6 +11208,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پیام‌های Signal در متن معمولی پیچیده می‌شوند و «حالت» تعیین می‌کند آن متن چه شکلی باشد."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As mensagens do Signal são embrulhadas em texto comum — o Modo decide a aparência desse texto."
           }
         },
         "ru": {
@@ -9330,6 +11244,12 @@
             "value": "امضا بررسی شد — از یک گیرنده ذخیره‌شده."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assinatura verificada — de um destinatário salvo."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9358,6 +11278,12 @@
             "value": "واژه‌های ساده"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Palavras simples"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9368,6 +11294,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "普通词语"
+          }
+        }
+      }
+    },
+    "Size of the letters and labels drawn on the keys. The enlarged letter appears above the key you press; with it off the key only lights up.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Größe der Buchstaben und Beschriftungen auf den Tasten. Der vergrößerte Buchstabe erscheint über der gedrückten Taste; ist das aus, wird die Taste nur hervorgehoben."
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اندازه حروف و برچسب‌های روی کلیدها. حرف بزرگ‌شده بالای کلید فشرده‌شده ظاهر می‌شود؛ اگر خاموش باشد فقط خود کلید روشن می‌شود."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tamanho das letras e dos rótulos desenhados nas teclas. A letra ampliada aparece acima da tecla que você pressiona; com isso desligado, a tecla apenas se acende."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Размер букв и подписей на клавишах. Увеличенная буква показывается над нажатой клавишей; если выключить, клавиша просто подсвечивается."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "键面上字母和标签的大小。按下时会在按键上方显示放大的字母；关闭后按键只会高亮。"
           }
         }
       }
@@ -9385,6 +11346,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کوچک"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pequeno"
           }
         },
         "ru": {
@@ -9415,6 +11382,12 @@
             "value": "جمله‌های بامعنا"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frases inteligentes"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9441,6 +11414,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "لرزش ملایم و صدای کلیک سیستم روی هر کلید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vibração suave e o clique nativo a cada toque nas teclas."
           }
         },
         "ru": {
@@ -9471,6 +11450,12 @@
             "value": "کد منبع"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Código-fonte"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9497,6 +11482,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پنهان‌نگاری"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esteganografia"
           }
         },
         "ru": {
@@ -9527,6 +11518,12 @@
             "value": "پنهان‌نگاری برای گفت‌وگوها"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esteganografia para as Conversas"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9553,6 +11550,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "گام %lld"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passo %lld"
           }
         },
         "ru": {
@@ -9584,6 +11587,12 @@
             "value": "حمایت از پروژه"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apoie o projeto"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9610,6 +11619,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کلید او"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A CHAVE DELE"
           }
         },
         "ru": {
@@ -9640,6 +11655,12 @@
             "value": "کلید عمومی او"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A CHAVE PÚBLICA DELE"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9666,6 +11687,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "نوار زبانه‌ها"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barra de abas"
           }
         },
         "ru": {
@@ -9696,6 +11723,12 @@
             "value": "زبانه‌هایی که خاموش کنید از نوار پایین ناپدید می‌شوند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As abas que você desligar somem da barra de baixo."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9722,6 +11755,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "تلگرام"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram"
           }
         },
         "ru": {
@@ -9752,6 +11791,12 @@
             "value": "کانال تلگرام"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Canal no Telegram"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9780,6 +11825,12 @@
             "value": "این ایراد نیست، رازداری پیش‌رو است: کلید هر پیام همان لحظه‌ای که خوانده می‌شود نابود می‌شود، پس حتی کسی که گوشی شما را بردارد نمی‌تواند مکاتبات قدیمی را بازیابی کند. پیام‌هایی که پیش‌تر باز کرده‌اید در تاریخچه گفت‌وگو می‌مانند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Isso não é defeito, é sigilo de encaminhamento: a chave de cada mensagem é destruída no instante em que ela é lida, então a correspondência antiga não pode ser recuperada nem por quem levar seu telefone. As mensagens que você já abriu continuam no histórico da conversa."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9806,6 +11857,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "صفحه‌کلید Kryptos"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O teclado Kryptos"
           }
         },
         "ru": {
@@ -9837,6 +11894,12 @@
             "value": "صفحه‌کلید Kryptos به شما اجازه می‌دهد بدون بیرون رفتن از برنامه‌ای که در آن هستید رمزگذاری و رمزگشایی کنید. یک بار راه‌اندازی می‌شود: رمزگشایی خودکار را داخل Kryptos روشن کنید و بعد صفحه‌کلید را در تنظیمات iOS فعال کنید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O teclado Kryptos deixa você criptografar e descriptografar sem sair do app em que está. Ele é configurado uma vez só: ligue a descriptografia automática dentro do Kryptos e depois ative o teclado nos Ajustes do iOS."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9863,6 +11926,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "زبانه PGP برای نوشتن به کسانی است که همین حالا از OpenPGP معمولی استفاده می‌کنند. این زبانه کلیدها و فهرست گیرندگان خودش را دارد، جدا از گفت‌وگوهای شما."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A aba PGP serve para escrever a quem já usa o OpenPGP comum. Ela guarda as próprias chaves e a própria lista de destinatários, separadas das suas conversas."
           }
         },
         "ru": {
@@ -9894,6 +11963,12 @@
             "value": "برنامه کاملاً برون‌خط است: بدون سرور، بدون حساب کاربری، و هیچ‌وقت اتصال شبکه‌ای باز نمی‌کند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O app é totalmente offline: sem servidores, sem contas, e ele nunca abre uma conexão de rede."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9922,6 +11997,12 @@
             "value": "رمز برنامه، Kryptos را باز می‌کند؛ گذرواژه اضطراری همه‌چیز را پاک می‌کند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O código de acesso do app abre o Kryptos; a senha de pânico apaga tudo."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -9948,6 +12029,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "در کلیپ‌بورد پیام Kryptos نیست — نخست متن رمزشده را کپی کنید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A área de transferência não tem nenhuma mensagem do Kryptos — copie primeiro o texto criptografado."
           }
         },
         "ru": {
@@ -9979,6 +12066,12 @@
             "value": "داده‌های ذخیره‌شده این نمایه دیگر رمزگشایی نمی‌شوند. منوی نمایه در بالا را باز کنید، «مدیریت نمایه‌ها» را انتخاب کنید و کلید را از نو بسازید تا دوباره از این نمایه استفاده کنید — مخاطبان و پیام‌های قدیمی بازیافتنی نیستند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os dados salvos para este perfil não podem mais ser descriptografados. Abra o menu de perfis acima, escolha Gerenciar perfis e gere uma nova chave para usar este perfil de novo — os contatos e as mensagens antigos não podem ser recuperados."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10005,6 +12098,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "این فیلد به شما اجازه می‌دهد بیرون از پیام‌رسان بنویسید، پس پیام‌رسان نمی‌تواند پیش‌نویس نگه دارد. دکمه، همان فیلد را از روی صفحه‌کلید روشن و خاموش می‌کند."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O campo deixa você digitar fora do mensageiro, para que ele não guarde nenhum rascunho. O botão liga e desliga esse campo pelo teclado."
           }
         },
         "ru": {
@@ -10035,6 +12134,12 @@
             "value": "این فایل کلیدهای شما را نگه می‌دارد و با گذرواژه‌ای که همین‌جا انتخاب می‌کنید رمزگذاری می‌شود. Kryptos هیچ نسخه‌ای از آن نگه نمی‌دارد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O arquivo guarda suas chaves, criptografadas com a senha que você escolher aqui. O Kryptos não fica com nenhuma cópia dela."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10061,6 +12166,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "صفحه‌کلید هنگام باز شدن، پیام رمزگذاری‌شده را از کلیپ‌بورد آشکار می‌کند."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O teclado revela uma mensagem criptografada da área de transferência assim que abre."
           }
         },
         "ru": {
@@ -10091,6 +12202,12 @@
             "value": "کلیدها روی دستگاه هستند و هیچ‌جای دیگر، پس حذف برنامه آن‌ها را برای همیشه نابود می‌کند و چیزی برای رمزگشایی نمی‌ماند. تنها بیمه این است که از پیش در تنظیمات از کلیدها پشتیبان بگیرید. روی دیگر همین ویژگی: هرکس گوشی را پیدا کند هم چیزی گیرش نمی‌آید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As chaves ficam no aparelho e em nenhum outro lugar, então apagar o app as destrói de vez e não sobra nada com que descriptografar. O único seguro é fazer antes um backup de chaves nas Configurações. O outro lado da mesma propriedade: quem achar o telefone também não recebe nada."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10119,6 +12236,12 @@
             "value": "کلید زبان، چیدمان‌ها را عوض می‌کند. همیشه دست‌کم یک زبان روشن می‌ماند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A tecla de idioma alterna os layouts. Pelo menos um idioma fica sempre ligado."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10145,6 +12268,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "طول متن رمزشده معمولاً از طول نوشته شما پیروی می‌کند، پس همچنان پیداست که یک کلمه پاسخ داده‌اید یا یک صفحه نوشته‌اید. با روشن بودن این گزینه، Kryptos هر پیام را با بایت‌های تصادفی تا پله بعدی یک نردبان ثابت پر می‌کند — ۶۴ بایت، ۱۲۸، ۲۵۶ و همین‌طور جلو — تا نوشته‌هایی با طول‌های گوناگون هم‌اندازه دربیایند. این کار گفت‌وگوها و حالت گذرواژه را می‌پوشاند، از جمله پیام‌هایی که در متن معمولی پنهان شده‌اند؛ عکس و PGP از آن اثر نمی‌گیرند. مخاطب شما این پرکننده را خودبه‌خود کنار می‌گذارد، هر تنظیمی که خودش داشته باشد. بهایش پیام بلندتر است، گاهی نزدیک به دو برابر، و برای همین به‌طور پیش‌فرض خاموش است."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O tamanho do texto cifrado normalmente acompanha o tamanho do seu texto, então ele ainda revela se você respondeu com uma palavra ou escreveu uma página. Com isso ligado, o Kryptos completa toda mensagem com bytes aleatórios até o próximo tamanho de uma escada fixa — 64 bytes, 128, 256 e assim por diante — para que textos de tamanhos diferentes saiam do mesmo tamanho. Vale para as Conversas e para o modo senha, inclusive para mensagens escondidas em texto comum; fotos e PGP não são afetados. Seu contato remove o preenchimento automaticamente, seja qual for a configuração dele. O preço é uma mensagem mais longa, às vezes quase o dobro, e por isso a opção vem desligada."
           }
         },
         "ru": {
@@ -10176,6 +12305,12 @@
             "value": "این پیام برای این عکس بیش از اندازه بزرگ است. عکس بزرگ‌تر یا پرجزئیات‌تری بردارید، یا پیام کوتاه‌تری بنویسید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A mensagem é grande demais para esta foto. Use uma foto maior ou mais detalhada, ou uma mensagem mais curta."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10203,6 +12338,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "گذرواژه‌ها یکسان نیستند."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As senhas não coincidem."
           }
         },
         "ru": {
@@ -10233,6 +12374,12 @@
             "value": "عکس باید به‌صورت فایل (سند) فرستاده شود. اگر مثل یک تصویر معمولی فرستاده شود، پیام‌رسان دوباره فشرده‌اش می‌کند و همین فشرده‌سازی داده پنهان را نابود می‌کند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A foto precisa ser enviada como arquivo (documento). Enviada como imagem comum, ela é recomprimida pelo mensageiro, e a recompressão destrói os dados escondidos."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10259,6 +12406,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "امن‌ترین راه این است که کد QR را نشان دهید و او رودررو اسکنش کند. اگر دور است، «کپی کلید» را بزنید و متن را هرطور که خواستید بفرستید. شنود این کلید هیچ سودی برای کسی ندارد — این نیمه عمومی کلید است."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O jeito mais seguro é mostrar o QR code e deixar que ele escaneie pessoalmente. Se estiver longe, toque em Copiar chave e envie o texto como preferir. Interceptar esta chave não dá nada a quem estiver espionando — ela é a metade pública."
           }
         },
         "ru": {
@@ -10289,6 +12442,12 @@
             "value": "هر پیام تنها یک بار رمزگشایی می‌شود — این همان رازداری پیش‌رو است. پیام‌هایی که خوانده‌اید در تاریخچه گفت‌وگو می‌مانند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A mesma mensagem só é descriptografada uma vez — é o sigilo de encaminhamento em ação. As mensagens que você já leu ficam no histórico da conversa."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10315,6 +12474,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "نشست امن با این مخاطب از میان رفته است. کلیدتان را دوباره برایش بفرستید و کلید او را اضافه کنید — گفت‌وگو با همین کار برمی‌گردد."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A sessão segura com este contato acabou. Envie sua chave a ele de novo e adicione a chave dele — isso restaura a conversa."
           }
         },
         "ru": {
@@ -10345,6 +12510,12 @@
             "value": "کوتاه‌ترین حالت — نزدیک به نصف طول واژه‌های ساده."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O modo mais curto — cerca de metade do tamanho de Palavras simples."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10371,6 +12542,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کد منبع باز است — بخوانیدش یا خودتان برنامه را بسازید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O código é público — leia ou compile o app você mesmo."
           }
         },
         "ru": {
@@ -10401,6 +12578,12 @@
             "value": "نخستین پیام به هر مخاطب تازه به‌روشنی بلندتر از بقیه است: دست‌دادن پساکوانتومی را با خود می‌برد. به‌محض اینکه او پاسخ بدهد، پیام‌ها کوتاه می‌شوند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A primeira mensagem para um contato novo é bem mais longa que as outras: ela leva o handshake pós-quântico. Assim que ele responder, as mensagens ficam curtas."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10429,6 +12612,12 @@
             "value": "همان کتابخانه‌ای که خود برنامه Signal به کار می‌برد: توافق کلید پساکوانتومی (PQXDH با Kyber) و Triple Ratchet — کلیدی تازه برای هر پیام."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A mesma biblioteca que o app Signal usa: acordo de chaves pós-quântico (PQXDH com Kyber) e o Triple Ratchet — uma chave nova para cada mensagem."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10455,6 +12644,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پوسته"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tema"
           }
         },
         "ru": {
@@ -10486,6 +12681,12 @@
             "value": "هنوز کلیدی برای تهیه پشتیبان نیست."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda não há chaves para exportar."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10512,6 +12713,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "راهی برای بازیابی‌اش نیست. فایل با همان گذرواژه رمزگذاری شده و Kryptos هیچ نسخه‌ای از آن، هیچ‌جا، نگه نمی‌دارد. پشتیبان تازه‌ای با گذرواژه‌ای بگیرید که فراموش نکنید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não há como recuperá-la. O arquivo é criptografado com essa senha e o Kryptos não guarda nenhuma cópia dela em lugar nenhum. Faça um backup novo com uma senha que você não vá esquecer."
           }
         },
         "ru": {
@@ -10542,6 +12749,12 @@
             "value": "گفت‌وگو را پس از زمانی که انتخاب می‌کنید داخل Kryptos پاک می‌کنند — روی دستگاه شما، و روی دستگاه مخاطبتان اگر او هم همین را تنظیم کرده باشد. کاری که از دستشان برنمی‌آید، متن رمزشده‌ای است که همین حالا در پیام‌رسان نشسته: تنها خود پیام‌رسان می‌تواند آن را بردارد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elas apagam a conversa dentro do Kryptos depois do tempo que você escolher — no seu aparelho, e no do seu contato se ele configurar a mesma coisa. O que elas não alcançam é o texto cifrado que já está no mensageiro: só o próprio mensageiro pode removê-lo."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10570,6 +12783,12 @@
             "value": "این کد QR شناخته نشد. شاید با نسخه دیگری از Kryptos ساخته شده باشد — از مخاطبتان بخواهید کلید را به‌صورت متن بفرستد."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este QR code não foi reconhecido. Ele pode ter sido feito por outra versão do Kryptos — peça ao seu contato que envie a chave como texto."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10580,6 +12799,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法识别此二维码。它可能由其他版本的 Kryptos 生成——请让联系人改为以文本形式发送密钥。"
+          }
+        }
+      }
+    },
+    "This backup is too large to be restored later. Turn off chat backup and try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Sicherung ist zu groß, um später wiederhergestellt zu werden. Schalte die Chat-Sicherung aus und versuche es erneut."
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "این پشتیبان بیش از حد بزرگ است و بعداً بازیابی نمی‌شود. پشتیبان‌گیری از گفتگوها را خاموش کنید و دوباره تلاش کنید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este backup é grande demais para ser restaurado depois. Desligue o backup das conversas e tente de novo."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Эта копия слишком большая — её потом не удастся восстановить. Выключите копирование переписки и попробуйте снова."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此备份过大，以后无法恢复。请关闭聊天记录备份后重试。"
           }
         }
       }
@@ -10596,6 +12849,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "فقط همین دستگاه"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Somente neste aparelho"
           }
         },
         "ru": {
@@ -10627,6 +12886,12 @@
             "value": "این رمز همین حالا برای آن یکی به کار رفته است. رمز دیگری انتخاب کنید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Isto já está sendo usado como o outro código. Escolha um diferente."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10653,6 +12918,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پیام‌های شما این شکلی می‌شوند. نخستین پیام به هر مخاطب تازه بلندتر است."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "É assim que suas mensagens ficam. A primeira mensagem para um contato novo é mais longa."
           }
         },
         "ru": {
@@ -10683,6 +12954,12 @@
             "value": "این یک کلید معتبر Kryptos نیست."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta não é uma chave válida do Kryptos."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10709,6 +12986,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "این یک کلید عمومی PGP معتبر نیست."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta não é uma chave pública PGP válida."
           }
         },
         "ru": {
@@ -10739,6 +13022,12 @@
             "value": "این کلید خودتان است — به‌جای آن کلید مخاطبتان را اضافه کنید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta é a sua própria chave — adicione a chave do seu contato."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10765,6 +13054,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "این پیام از مخاطب دیگری است: %@."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta mensagem é de outro contato: %@."
           }
         },
         "ru": {
@@ -10796,6 +13091,12 @@
             "value": "این پیام برای باز شدن بیش از اندازه بزرگ است."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta mensagem é grande demais para ser aberta."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10822,6 +13123,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "این پیام یک بار رمزگشایی شده است — برای امنیت، دوباره باز نمی‌شود."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta mensagem já foi descriptografada uma vez — por segurança, ela não pode ser aberta de novo."
           }
         },
         "ru": {
@@ -10852,6 +13159,12 @@
             "value": "این پیام با کلیدی رمزگذاری شده که پیش‌تر استفاده شده یا منقضی است. کلیدتان را دوباره بفرستید و بخواهید شما را از نو اضافه کند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta mensagem foi criptografada com uma chave que já tinha sido usada ou que expirou. Compartilhe sua chave de novo e peça ao seu contato que adicione você mais uma vez."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10878,6 +13191,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "این پیام با نسخه تازه‌تری از Kryptos ساخته شده است. برای خواندنش برنامه را به‌روز کنید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta mensagem foi feita por uma versão mais nova do Kryptos. Atualize o app para lê-la."
           }
         },
         "ru": {
@@ -10909,6 +13228,12 @@
             "value": "این نمایه به‌همراه کلیدها، مخاطبان و پیام‌هایش برای همیشه حذف می‌شود."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Isso remove este perfil de vez, junto com as chaves, os contatos e as mensagens dele."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10936,6 +13261,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "این عکس بیش از اندازه بزرگ است. عکس کوچک‌تری بردارید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta foto é grande demais. Use uma menor."
           }
         },
         "ru": {
@@ -10967,6 +13298,12 @@
             "value": "کلید این نمایه از میان رفته است"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A chave deste perfil sumiu"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -10994,6 +13331,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "این متن یک پیام رمزگذاری‌شده PGP نیست — هیچ لایه رمزشده‌ای ندارد."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este texto não é uma mensagem PGP criptografada — ele não tem nenhuma camada criptografada."
           }
         },
         "ru": {
@@ -11024,6 +13367,12 @@
             "value": "برای ورود فقط با رمز، پایین‌تر یک رمز برنامه بسازید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para desbloquear só com código, crie um código de acesso do app abaixo."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11050,6 +13399,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "برای استفاده از قفل، روی دستگاه رمز بگذارید یا یک رمز برنامه بسازید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para usar o bloqueio, defina um código no seu aparelho ou crie um código de acesso do app."
           }
         },
         "ru": {
@@ -11081,6 +13436,12 @@
             "value": "نخست Kryptos را روشن کنید و بعد «اجازه دسترسی کامل» را روشن کنید — بدون آن، صفحه‌کلید به کلیدهای شما نمی‌رسد و رمزگذاری در آن کار نمی‌کند. iOS اینجا هشداری کلی درباره صفحه‌کلیدهای دیگران نشان می‌دهد؛ Kryptos هیچ‌وقت اتصال شبکه‌ای باز نمی‌کند، پس آنچه می‌نویسید نمی‌تواند از دستگاه بیرون برود."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ative o Kryptos e depois ligue Permitir Acesso Completo — sem isso o teclado não alcança suas chaves e a criptografia nele não funciona. O iOS mostra aqui um aviso geral sobre teclados de terceiros; o Kryptos nunca abre uma conexão de rede, então o que você digita não tem como sair do aparelho."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11108,6 +13469,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "روشن کردن رمزگشایی خودکار"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ligue a descriptografia automática"
           }
         },
         "ru": {
@@ -11139,6 +13506,12 @@
             "value": "نامی بنویسید، بعد کلیدی را که گرفته‌اید بچسبانید یا کد QR او را اسکن کنید و «افزودن» را بزنید. مخاطب شما هم دقیقاً همین کار را در سمت خودش می‌کند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digite um nome, cole a chave que você recebeu ou escaneie o QR code dele e toque em Adicionar. Seu contato faz exatamente o mesmo do lado dele."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11165,6 +13538,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "آن را روی صفحه قفل بنویسید تا Kryptos بی‌درنگ و برای همیشه همه‌چیز را پاک کند و بعد مثل یک نصب تازه خالی باز شود."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digite-a na tela de bloqueio e o Kryptos apaga tudo na hora e para sempre, depois abre vazio como uma instalação nova."
           }
         },
         "ru": {
@@ -11195,6 +13574,12 @@
             "value": "تایپ"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digitação"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11221,6 +13606,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پشت صحنه"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por dentro"
           }
         },
         "ru": {
@@ -11251,6 +13642,12 @@
             "value": "باز کردن قفل"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desbloquear"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11277,6 +13674,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "باز کردن قفل Kryptos"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desbloquear o Kryptos"
           }
         },
         "ru": {
@@ -11307,6 +13710,12 @@
             "value": "باز کردن با"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desbloquear com"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11335,6 +13744,12 @@
             "value": "برداشتن سنجاق"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desafixar conversa"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11361,6 +13776,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "استفاده"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar"
           }
         },
         "ru": {
@@ -11392,6 +13813,12 @@
             "value": "دست‌کم ۴ نویسه بگذارید."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use no mínimo 4 caracteres."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11419,6 +13846,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "برای گذرواژه پشتیبان دست‌کم ۸ نویسه بگذارید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use no mínimo 8 caracteres na senha do backup."
           }
         },
         "ru": {
@@ -11449,6 +13882,12 @@
             "value": "معمولاً مخاطب یا نمایه اشتباهی انتخاب شده است. اگر هر پیام تازه از یک نفر ناکام می‌ماند، نشست از هماهنگی خارج شده: کلیدتان را دوباره برایش بفرستید و بخواهید بار دوم شما را اضافه کند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Normalmente está selecionado o contato errado ou o perfil errado. Se toda mensagem nova de uma pessoa falhar, a sessão saiu de sincronia: envie sua chave a ela de novo e peça que adicione você uma segunda vez."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11477,6 +13916,12 @@
             "value": "نسخه %@"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versão %@"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11487,6 +13932,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "版本 %@"
+          }
+        }
+      }
+    },
+    "Vibration strength": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vibrationsstärke"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "شدت لرزش"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intensidade da vibração"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сила вибрации"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "振动强度"
           }
         }
       }
@@ -11503,6 +13983,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "وب‌سایت"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Site"
           }
         },
         "ru": {
@@ -11533,6 +14019,12 @@
             "value": "نمایه‌ها برای چه هستند؟"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para que servem os perfis?"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11559,6 +14051,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پیام‌های ناپدیدشونده دقیقاً چه می‌کنند؟"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O que as mensagens temporárias fazem de verdade?"
           }
         },
         "ru": {
@@ -11589,6 +14087,12 @@
             "value": "«پنهان کردن طول پیام» چه می‌کند؟"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O que faz “Mascarar o tamanho da mensagem”?"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11615,6 +14119,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "اگر برنامه را حذف کنم یا گوشی‌ام را گم کنم چه می‌شود؟"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O que acontece se eu apagar o app ou perder o telefone?"
           }
         },
         "ru": {
@@ -11645,6 +14155,12 @@
             "value": "گذرواژه اضطراری چیست؟"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O que é a senha de pânico?"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11671,6 +14187,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "شماره امنیتی به چه درد می‌خورد؟"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para que serve o número de segurança?"
           }
         },
         "ru": {
@@ -11701,6 +14223,12 @@
             "value": "«فیلد پیام در صفحه‌کلید» برای چیست؟"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para que serve o “Campo de mensagem no teclado”?"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11727,6 +14255,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "چرا برنامه دوربین می‌خواهد؟"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por que o app pede a câmera?"
           }
         },
         "ru": {
@@ -11757,6 +14291,12 @@
             "value": "چرا نخستین پیام این‌قدر بلند است؟"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por que a primeira mensagem é tão longa?"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11785,6 +14325,12 @@
             "value": "چرا یک پیام بار دوم رمزگشایی نمی‌شود؟"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por que uma mensagem não descriptografa uma segunda vez?"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11811,6 +14357,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "پیشنهاد واژه"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sugestões de palavras"
           }
         },
         "ru": {
@@ -11842,6 +14394,12 @@
             "value": "در حال پردازش…"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Processando…"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11869,6 +14427,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "رمز نادرست است."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Código de acesso errado."
           }
         },
         "ru": {
@@ -11899,6 +14463,12 @@
             "value": "گذرواژه اشتباه است یا داده‌ها آسیب دیده‌اند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senha errada ou dados corrompidos."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11925,6 +14495,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کلید شما — برای مدیریت بزنید"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SUA CHAVE — TOQUE PARA GERENCIAR"
           }
         },
         "ru": {
@@ -11955,6 +14531,12 @@
             "value": "بله — هیچ چیز جز Kryptos نمی‌تواند پیام را رمزگشایی کند. اما فرقی نمی‌کند هرکدام چه گوشی‌ای دارید: نسخه‌های آیفون و اندروید کاملاً سازگارند و کلیدها و پیام‌ها در هر دو جهت کار می‌کنند."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sim — nada além do Kryptos consegue descriptografar a mensagem. Mas o telefone que cada um usa não importa: as versões para iPhone e Android são totalmente compatíveis, e chaves e mensagens funcionam nos dois sentidos."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -11981,6 +14563,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "بله. برنامه Kryptos روی libsignal ساخته شده و در آن، رچت پساکوانتومی SPQR از نسخه 0.83.0 همیشه روشن است: کلید هر پیام با ماده پساکوانتومی ساخته می‌شود، نه فقط دست‌دادن اولیه. برای این کار هیچ کلید روشن و خاموشی وجود ندارد، نه در Kryptos و نه در خود کتابخانه."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sim. O Kryptos é construído sobre a libsignal, onde o ratchet pós-quântico SPQR está permanentemente ligado desde a versão 0.83.0: a chave de cada mensagem é derivada com material pós-quântico, não apenas o handshake. Não existe interruptor para isso, nem no Kryptos nem na própria biblioteca."
           }
         },
         "ru": {
@@ -12011,6 +14599,12 @@
             "value": "کلیدهای PGP شما"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suas chaves PGP"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -12021,6 +14615,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "你的 PGP 密钥"
+          }
+        }
+      }
+    },
+    "Your chats go into the backup file, encrypted with the same password.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Chats kommen in die Sicherungsdatei, mit demselben Passwort verschlüsselt."
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "گفتگوهای شما در فایل پشتیبان قرار می‌گیرد و با همان رمز رمزگذاری می‌شود."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suas conversas entram no arquivo de backup, criptografadas com a mesma senha."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Переписка войдёт в файл копии и зашифруется тем же паролем."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的聊天记录会写入备份文件，用同一个密码加密。"
           }
         }
       }
@@ -12037,6 +14665,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "کلیدهای شما تنها روی همین دستگاه هستند. پیش از عوض کردن گوشی، در تنظیمات از کلیدها پشتیبان بگیرید."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suas chaves ficam só neste aparelho. Antes de trocar de telefone, faça um backup das chaves nas Configurações."
           }
         },
         "ru": {
@@ -12067,6 +14701,12 @@
             "value": "تاریخچه پیام‌ها در آن نیست."
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu histórico de mensagens não é incluído."
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -12095,6 +14735,12 @@
             "value": "مثلاً سارا"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "por exemplo, Alice"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -12105,6 +14751,170 @@
           "stringUnit": {
             "state": "translated",
             "value": "例如 Alice"
+          }
+        }
+      }
+    },
+    "keys.section": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tasten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keys"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "کلیدها"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teclas"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Клавиши"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按键"
+          }
+        }
+      }
+    },
+    "keysize.large": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groß"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Large"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بزرگ"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grande"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Большой"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大"
+          }
+        }
+      }
+    },
+    "keysize.medium": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mittel"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medium"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "متوسط"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Médio"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Средний"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中"
+          }
+        }
+      }
+    },
+    "keysize.small": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klein"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Small"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "کوچک"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pequeno"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Маленький"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小"
           }
         }
       }
@@ -12121,6 +14931,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "راز مشترک"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "segredo compartilhado"
           }
         },
         "ru": {
@@ -12151,6 +14967,12 @@
             "value": "به‌زودی"
           }
         },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "em breve"
+          }
+        },
         "ru": {
           "stringUnit": {
             "state": "translated",
@@ -12161,6 +14983,129 @@
           "stringUnit": {
             "state": "translated",
             "value": "即将推出"
+          }
+        }
+      }
+    },
+    "vibration.light": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leicht"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سبک"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fraca"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Лёгкая"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "轻"
+          }
+        }
+      }
+    },
+    "vibration.medium": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mittel"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medium"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "متوسط"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Média"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Средняя"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中"
+          }
+        }
+      }
+    },
+    "vibration.strong": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stark"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strong"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قوی"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forte"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сильная"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "强"
           }
         }
       }
@@ -12177,6 +15122,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "«فقط همین دستگاه» متن کپی‌شده را، به جز کلید عمومی‌تان، از دستگاه‌های اپل دیگرتان دور نگه می‌دارد. پاک‌سازی خودکار آن را پس از زمان انتخابی پاک می‌کند."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Somente neste aparelho” mantém o texto copiado longe dos seus outros aparelhos Apple, exceto a sua chave pública. A limpeza automática o apaga depois do tempo escolhido."
           }
         },
         "ru": {

@@ -46,6 +46,13 @@ enum Clipboard {
         clear()
     }
 
+    /// Clears the clipboard when nothing has been copied since it was read, whoever put it there.
+    /// Reading the contents again would be a second pasteboard access, which iOS may ask about.
+    static func clearIfUnchanged(since changeCount: Int) {
+        guard UIPasteboard.general.changeCount == changeCount else { return }
+        clear()
+    }
+
     static func clear() {
         lastDigest = nil
         lastChangeCount = nil

@@ -38,9 +38,9 @@ struct PGPView: View {
                 if !output.isEmpty { outputCard }
             }
         }
-        .sheet(isPresented: $showMyKey) { MyPGPKeyView(armoredKey: pgp.myPublicKey, title: pgp.currentIdentity?.name ?? String(localized: "My key")) }
-        .sheet(isPresented: $showRecipients) { PGPRecipientsView().environmentObject(pgp) }
-        .sheet(isPresented: $showKeys) { PGPKeysView().environmentObject(pgp) }
+        .sheet(isPresented: $showMyKey) { MyPGPKeyView(armoredKey: pgp.myPublicKey, title: pgp.currentIdentity?.name ?? String(localized: "My key")).softScrollEdges() }
+        .sheet(isPresented: $showRecipients) { PGPRecipientsView().environmentObject(pgp).softScrollEdges() }
+        .sheet(isPresented: $showKeys) { PGPKeysView().environmentObject(pgp).softScrollEdges() }
         .onChange(of: lock.isLocked) { _, locked in
             guard locked else { return }
             showMyKey = false
@@ -65,13 +65,15 @@ struct PGPView: View {
     }
 
     private var identityCard: some View {
-        Button { showKeys = true } label: {
+        let shape = RoundedRectangle(cornerRadius: KTheme.corner, style: .continuous)
+        return Button { showKeys = true } label: {
             HStack(spacing: 12) {
                 Image(systemName: "key.horizontal.fill")
                     .font(.system(size: 20, weight: .semibold)).foregroundStyle(KTheme.accent)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("YOUR KEY — TAP TO MANAGE").font(.kLabel()).foregroundStyle(KTheme.textSecondary)
                     Text(pgp.currentIdentity?.name ?? String(localized: "My key")).font(.kHeadline()).foregroundStyle(KTheme.textPrimary)
+                        .lineLimit(1)
                     Text(pgp.currentIdentity?.fingerprint ?? "").font(.kMono()).foregroundStyle(KTheme.textSecondary)
                         .lineLimit(1).minimumScaleFactor(0.5)
                 }
@@ -82,6 +84,7 @@ struct PGPView: View {
                 }.foregroundStyle(KTheme.accent)
             }
             .glassCard()
+            .contentShape(shape)
         }
         .buttonStyle(.plain)
         .disabled(pgp.busy)
@@ -121,6 +124,7 @@ struct PGPView: View {
                     HStack {
                         Text(recipient?.name ?? (pgp.recipients.isEmpty ? String(localized: "Add a recipient first") : String(localized: "Choose a recipient")))
                             .foregroundStyle(recipient == nil ? KTheme.textSecondary : KTheme.textPrimary)
+                            .lineLimit(1)
                         Spacer()
                         Image(systemName: "chevron.up.chevron.down").foregroundStyle(KTheme.textSecondary)
                     }
@@ -169,9 +173,14 @@ struct PGPView: View {
         VStack(alignment: .leading, spacing: 12) {
             fieldLabel(mode == .encrypt ? "ENCRYPTED — SEND THIS" : "DECRYPTED TEXT")
             ScrollView {
-                Text(output).font(mode == .encrypt ? .kMono() : .kBody())
-                    .foregroundStyle(KTheme.textPrimary).textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                if mode == .encrypt {
+                    Text(output).font(.kMono())
+                        .foregroundStyle(KTheme.textPrimary).textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    SelectableLinkedText(text: output, color: KTheme.textPrimaryUI, linkColor: KTheme.linkUI)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }.frame(maxHeight: 220)
             HStack(spacing: 12) {
                 Button {
@@ -333,7 +342,7 @@ private struct PGPKeysView: View {
                 Image(systemName: ident.id == pgp.currentID ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(ident.id == pgp.currentID ? KTheme.accent : KTheme.textSecondary)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(ident.name).font(.kHeadline()).foregroundStyle(KTheme.textPrimary)
+                    Text(ident.name).font(.kHeadline()).foregroundStyle(KTheme.textPrimary).lineLimit(1)
                     if let known = PGPAlgo.matching(label: ident.algo) {
                         Text(known.title).font(.kLabel()).foregroundStyle(KTheme.textSecondary)
                     } else {
@@ -407,7 +416,7 @@ private struct PGPRecipientsView: View {
                         ForEach(pgp.recipients) { r in
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
-                                    Text(r.name).font(.kHeadline()).foregroundStyle(KTheme.textPrimary)
+                                    Text(r.name).font(.kHeadline()).foregroundStyle(KTheme.textPrimary).lineLimit(1)
                                     Spacer()
                                     Button { confirmDelete = r } label: {
                                         Image(systemName: "trash").foregroundStyle(KTheme.danger)

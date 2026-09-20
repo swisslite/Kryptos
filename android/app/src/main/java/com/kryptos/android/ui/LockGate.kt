@@ -142,7 +142,6 @@ private fun LockScreen(activity: FragmentActivity) {
                             }
                             checking = false
                             wrong = outcome == AppLock.CodeOutcome.REJECTED
-                            if (!wrong) AppLock.locked.value = false
                         }
                     }
                 }

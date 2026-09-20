@@ -3,9 +3,12 @@ package com.kryptos.android.store
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -14,7 +17,16 @@ import javax.crypto.spec.GCMParameterSpec
 
 @SuppressLint("StaticFieldLeak")
 object SecureStore {
-    private const val KEY_ALIAS = "kryptos.master"
+    private const val LEGACY_ALIAS = "kryptos.master"
+    private const val UNLOCKED_ALIAS = "kryptos.master.u"
+    private const val PLAIN_ALIAS = "kryptos.master.p"
+
+    private val ALIASES = listOf(UNLOCKED_ALIAS, PLAIN_ALIAS, LEGACY_ALIAS)
+
+    private const val TMP_SUFFIX = ".tmp"
+    private const val IV_LENGTH = 12
+    private const val TAG_BITS = 128
+
     private lateinit var context: Context
 
     fun init(appContext: Context) {
@@ -40,36 +52,51 @@ object SecureStore {
         return File(dir(), name)
     }
 
-    @Volatile private var cachedKey: SecretKey? = null
+    private class Master(val alias: String, val key: SecretKey)
 
-    private fun masterKey(): SecretKey {
-        cachedKey?.let { return it }
-        return resolveMasterKey().also { cachedKey = it }
+    @Volatile private var cachedMaster: Master? = null
+
+    private fun keystore(): KeyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+
+    private fun aliasKey(ks: KeyStore, alias: String): SecretKey? =
+        runCatching { ks.getKey(alias, null) as? SecretKey }.getOrNull()
+
+    private fun master(): Master {
+        cachedMaster?.let { return it }
+        return resolveMaster().also { cachedMaster = it }
     }
 
     private fun hasStoredData(): Boolean =
-        dir().listFiles()?.any { it.isFile && !it.name.endsWith(".tmp") } == true
+        dir().listFiles()?.any { it.isFile && !it.name.endsWith(TMP_SUFFIX) } == true
 
-    private fun resolveMasterKey(): SecretKey {
-        val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        (ks.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+    private fun deviceSecure(): Boolean = runCatching {
+        (context.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isDeviceSecure
+    }.getOrDefault(false)
+
+    private fun unlockedPolicySupported(): Boolean = Build.VERSION.SDK_INT >= 28
+
+    private fun resolveMaster(): Master {
+        val ks = keystore()
+        for (alias in ALIASES) aliasKey(ks, alias)?.let { return Master(alias, it) }
         if (hasStoredData()) {
             throw IllegalStateException("Keystore master key is gone while encrypted data is present")
         }
-        val deviceSecure = runCatching {
-            (context.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isDeviceSecure
-        }.getOrDefault(false)
+        return createMaster(deviceSecure() && unlockedPolicySupported())
+    }
+
+    private fun createMaster(preferUnlocked: Boolean): Master {
         var last: Throwable? = null
         for (unlockedOnly in listOf(true, false)) {
-            if (unlockedOnly && !deviceSecure) continue
+            if (unlockedOnly && !preferUnlocked) continue
+            val alias = if (unlockedOnly) UNLOCKED_ALIAS else PLAIN_ALIAS
             for (strongBox in listOf(true, false)) {
                 try {
-                    val key = generateMasterKey(strongBox, unlockedOnly)
+                    val key = generateMasterKey(alias, strongBox, unlockedOnly)
                     selfTest(key)
-                    return key
+                    return Master(alias, key)
                 } catch (t: Throwable) {
                     last = t
-                    destroyMasterKey()
+                    deleteAlias(alias)
                 }
             }
         }
@@ -81,42 +108,80 @@ object SecureStore {
         enc.init(Cipher.ENCRYPT_MODE, key)
         val probe = enc.doFinal(ByteArray(16))
         val dec = Cipher.getInstance("AES/GCM/NoPadding")
-        dec.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, enc.iv))
+        dec.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(TAG_BITS, enc.iv))
         dec.doFinal(probe)
     }
 
-    private fun generateMasterKey(strongBox: Boolean, unlockedOnly: Boolean): SecretKey {
+    private fun generateMasterKey(alias: String, strongBox: Boolean, unlockedOnly: Boolean): SecretKey {
         val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
-        val spec = KeyGenParameterSpec.Builder(KEY_ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+        val spec = KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
             .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
             .setKeySize(256)
-        if (android.os.Build.VERSION.SDK_INT >= 28) {
+        if (Build.VERSION.SDK_INT >= 28) {
             if (unlockedOnly) spec.setUnlockedDeviceRequired(true)
             if (strongBox) spec.setIsStrongBoxBacked(true)
-        } else if (strongBox) {
-            throw IllegalStateException("StrongBox requires API 28")
+        } else {
+            if (strongBox) throw IllegalStateException("StrongBox requires API 28")
+            if (unlockedOnly) throw IllegalStateException("Unlocked-device policy requires API 28")
         }
         generator.init(spec.build())
         return generator.generateKey()
     }
 
-    @Synchronized
-    fun destroyMasterKey() {
-        cachedKey = null
-        runCatching {
-            KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.deleteEntry(KEY_ALIAS)
-        }
+    private fun deleteAlias(alias: String) {
+        runCatching { keystore().deleteEntry(alias) }
     }
 
-    private fun <T> withMasterKey(body: (SecretKey) -> T): T =
-        try {
-            body(masterKey())
-        } catch (first: Exception) {
-            if (cachedKey == null) throw first
-            cachedKey = null
-            body(masterKey())
+    @Synchronized
+    fun destroyMasterKey() {
+        cachedMaster = null
+        for (alias in ALIASES) deleteAlias(alias)
+    }
+
+    @Synchronized
+    fun upgradeKeyPolicyIfNeeded(): Boolean {
+        if (!unlockedPolicySupported() || !deviceSecure()) return false
+        val ks = runCatching { keystore() }.getOrNull() ?: return false
+        val stale = ALIASES.filter { it != UNLOCKED_ALIAS && aliasKey(ks, it) != null }
+        if (stale.isEmpty()) return false
+
+        val target = aliasKey(ks, UNLOCKED_ALIAS) ?: run {
+            var made: SecretKey? = null
+            for (strongBox in listOf(true, false)) {
+                try {
+                    val key = generateMasterKey(UNLOCKED_ALIAS, strongBox, true)
+                    selfTest(key)
+                    made = key
+                    break
+                } catch (t: Throwable) {
+                    deleteAlias(UNLOCKED_ALIAS)
+                }
+            }
+            made ?: return false
         }
+        cachedMaster = Master(UNLOCKED_ALIAS, target)
+
+        var complete = true
+        for (f in dir().listFiles().orEmpty()) {
+            if (!f.isFile) continue
+            if (f.name.endsWith(TMP_SUFFIX)) {
+                f.delete()
+                continue
+            }
+            val plain = decryptFile(f)
+            if (plain == null) {
+                complete = false
+                continue
+            }
+            val rewritten = runCatching { writeSealed(f.name, seal(target, plain)) }.isSuccess
+            plain.fill(0)
+            if (!rewritten) complete = false
+        }
+        if (!complete) return false
+        for (alias in stale) deleteAlias(alias)
+        return true
+    }
 
     @Synchronized
     fun read(name: String): ByteArray? = decryptFile(file(name))
@@ -131,35 +196,55 @@ object SecureStore {
 
     private fun decryptFile(f: File): ByteArray? {
         if (!f.exists()) return null
-        return try {
-            val blob = f.readBytes()
-            val iv = blob.copyOfRange(0, 12)
-            val ct = blob.copyOfRange(12, blob.size)
-            withMasterKey { key ->
-                val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-                cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
-                cipher.doFinal(ct)
-            }
-        } catch (e: Exception) {
-            null
+        val blob = runCatching { f.readBytes() }.getOrNull() ?: return null
+        if (blob.size <= IV_LENGTH) return null
+        val iv = blob.copyOfRange(0, IV_LENGTH)
+        val ct = blob.copyOfRange(IV_LENGTH, blob.size)
+        val active = runCatching { master() }.getOrNull()
+        if (active != null) open(active.key, iv, ct)?.let { return it }
+        val ks = runCatching { keystore() }.getOrNull() ?: return null
+        for (alias in ALIASES) {
+            if (alias == active?.alias) continue
+            val key = aliasKey(ks, alias) ?: continue
+            open(key, iv, ct)?.let { return it }
         }
+        return null
+    }
+
+    private fun open(key: SecretKey, iv: ByteArray, ct: ByteArray): ByteArray? = runCatching {
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(TAG_BITS, iv))
+        cipher.doFinal(ct)
+    }.getOrNull()
+
+    private fun seal(key: SecretKey, data: ByteArray): ByteArray {
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, key)
+        return cipher.iv + cipher.doFinal(data)
     }
 
     @Synchronized
     fun write(name: String, data: ByteArray) {
         val target = file(name)
-        val blob = withMasterKey { key ->
-            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-            cipher.init(Cipher.ENCRYPT_MODE, key)
-            cipher.iv + cipher.doFinal(data)
+        val blob = try {
+            seal(master().key, data)
+        } catch (first: Exception) {
+            if (cachedMaster == null) throw first
+            cachedMaster = null
+            seal(master().key, data)
         }
-        val tmp = File(dir(), "$name.tmp")
+        writeSealed(target.name, blob)
+    }
+
+    private fun writeSealed(name: String, blob: ByteArray) {
+        val target = file(name)
+        val tmp = File(dir(), "$name$TMP_SUFFIX")
         try {
-            java.io.FileOutputStream(tmp).use { out ->
+            FileOutputStream(tmp).use { out ->
                 out.write(blob)
                 out.fd.sync()
             }
-            if (!tmp.renameTo(target)) throw java.io.IOException("SecureStore: cannot commit '$name'")
+            if (!tmp.renameTo(target)) throw IOException("SecureStore: cannot commit '$name'")
         } finally {
             if (tmp.exists()) tmp.delete()
         }
@@ -186,5 +271,42 @@ object SecureStore {
         destroyMasterKey()
     }
 
-    fun prefs(): SharedPreferences = context.getSharedPreferences("kryptos.settings", Context.MODE_PRIVATE)
+    private const val SETTINGS_KEY = "settings"
+
+    private val LEGACY_SETTING_KEYS = setOf(
+        "kb.learned.words",
+        "kb.learned.bigrams",
+        "kb.emoji.recents",
+        "kb.clip.handled",
+        "privacy.duresspin",
+        "privacy.duresspin.hash",
+        "privacy.duresspin.salt",
+        "privacy.duresspin.iter",
+        "privacy.duresspin.argon2.hash",
+        "privacy.duresspin.argon2.salt",
+    )
+
+    private val securePrefs: SecurePrefs by lazy {
+        SecurePrefs(SETTINGS_KEY, ::legacyPrefs, LEGACY_SETTING_KEYS)
+    }
+
+    fun prefs(): SharedPreferences = securePrefs
+
+    fun settingsReadable(): Boolean = runCatching { securePrefs.isReady() }.getOrDefault(false)
+
+    fun legacyPrefs(): SharedPreferences =
+        context.getSharedPreferences("kryptos.settings", Context.MODE_PRIVATE)
+
+    fun retireLegacyPrefs() {
+        if (!exists(SETTINGS_KEY)) return
+        runCatching {
+            val old = legacyPrefs()
+            if (old.all.isNotEmpty()) old.edit().clear().commit()
+        }
+    }
+
+    fun eraseSettings() {
+        runCatching { prefs().edit().clear().commit() }
+        runCatching { legacyPrefs().edit().clear().commit() }
+    }
 }

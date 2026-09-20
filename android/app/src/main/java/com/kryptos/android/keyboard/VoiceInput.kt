@@ -192,6 +192,7 @@ class VoiceInput(context: Context, private val listener: Listener) {
                 "ru" -> "ru-RU"
                 "de" -> "de-DE"
                 "zh" -> "zh-CN"
+                "pt" -> "pt-BR"
                 else -> "en-US"
             }
         }

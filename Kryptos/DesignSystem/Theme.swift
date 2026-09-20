@@ -24,9 +24,13 @@ enum KTheme {
 
     static let bg = Color(bgUI)
 
-    static let textPrimary = Color(
-        light: UIColor(red: 0.07, green: 0.08, blue: 0.10, alpha: 1),
-        dark: UIColor(red: 0.95, green: 0.96, blue: 0.98, alpha: 1))
+    static let textPrimaryUI = UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.95, green: 0.96, blue: 0.98, alpha: 1)
+            : UIColor(red: 0.07, green: 0.08, blue: 0.10, alpha: 1)
+    }
+
+    static let textPrimary = Color(textPrimaryUI)
 
     static let textSecondary = Color(
         light: UIColor(red: 0.07, green: 0.08, blue: 0.10, alpha: 0.55),
@@ -49,6 +53,14 @@ enum KTheme {
         light: UIColor(red: 0.78, green: 0.18, blue: 0.22, alpha: 1),
         dark: UIColor(red: 1.0, green: 0.42, blue: 0.46, alpha: 1))
 
+    static let linkUI = UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.730, green: 0.650, blue: 1.000, alpha: 1)
+            : UIColor(red: 0.420, green: 0.310, blue: 0.900, alpha: 1)
+    }
+
+    static let link = Color(linkUI)
+
     static let hairline = Color(
         light: UIColor(white: 0, alpha: 0.10),
         dark: UIColor(white: 1, alpha: 0.10))
@@ -59,6 +71,8 @@ enum KTheme {
 
     static let corner: CGFloat = 20
     static let cornerSmall: CGFloat = 14
+
+    @MainActor static var barTitleWidth: CGFloat { UIScreen.main.bounds.width - 2 * 60 }
 }
 
 extension Font {

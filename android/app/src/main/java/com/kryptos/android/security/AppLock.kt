@@ -1,5 +1,12 @@
 package com.kryptos.android.security
 
+import android.app.KeyguardManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
 import androidx.activity.result.ActivityResultLauncher
@@ -7,6 +14,7 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import com.kryptos.android.R
 import com.kryptos.android.signal.AppSettingsStore
 import com.kryptos.android.store.SecureStore
 import kotlinx.coroutines.delay
@@ -16,18 +24,16 @@ object AppLock {
     val locked = MutableStateFlow(false)
     val shielded = MutableStateFlow(false)
 
-    @Volatile private var sessionValidated = false
-    @Volatile private var sessionRestored = false
-
-    private var backgroundedAt = 0L
     private var authInFlight = false
 
     private const val OWN_SCREEN_LAUNCH_MS = 10L * 1000
     private const val OWN_SCREEN_AWAY_MS = 5L * 60 * 1000
+    internal const val SESSION_AFTER_LEAVING_MS = 5L * 60 * 1000
+
+    private val session = CryptoSession(SESSION_AFTER_LEAVING_MS)
 
     @Volatile private var ownScreenAt = 0L
     @Volatile private var leftForOwnScreen = false
-    private var leftAt = 0L
 
     fun onOwnScreen() {
         ownScreenAt = SystemClock.elapsedRealtime()
@@ -38,6 +44,9 @@ object AppLock {
 
     fun returningFromOwnScreen(leftForOwnScreen: Boolean, leftAt: Long, now: Long): Boolean =
         leftForOwnScreen && (now - leftAt) in 0 until OWN_SCREEN_AWAY_MS
+
+    fun lockDue(backgroundedAt: Long, now: Long, graceMs: Long): Boolean =
+        backgroundedAt != 0L && now - backgroundedAt >= graceMs
 
     private fun authenticators(): Int =
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
@@ -91,11 +100,7 @@ object AppLock {
         }
         if (AppSettingsStore.appLock != next.enabled) {
             AppSettingsStore.appLock = next.enabled
-            if (next.enabled) {
-                if (sessionValidated) LockSession.open()
-            } else {
-                onLockDisabled()
-            }
+            if (!next.enabled) LockSession.close()
         }
         return next
     }
@@ -119,57 +124,153 @@ object AppLock {
     fun onLaunch(context: android.content.Context) {
         hasLaunched = true
         refreshLockAvailability()
-        val armed = AppSettingsStore.appLock && lockUsable(context)
+        val unknown = !AppSettingsStore.settingsAvailable()
+        val armed = (unknown || AppSettingsStore.appLock) && lockUsable(context)
         locked.value = armed
-        if (armed) LockSession.close() else sessionValidated = true
+        if (armed) closeSession()
     }
 
+    private fun deviceLocked(context: Context): Boolean =
+        context.getSystemService(KeyguardManager::class.java)?.isDeviceLocked == true
+
     fun isCryptoSessionLocked(context: android.content.Context): Boolean {
+        if (!AppSettingsStore.settingsAvailable()) return true
+        if (deviceLocked(context)) return true
         if (!AppSettingsStore.appLock) return false
-        restoreSession()
-        if (sessionValidated && !locked.value) return false
+        if (!locked.value && sessionOpen()) return false
         return lockUsable(context)
     }
 
-    fun onLockDisabled() {
-        LockSession.close()
+    fun cryptoSessionEndsIn(): Long? {
+        if (!AppSettingsStore.settingsAvailable() || !AppSettingsStore.appLock || locked.value) return null
+        return synchronized(session) {
+            restoreSession()
+            session.endsIn(SystemClock.elapsedRealtime())
+        }
+    }
+
+    private fun sessionOpen(): Boolean = synchronized(session) {
+        restoreSession()
+        session.isOpen(SystemClock.elapsedRealtime())
     }
 
     private fun restoreSession() {
-        if (sessionValidated || sessionRestored) return
-        sessionRestored = true
-        if (LockSession.isOpen()) sessionValidated = true
+        if (!session.restored) session.restore(LockSession.until())
     }
 
-    private fun openSession() {
-        sessionValidated = true
-        sessionRestored = true
-        if (AppSettingsStore.appLock) LockSession.open()
+    private fun closeSession() {
+        synchronized(session) {
+            session.forget()
+            LockSession.close()
+        }
     }
 
-    fun onBackground() {
-        backgroundedAt = System.currentTimeMillis()
-        leftAt = SystemClock.elapsedRealtime()
-        leftForOwnScreen = leftForOwnScreen(ownScreenAt, leftAt)
+    private fun unlockSession() {
+        synchronized(session) {
+            session.unlock()?.let { if (AppSettingsStore.appLock) LockSession.open(it) }
+            locked.value = false
+        }
+    }
+
+    private const val RETURN_PROBE = "com.kryptos.android.action.RETURN_PROBE"
+    private const val RETURN_PROBE_TIMEOUT_MS = 3_000L
+
+    private val main by lazy { Handler(Looper.getMainLooper()) }
+
+    @Volatile private var departed = false
+    private var watchingDeparture = false
+    private var probing: Context? = null
+
+    private val departure = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == RETURN_PROBE) settleReturn() else departed = true
+        }
+    }
+
+    private val probeTimeout = Runnable {
+        departed = true
+        settleReturn()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun watchDeparture(context: Context) {
+        if (watchingDeparture) return
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(RETURN_PROBE)
+        }
+        watchingDeparture = runCatching {
+            ContextCompat.registerReceiver(
+                context.applicationContext, departure, filter, ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
+        }.isSuccess
+    }
+
+    private fun stopWatchingDeparture(context: Context) {
+        main.removeCallbacks(probeTimeout)
+        probing = null
+        if (!watchingDeparture) return
+        watchingDeparture = false
+        runCatching { context.applicationContext.unregisterReceiver(departure) }
+    }
+
+    fun onBackground(context: Context) {
+        val now = SystemClock.elapsedRealtime()
+        main.removeCallbacks(probeTimeout)
+        probing = null
+        departed = false
+        leftForOwnScreen = leftForOwnScreen(ownScreenAt, now)
         ownScreenAt = 0L
+        if (leftForOwnScreen) watchDeparture(context) else stopWatchingDeparture(context)
         shielded.value = true
+        synchronized(session) {
+            session.leave(now)
+            if (AppSettingsStore.appLock && !locked.value) LockSession.open(now + SESSION_AFTER_LEAVING_MS)
+        }
     }
 
-    fun onForeground(context: android.content.Context) {
-        shielded.value = false
+    fun onForeground(context: Context) {
+        val leftAt = synchronized(session) {
+            session.resume()
+            session.leftAt
+        }
         refreshLockAvailability()
-        val ownScreen = returningFromOwnScreen(leftForOwnScreen, leftAt, SystemClock.elapsedRealtime())
+        val ownScreen = !departed && returningFromOwnScreen(leftForOwnScreen, leftAt, SystemClock.elapsedRealtime())
         leftForOwnScreen = false
-        if (!AppSettingsStore.appLock || !lockUsable(context)) return
-        if (authInFlight || locked.value) return
-        if (ownScreen) {
-            backgroundedAt = 0L
+        if (ownScreen && watchingDeparture) {
+            val app = context.applicationContext
+            probing = app
+            main.postDelayed(probeTimeout, RETURN_PROBE_TIMEOUT_MS)
+            val sent = runCatching { app.sendBroadcast(Intent(RETURN_PROBE).setPackage(app.packageName)) }.isSuccess
+            if (sent) return
+            departed = true
+            settleReturn()
             return
         }
-        val grace = AppSettingsStore.autoLockGraceSeconds * 1000L
-        if (backgroundedAt != 0L && System.currentTimeMillis() - backgroundedAt >= grace) {
-            locked.value = true
-            LockSession.close()
+        stopWatchingDeparture(context)
+        settle(context, ownScreen)
+    }
+
+    private fun settleReturn() {
+        val context = probing ?: return
+        val ownScreen = !departed
+        stopWatchingDeparture(context)
+        settle(context, ownScreen)
+    }
+
+    private fun settle(context: Context, ownScreen: Boolean) {
+        shielded.value = false
+        val now = SystemClock.elapsedRealtime()
+        val armed = AppSettingsStore.appLock && lockUsable(context)
+        synchronized(session) {
+            if (authInFlight || locked.value) return
+            if (armed && !ownScreen && session.lockDue(now, AppSettingsStore.autoLockGraceSeconds * 1000L)) {
+                locked.value = true
+                closeSession()
+                return
+            }
+            session.stay()
         }
     }
 
@@ -181,9 +282,8 @@ object AppLock {
         val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 authInFlight = false
-                backgroundedAt = 0L
-                openSession()
-                locked.value = false
+                synchronized(session) { session.stay() }
+                unlockSession()
             }
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 authInFlight = false
@@ -191,7 +291,7 @@ object AppLock {
         })
         val info = BiometricPrompt.PromptInfo.Builder()
             .setTitle("Kryptos")
-            .setSubtitle("Unlock Kryptos")
+            .setSubtitle(activity.getString(R.string.lock_unlock))
             .setAllowedAuthenticators(promptAuthenticators(activity))
             .build()
         runCatching { prompt.authenticate(info) }.onFailure { authInFlight = false }
@@ -207,14 +307,15 @@ object AppLock {
 
     enum class CodeOutcome { REJECTED, UNLOCKED, WIPED }
 
-    private const val FREE_ATTEMPTS = 4
-    private const val MAX_THROTTLE_MS = 30_000L
-    private const val MAX_THROTTLE_STEPS = 5
+    private const val FREE_ATTEMPTS = 5
+    private const val FIRST_LOCKOUT_MS = 60_000L
+    private const val MAX_LOCKOUT_MS = 5L * 60 * 1000
+    private const val MAX_LOCKOUT_STEPS = 4
 
     fun throttleFor(failures: Int): Long {
         val over = failures - FREE_ATTEMPTS
         if (over <= 0) return 0L
-        return minOf(MAX_THROTTLE_MS, 1_000L shl minOf(over - 1, MAX_THROTTLE_STEPS))
+        return minOf(MAX_LOCKOUT_MS, FIRST_LOCKOUT_MS shl minOf(over - 1, MAX_LOCKOUT_STEPS))
     }
 
     fun remainingThrottle(total: Long, since: Long, now: Long): Long {
@@ -237,14 +338,12 @@ object AppLock {
         if (check.panic) {
             AppSettingsStore.codeFailures = 0
             DataWipe.wipe(context)
-            sessionValidated = true
-            backgroundedAt = 0L
+            unlockSession()
             return CodeOutcome.WIPED
         }
         if (check.app) {
             AppSettingsStore.codeFailures = 0
-            openSession()
-            backgroundedAt = 0L
+            unlockSession()
             return CodeOutcome.UNLOCKED
         }
         val failures = AppSettingsStore.codeFailures
@@ -261,27 +360,87 @@ fun <I> ActivityResultLauncher<I>.launchFromApp(input: I) {
 private object LockSession {
     private const val NAME = "lock.session"
 
-    fun open() {
-        val mark = bootMark() ?: return
-        runCatching { SecureStore.write(NAME, mark) }
+    fun open(until: Long) {
+        val boot = bootCount() ?: return
+        runCatching { SecureStore.write(NAME, LockSessionRecord.encode(boot, until)) }
     }
 
     fun close() {
         runCatching { SecureStore.delete(NAME) }
     }
 
-    fun isOpen(): Boolean {
-        val mark = bootMark() ?: return false
-        val stored = runCatching { SecureStore.read(NAME) }.getOrNull() ?: return false
-        return stored.contentEquals(mark)
+    fun until(): Long? {
+        val boot = bootCount() ?: return null
+        val stored = runCatching { SecureStore.read(NAME) }.getOrNull() ?: return null
+        return LockSessionRecord.parse(stored, boot, SystemClock.elapsedRealtime())
     }
 
-    private fun bootMark(): ByteArray? {
-        val boot = runCatching {
-            Settings.Global.getInt(SecureStore.appContext().contentResolver, Settings.Global.BOOT_COUNT)
-        }.getOrNull() ?: return null
-        return byteArrayOf(
-            (boot ushr 24).toByte(), (boot ushr 16).toByte(), (boot ushr 8).toByte(), boot.toByte(),
-        )
+    private fun bootCount(): Int? = runCatching {
+        Settings.Global.getInt(SecureStore.appContext().contentResolver, Settings.Global.BOOT_COUNT)
+    }.getOrNull()
+}
+
+internal object LockSessionRecord {
+    private const val SIZE = 12
+
+    fun encode(boot: Int, until: Long): ByteArray =
+        java.nio.ByteBuffer.allocate(SIZE).putInt(boot).putLong(until).array()
+
+    fun parse(raw: ByteArray, boot: Int, now: Long): Long? {
+        if (raw.size != SIZE) return null
+        val buffer = java.nio.ByteBuffer.wrap(raw)
+        if (buffer.int != boot) return null
+        val until = buffer.long
+        return until.takeIf { it > now && it - now <= AppLock.SESSION_AFTER_LEAVING_MS }
     }
+}
+
+internal class CryptoSession(private val windowMs: Long) {
+    var leftAt = 0L
+        private set
+    var restored = false
+        private set
+    private var resumed = false
+    private var departedAt = 0L
+    private var restoredUntil = 0L
+
+    fun leave(now: Long) {
+        resumed = false
+        leftAt = now
+        departedAt = now
+    }
+
+    fun resume() {
+        resumed = true
+    }
+
+    fun lockDue(now: Long, graceMs: Long): Boolean = AppLock.lockDue(departedAt, now, graceMs)
+
+    fun stay() {
+        departedAt = 0L
+    }
+
+    fun unlock(): Long? {
+        if (resumed) {
+            departedAt = 0L
+            return null
+        }
+        return if (leftAt == 0L) null else leftAt + windowMs
+    }
+
+    fun restore(until: Long?) {
+        restored = true
+        if (until != null) restoredUntil = until
+    }
+
+    fun forget() {
+        restored = true
+        restoredUntil = 0L
+    }
+
+    fun isOpen(now: Long): Boolean = resumed || now < end()
+
+    fun endsIn(now: Long): Long? = if (resumed) null else (end() - now).takeIf { it > 0L }
+
+    private fun end(): Long = maxOf(if (leftAt == 0L) 0L else leftAt + windowMs, restoredUntil)
 }

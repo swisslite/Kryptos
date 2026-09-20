@@ -1,9 +1,11 @@
 package com.kryptos.android.screen
 
 import android.accessibilityservice.AccessibilityService
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.PixelFormat
@@ -11,11 +13,13 @@ import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.text.TextUtils
+import android.text.method.LinkMovementMethod
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -38,6 +42,7 @@ import com.kryptos.android.security.AppLock
 import com.kryptos.android.security.ClipboardGuard
 import com.kryptos.android.signal.AppSettingsStore
 import com.kryptos.android.signal.SignalService
+import com.kryptos.android.ui.MessageLinks
 
 class ScreenDecryptService : AccessibilityService() {
 
@@ -82,6 +87,7 @@ class ScreenDecryptService : AccessibilityService() {
         overlayNight = dark
         overlayLang = runCatching { AppSettingsStore.storedLanguage() }.getOrDefault("auto")
         addOverlay()
+        watchScreenOff()
         live = this
         if (!purgeHooked) {
             purgeHooked = true
@@ -151,6 +157,7 @@ class ScreenDecryptService : AccessibilityService() {
         if (live === this) live = null
         handler.removeCallbacks(scan)
         handler.removeCallbacks(verify)
+        stopWatchingScreenOff()
         removeOverlay()
         return super.onUnbind(intent)
     }
@@ -158,6 +165,7 @@ class ScreenDecryptService : AccessibilityService() {
     override fun onDestroy() {
         handler.removeCallbacks(scan)
         handler.removeCallbacks(verify)
+        stopWatchingScreenOff()
         removeOverlay()
         worker.shutdownNow()
         if (live === this) live = null
@@ -166,6 +174,32 @@ class ScreenDecryptService : AccessibilityService() {
 
     private fun active(): Boolean =
         AppSettingsStore.screenDecrypt && !AppLock.isCryptoSessionLocked(this)
+
+    private val screenOff = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            handler.removeCallbacks(scan)
+            generation++
+            clearOverlay()
+            ScreenDecryptor.forget()
+        }
+    }
+
+    private var watchingScreenOff = false
+
+    private fun watchScreenOff() {
+        if (watchingScreenOff) return
+        watchingScreenOff = runCatching {
+            ContextCompat.registerReceiver(
+                this, screenOff, IntentFilter(Intent.ACTION_SCREEN_OFF), ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
+        }.isSuccess
+    }
+
+    private fun stopWatchingScreenOff() {
+        if (!watchingScreenOff) return
+        watchingScreenOff = false
+        runCatching { unregisterReceiver(screenOff) }
+    }
 
     private var overlaySecure = false
 
@@ -520,6 +554,9 @@ class ScreenDecryptService : AccessibilityService() {
         if (android.os.Build.VERSION.SDK_INT >= 30) {
             view.importantForContentCapture = View.IMPORTANT_FOR_CONTENT_CAPTURE_NO_EXCLUDE_DESCENDANTS
         }
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            view.setAccessibilityDataSensitive(View.ACCESSIBILITY_DATA_SENSITIVE_YES)
+        }
         view.onPanelsLaidOut = { frames, clipped ->
             handler.post { rebuildExpandButtons(frames, clipped) }
         }
@@ -668,12 +705,15 @@ class ScreenDecryptService : AccessibilityService() {
         val sub = Color.parseColor(if (dark) "#94FFFFFF" else "#8712141A")
         val accent = Color.parseColor(if (dark) "#6B85FA" else "#3749C2")
         val panelBg = Color.parseColor(if (dark) "#1B2030" else "#FFFFFF")
+        val link = Color.parseColor(if (dark) "#BAA6FF" else "#6B4FE6")
 
         val title = TextView(this).apply {
             text = if (item.mine) str(R.string.screen_you_to, item.name) else item.name
             setTextColor(accent)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
             setTypeface(typeface, Typeface.BOLD)
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
         }
         val close = TextView(this).apply {
             text = "✕"
@@ -691,10 +731,15 @@ class ScreenDecryptService : AccessibilityService() {
         }
 
         val body = TextView(this).apply {
-            text = item.text
+            text = MessageLinks.spanned(item.text, link) { url ->
+                if (MessageLinks.open(this@ScreenDecryptService, url)) dismissReader()
+            }
             setTextColor(ink)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             setLineSpacing(0f, 1.1f)
+            movementMethod = LinkMovementMethod.getInstance()
+            highlightColor = Color.TRANSPARENT
+            filterTouchesWhenObscured = true
         }
         val scroll = ScrollView(this).apply { addView(body) }
 

@@ -13,11 +13,12 @@ struct InterfaceView: View {
                 }
                 Picker("App language", selection: $settings.uiLanguage) {
                     Text("Automatic").tag("auto")
-                    Text("English").tag("en")
-                    Text("Russian").tag("ru")
-                    Text("German").tag("de")
-                    Text("Chinese").tag("zh-Hans")
-                    Text("Persian").tag("fa")
+                    Text(verbatim: "Deutsch").tag("de")
+                    Text(verbatim: "English").tag("en")
+                    Text(verbatim: "Português (Brasil)").tag("pt")
+                    Text(verbatim: "Русский").tag("ru")
+                    Text(verbatim: "فارسی").tag("fa")
+                    Text(verbatim: "中文").tag("zh-Hans")
                 }
             } header: {
                 Text("Appearance")

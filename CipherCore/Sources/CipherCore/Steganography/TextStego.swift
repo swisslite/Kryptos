@@ -6,6 +6,7 @@ public enum StegoLanguage: String, Sendable, CaseIterable {
     case german
     case chinese
     case persian
+    case portuguese
 
     var words: [String] {
         switch self {
@@ -14,6 +15,7 @@ public enum StegoLanguage: String, Sendable, CaseIterable {
         case .german: return StegoWordlists.german
         case .chinese: return StegoWordlists.chinese
         case .persian: return StegoWordlists.persian
+        case .portuguese: return StegoWordlists.portuguese
         }
     }
 
@@ -47,6 +49,7 @@ public enum StegoLanguage: String, Sendable, CaseIterable {
         if code.hasPrefix("de") { return .german }
         if code.hasPrefix("zh") { return .chinese }
         if code.hasPrefix("fa") { return .persian }
+        if code.hasPrefix("pt") { return .portuguese }
         return .english
     }
 }
@@ -116,8 +119,6 @@ public enum TextStego {
         }
         return nil
     }
-
-    public static func looksLikeStego(_ text: String) -> Bool { decode(text) != nil }
 
     private static func decode(tokens: [String], language: StegoLanguage) -> Data? {
         let index = language.indexMap

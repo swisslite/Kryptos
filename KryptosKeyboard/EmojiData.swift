@@ -100,7 +100,7 @@ enum EmojiData {
         }
         lock.unlock()
 
-        let stored = SharedStore.read(storeKey)
+        let stored = SecureBlob.read(storeKey)
         let list = stored.flatMap { try? JSONDecoder().decode([String].self, from: $0) } ?? []
         lock.lock()
         if cached == nil {
@@ -171,7 +171,7 @@ enum EmojiData {
             return
         }
         guard let d = try? JSONEncoder().encode(list) else { return }
-        SharedStore.write(storeKey, d)
+        SecureBlob.write(storeKey, d)
         lock.lock()
         loadedFromStore = true
         lock.unlock()

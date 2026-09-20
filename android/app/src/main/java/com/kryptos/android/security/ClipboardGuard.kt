@@ -24,6 +24,11 @@ object ClipboardGuard {
 
     private enum class Outcome { CLEARED, FOREIGN, BLOCKED }
 
+    private const val BLOCKED_RETRY_MS = 30_000L
+    private const val MAX_BLOCKED_RETRIES = 20
+
+    @Volatile private var blockedRetries = 0
+
     init {
         CachePurge.register { forget() }
     }
@@ -31,6 +36,7 @@ object ClipboardGuard {
     @Synchronized
     fun forget() {
         cancelPending()
+        blockedRetries = 0
         lastCopied = null
         dueAt = 0L
         forgetRecord()
@@ -116,6 +122,7 @@ object ClipboardGuard {
     @Synchronized
     private fun scheduleClear(context: Context, text: String) {
         cancelPending()
+        blockedRetries = 0
         lastCopied = digest(text)
         val seconds = AppSettingsStore.clipboardClearSeconds
         if (seconds <= 0) {
@@ -144,10 +151,15 @@ object ClipboardGuard {
         if (dueAt == 0L || SystemClock.elapsedRealtime() < dueAt) return
         cancelPending()
         if (clearMatching(context, fingerprint) != Outcome.BLOCKED) {
+            blockedRetries = 0
             lastCopied = null
             dueAt = 0L
             forgetRecord()
+            return
         }
+        if (blockedRetries >= MAX_BLOCKED_RETRIES) return
+        blockedRetries++
+        arm(context, BLOCKED_RETRY_MS)
     }
 
     private fun digest(text: String): String = sha256Hex(text.toByteArray(Charsets.UTF_8))

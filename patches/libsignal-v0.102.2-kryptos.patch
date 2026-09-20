@@ -1,0 +1,46 @@
+diff --git a/swift/Package.resolved b/swift/Package.resolved
+deleted file mode 100644
+index cceeb5d..0000000
+--- a/swift/Package.resolved
++++ /dev/null
+@@ -1,25 +0,0 @@
+-{
+-  "object": {
+-    "pins": [
+-      {
+-        "package": "SwiftDocCPlugin",
+-        "repositoryURL": "https://github.com/apple/swift-docc-plugin",
+-        "state": {
+-          "branch": null,
+-          "revision": "85e4bb4e1cd62cec64a4b8e769dcefdf0c5b9d64",
+-          "version": "1.4.3"
+-        }
+-      },
+-      {
+-        "package": "SymbolKit",
+-        "repositoryURL": "https://github.com/swiftlang/swift-docc-symbolkit",
+-        "state": {
+-          "branch": null,
+-          "revision": "b45d1f2ed151d057b54504d653e0da5552844e34",
+-          "version": "1.0.0"
+-        }
+-      }
+-    ]
+-  },
+-  "version": 1
+-}
+diff --git a/swift/Package.swift b/swift/Package.swift
+index 298949f..c2a5639 100644
+--- a/swift/Package.swift
++++ b/swift/Package.swift
+@@ -20,9 +20,7 @@ let package = Package(
+             targets: ["LibSignalClient"]
+         )
+     ],
+-    dependencies: [
+-        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.4.3")
+-    ],
++    dependencies: [],
+     targets: [
+         .systemLibrary(name: "SignalFfi"),
+         .target(

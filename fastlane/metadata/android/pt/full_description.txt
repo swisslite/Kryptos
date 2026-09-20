@@ -1,0 +1,13 @@
+O Kryptos criptografa as mensagens dentro da própria conversa, sem você precisar ficar trocando de aplicativo.
+
+O teclado do Kryptos se instala como qualquer outro teclado do sistema: ative uma vez e ele fica disponível em todo lugar onde você digita. Escreva a mensagem no WhatsApp, no Telegram ou por SMS, toque no ícone do cadeado e o texto do campo vira na hora um texto criptografado, pronto para enviar. As mensagens recebidas são descriptografadas sozinhas, em cima da própria conversa enquanto você rola a tela, sem copiar nada e sem sair do aplicativo. O teclado e a descriptografia na tela fazem parte do sistema, por isso funcionam em qualquer aplicativo.
+
+Criptografia: o protocolo Signal, com a biblioteca oficial libsignal do próprio Signal, uma chave nova para cada mensagem e proteção contra os computadores quânticos do futuro. Os contatos podem ser conferidos pelo número de segurança. Se um protocolo de conversa inteiro for mais do que você precisa, existe um modo simples com uma senha combinada entre vocês. O PGP também está integrado, para quem depende dele. Para o mensageiro, a mensagem criptografada não passa de uma sequência de caracteres sem sentido, sem nenhuma marca reconhecível.
+
+A esteganografia esconde o próprio fato de que uma mensagem foi escrita. O texto criptografado pode ser escondido dentro de uma foto comum ou disfarçado de uma sequência inofensiva de palavras reais. Sem a senha, não dá para tirar da imagem o que está escondido ali.
+
+Nada se conecta à internet: o aplicativo não tem nenhum código de rede. O Kryptos pede só as permissões de que precisa para ler QR code, vibrar e desenhar por cima de outros aplicativos. Sem contas, sem número de telefone, sem servidores e sem análise de uso. As chaves são geradas no próprio aparelho, guardadas no armazenamento seguro do Android, e nunca saem dele.
+
+O acesso ao aplicativo pode ser protegido por biometria ou por um código. Há também a senha de pânico: digitada no mesmo campo, ela apaga para sempre tudo o que está guardado. A área de transferência é limpa sozinha, as mensagens podem sumir depois de um tempo e dá para bloquear as capturas de tela e a prévia do aplicativo na lista de recentes. Todas as suas chaves também podem ser exportadas para um único arquivo protegido por senha, para levar ao celular novo.
+
+Também estão incluídos: temas claro e escuro, vários idiomas de interface, um guia passo a passo com respostas para as dúvidas mais comuns, emojis e correção automática totalmente offline para inglês, russo, alemão, persa e português, além da digitação em pinyin para o chinês.

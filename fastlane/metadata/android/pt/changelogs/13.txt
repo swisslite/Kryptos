@@ -1,0 +1,40 @@
+IMPORTANTE: recomendamos instalar a nova versão. O Kryptos 2.4 não é compatível com as versões antigas.
+
+Novidades:
+
+- Português do Brasil
+- A tecla que troca o idioma agora é o globo (segurando o globo também dá para trocar de teclado)
+- O ícone da versão para iOS agora é nativo
+- Bibliotecas atualizadas para as versões atuais
+- Links, endereços de e-mail e números de telefone no texto descriptografado agora podem ser copiados
+- Ajuste do modo de vibração
+- Ajuste do tamanho do texto das teclas
+- Ajuste da ampliação da tecla ao pressionar
+- O cursor no campo do teclado se move com o dedo
+- Tecla de vírgula no lugar da tecla de emoji; os emojis saem ao segurar a tecla
+- As conversas podem ser incluídas no backup
+- Dá para desligar as maiúsculas automáticas
+- As configurações agora ficam guardadas em um arquivo criptografado
+- Um teclado de terceiros não sugere mais palavras nos campos do Kryptos
+- A senha nos modos “Senha” e “Foto” não pode ter menos de 6 caracteres
+- A digitação do código é bloqueada depois de 5 tentativas erradas
+- O teclado e a descriptografia na tela são bloqueados 5 minutos depois que você sai do aplicativo
+- A “Senha de pânico” esconde o teclado e desliga a descriptografia na tela e o acesso à câmera e ao microfone
+- Outras mudanças
+
+Correções:
+
+- A tecla piscava ao mover o cursor segurando a barra de espaço
+- As mensagens temporárias eram apagadas com atraso
+- Dava para burlar o bloqueio atrasando o relógio
+- O teclado bloqueado mostrava perfis e contatos e deixava trocar de perfil
+- A tela “O armazenamento criptografado está indisponível” apagava tudo com um toque, sem confirmação
+- A descriptografia na tela mostrava o texto com o celular bloqueado
+- O texto das mensagens temporárias continuava no cache
+- O rascunho do teclado continuava visível depois do bloqueio
+- O teclado podia guardar palavras de uma mensagem criptografada
+- Os nomes dos arquivos entregavam se os códigos estavam definidos
+- As janelas e os menus não eram protegidos contra a sobreposição de outros aplicativos
+- Com uma mensagem grande o aplicativo podia travar
+- A chave da máscara não é mais formada a partir das impressões digitais públicas
+- Outras correções

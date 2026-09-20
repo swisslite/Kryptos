@@ -20,10 +20,30 @@ struct ChatMessage: Codable, Identifiable, Hashable {
     var text: String
     var mine: Bool
     var date = Date()
+    var expiresAfter: TimeInterval?
+
+    var expiryDate: Date? {
+        guard let expiresAfter, expiresAfter > 0 else { return nil }
+        return date.addingTimeInterval(expiresAfter)
+    }
 }
 
 enum SignalFormat {
     static func hex(_ d: Data) -> String { d.map { String(format: "%02x", $0) }.joined() }
+
+    static func bytes(_ hex: String) -> Data? {
+        guard hex.count % 2 == 0, hex.allSatisfy({ $0.isASCII && $0.isHexDigit }) else { return nil }
+        var out = Data(capacity: hex.count / 2)
+        var index = hex.startIndex
+        while index < hex.endIndex {
+            let next = hex.index(index, offsetBy: 2)
+            guard let byte = UInt8(hex[index ..< next], radix: 16) else { return nil }
+            out.append(byte)
+            index = next
+        }
+        return out
+    }
+
     static func safetyNumber(fromHex fp: String) -> String {
         stride(from: 0, to: min(fp.count, 24), by: 4).map {
             let s = fp.index(fp.startIndex, offsetBy: $0)
@@ -237,6 +257,13 @@ struct Meta: Codable {
     var autoDelete: [String: Double]?
     var pinned: [String]?
     var usedPreKeys: [String]?
+    var seenIncoming: [String]?
+    var expiryStamped: Bool?
+
+    func expiry(for fingerprint: String) -> TimeInterval? {
+        guard let seconds = autoDelete?[fingerprint], seconds > 0 else { return nil }
+        return seconds
+    }
 
     mutating func rememberUsedPreKey(_ mark: String) {
         var marks = usedPreKeys ?? []
@@ -245,6 +272,26 @@ struct Meta: Codable {
         let cap = 512
         if marks.count > cap { marks.removeFirst(marks.count - cap) }
         usedPreKeys = marks
+    }
+
+    static let incomingMarkLength = 32
+
+    static func incomingMark(_ cacheKey: String) -> String {
+        String(cacheKey.prefix(incomingMarkLength))
+    }
+
+    mutating func rememberIncoming(_ cacheKey: String) {
+        let mark = Meta.incomingMark(cacheKey)
+        var marks = seenIncoming ?? []
+        guard !marks.contains(mark) else { return }
+        marks.append(mark)
+        let cap = 512
+        if marks.count > cap { marks.removeFirst(marks.count - cap) }
+        seenIncoming = marks
+    }
+
+    func hasSeenIncoming(_ cacheKey: String) -> Bool {
+        seenIncoming?.contains(Meta.incomingMark(cacheKey)) == true
     }
 
     mutating func rememberDecrypt(armored: String, fingerprint: String, text: String, stego: Data?? = nil) {
@@ -274,6 +321,12 @@ struct Meta: Codable {
     mutating func purgeDecryptCache(fingerprint: String? = nil, olderThan age: TimeInterval? = nil) {
         guard var cache = decryptCache, !cache.isEmpty else { return }
         let now = Date()
+        let hasDoomedEntry = cache.contains { _, entry in
+            if let fingerprint, entry.fingerprint != fingerprint { return false }
+            if let age { return now.timeIntervalSince(entry.date) >= age }
+            return true
+        }
+        guard hasDoomedEntry else { return }
         cache = cache.filter { _, entry in
             if let fingerprint, entry.fingerprint != fingerprint { return true }
             if let age { return now.timeIntervalSince(entry.date) < age }
@@ -282,18 +335,36 @@ struct Meta: Codable {
         decryptCache = cache.isEmpty ? nil : cache
     }
 
+    mutating func stampCarriedOverMessages() -> Bool {
+        guard expiryStamped != true else { return false }
+        expiryStamped = true
+        for (fingerprint, list) in messages {
+            guard let seconds = expiry(for: fingerprint) else { continue }
+            var updated = list
+            var touched = false
+            for index in updated.indices where updated[index].expiresAfter == nil {
+                updated[index].expiresAfter = seconds
+                touched = true
+            }
+            if touched { messages[fingerprint] = updated }
+        }
+        return true
+    }
+
     mutating func purgeExpired() -> Bool {
-        guard let map = autoDelete, !map.isEmpty else { return false }
+        var changed = stampCarriedOverMessages()
         let now = Date()
         let cacheBefore = decryptCache?.count ?? 0
-        var changed = false
-        for (fingerprint, seconds) in map where seconds > 0 {
+        for (fingerprint, seconds) in autoDelete ?? [:] where seconds > 0 {
             purgeDecryptCache(fingerprint: fingerprint, olderThan: seconds)
-            guard var list = messages[fingerprint], !list.isEmpty else { continue }
-            let before = list.count
-            list.removeAll { now.timeIntervalSince($0.date) >= seconds }
-            guard list.count != before else { continue }
-            messages[fingerprint] = list.isEmpty ? nil : list
+        }
+        for (fingerprint, list) in messages {
+            guard list.contains(where: { ($0.expiryDate.map { $0 <= now }) ?? false }) else { continue }
+            let kept = list.filter { message in
+                guard let due = message.expiryDate else { return true }
+                return due > now
+            }
+            messages[fingerprint] = kept.isEmpty ? nil : kept
             changed = true
         }
         return changed || (decryptCache?.count ?? 0) != cacheBefore

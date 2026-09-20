@@ -4,6 +4,7 @@ import UIKit
 struct MyKeyView: View {
     @EnvironmentObject private var signal: SignalService
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @State private var copied = false
     @State private var share: SignalService.KeyShare?
     @State private var showQR = false
@@ -47,6 +48,7 @@ struct MyKeyView: View {
             qrImage = rendered
         }
         .onChange(of: showQR) { _, on in setBright(on) }
+        .onChange(of: scenePhase) { _, phase in setBright(phase == .active && showQR) }
         .onDisappear { setBright(false) }
     }
 
@@ -67,6 +69,7 @@ struct MyKeyView: View {
             Image(systemName: "person.crop.circle.fill").foregroundStyle(KTheme.accent)
             Text("Key for profile").font(.kLabel()).foregroundStyle(KTheme.textSecondary)
             Text(signal.currentProfile?.name ?? "").font(.kLabel().weight(.bold)).foregroundStyle(KTheme.textPrimary)
+                .lineLimit(1)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 14).padding(.vertical, 10)

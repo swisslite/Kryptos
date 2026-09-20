@@ -10,6 +10,17 @@ import kotlinx.serialization.json.encodeToStream
 data class ArchivedContact(val fingerprint: String, val displayName: String)
 
 @Serializable
+data class ArchivedMessage(
+    val id: String,
+    val text: String,
+    val mine: Boolean,
+    val date: Long,
+    val expiresAfter: Double? = null,
+) {
+    override fun toString(): String = "ArchivedMessage(id=$id, mine=$mine, date=$date)"
+}
+
+@Serializable
 data class ArchivedRetired(val signedPreKeyId: Long, val kyberPreKeyId: Long, val retiredAt: Long)
 
 @Serializable
@@ -33,12 +44,15 @@ data class ArchivedProfile(
     val autoDelete: Map<String, Double> = emptyMap(),
     val pinned: List<String> = emptyList(),
     val usedPreKeys: List<String> = emptyList(),
+    val seenIncoming: List<String> = emptyList(),
     val contacts: List<ArchivedContact> = emptyList(),
     val preKeys: Map<String, String> = emptyMap(),
     val signedPreKeys: Map<String, String> = emptyMap(),
     val kyberPreKeys: Map<String, String> = emptyMap(),
     val sessions: Map<String, String> = emptyMap(),
     val identities: Map<String, String> = emptyMap(),
+    val usedBaseKeys: List<String> = emptyList(),
+    val chats: Map<String, List<ArchivedMessage>> = emptyMap(),
 ) {
     override fun toString(): String = "ArchivedProfile(id=$id, contacts=${contacts.size})"
 }
@@ -73,6 +87,8 @@ data class KeyArchive(
 
     val contactCount: Int get() = profiles.sumOf { it.contacts.size }
 
+    val messageCount: Int get() = profiles.sumOf { p -> p.chats.values.sumOf { it.size } }
+
     companion object {
         const val MAGIC = "keys"
         const val VERSION = 1
@@ -87,6 +103,7 @@ data class KeyArchive(
             if (archive.isEmpty) throw ArchiveException(ArchiveException.Kind.NOTHING_TO_EXPORT)
             val plain = wipingBytes { json.encodeToStream(serializer(), archive, it) }
             try {
+                if (plain.size > Deflate.MAX_OUTPUT) throw ArchiveException(ArchiveException.Kind.TOO_LARGE)
                 return WireFormat.token(PasswordCipher.encrypt(plain, password))
             } finally {
                 plain.fill(0)
@@ -118,5 +135,5 @@ data class KeyArchive(
 }
 
 class ArchiveException(val kind: Kind) : Exception(kind.name) {
-    enum class Kind { PASSWORD_TOO_SHORT, UNREADABLE, NOTHING_TO_EXPORT, WRITE_FAILED }
+    enum class Kind { PASSWORD_TOO_SHORT, UNREADABLE, NOTHING_TO_EXPORT, WRITE_FAILED, TOO_LARGE }
 }

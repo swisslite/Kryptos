@@ -3,6 +3,7 @@ import Security
 
 enum Keychain {
     private static let service = "com.kryptos.app"
+    private static var accessibility: CFString { kSecAttrAccessibleWhenUnlockedThisDeviceOnly }
     private static var accessGroup: String { AppGroup.identifier }
 
     @discardableResult
@@ -41,6 +42,18 @@ enum Keychain {
         return a || b
     }
 
+    /// Items written before the app required an unlocked device keep their old class until they
+    /// are rewritten, so raise it once at start.
+    static func hardenAccessibility() {
+        let update: [String: Any] = [kSecAttrAccessible as String: accessibility]
+        for group in [accessGroup, nil] {
+            var q: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                    kSecAttrService as String: service]
+            if let group { q[kSecAttrAccessGroup as String] = group }
+            SecItemUpdate(q as CFDictionary, update as CFDictionary)
+        }
+    }
+
     static func eraseAll() {
         for group in [accessGroup, nil] {
             var q: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
@@ -56,7 +69,7 @@ enum Keychain {
             AppGroup.container.appendingPathComponent("kcfallback-\(account).bin")
         }
         static func save(_ data: Data, account: String) -> Bool {
-            SharedStore.writeFile(data, to: url(account), keyMaterial: true)
+            SharedStore.writeFile(data, to: url(account))
         }
         static func load(_ account: String) -> Data? { try? Data(contentsOf: url(account)) }
         static func loadStrict(_ account: String) -> ReadResult {
@@ -86,12 +99,12 @@ enum Keychain {
     private static func saveItem(_ data: Data, account: String, group: String?) -> Bool {
         var item = baseQuery(account: account, group: group)
         item[kSecValueData as String] = data
-        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        item[kSecAttrAccessible as String] = accessibility
         let status = SecItemAdd(item as CFDictionary, nil)
         if status == errSecSuccess { return true }
         guard status == errSecDuplicateItem else { return false }
         let update: [String: Any] = [kSecValueData as String: data,
-                                     kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly]
+                                     kSecAttrAccessible as String: accessibility]
         return SecItemUpdate(baseQuery(account: account, group: group) as CFDictionary, update as CFDictionary) == errSecSuccess
     }
 

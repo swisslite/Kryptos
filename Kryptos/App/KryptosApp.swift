@@ -38,10 +38,15 @@ struct KryptosApp: App {
                 if scenePhase == .active { ForegroundMarker.open() }
                 Task.detached(priority: .background) { SharedStore.excludeStoredFilesFromBackup() }
                 Task.detached(priority: .background) { SharedStore.purgeObsolete() }
+                Task.detached(priority: .background) {
+                    SharedStore.hardenStoredItems()
+                    Keychain.hardenAccessibility()
+                }
                 if scenePhase == .active, !lock.isLocked { scanClipboard() }
             }
             .preferredColorScheme(settings.colorScheme)
             .tint(KTheme.accent)
+            .softScrollEdges()
             .onChange(of: scenePhase) { _, phase in
                 lock.scenePhaseChanged(phase)
                 ScreenCover.set(lock.isShielded)
@@ -69,7 +74,7 @@ struct KryptosApp: App {
                     scanClipboard()
                 }
             }
-            .sheet(item: $incoming) { IncomingRevealView(reveal: $0) }
+            .sheet(item: $incoming) { IncomingRevealView(reveal: $0).softScrollEdges() }
         }
     }
 

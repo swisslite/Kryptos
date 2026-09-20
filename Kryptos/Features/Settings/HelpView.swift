@@ -199,8 +199,8 @@ private let faqItems: [HowToStep] = [
               text: "No. A conversation runs from one device: its key chain cannot advance in two places at once. Move your keys to the new phone with a key backup and then use only that phone."),
     HowToStep(title: "What happens if I delete the app or lose my phone?",
               text: "The keys live on the device and nowhere else, so deleting the app destroys them for good and there is nothing left to decrypt with. The only insurance is to make a key backup in Settings beforehand. The flip side of the same property: whoever finds the phone gets nothing either."),
-    HowToStep(title: "Does the key backup restore my messages too?",
-              text: "No, and that is deliberate. The file carries only your keys, your contacts and your PGP keys — message history is never written into it. After restoring on a new phone you carry on with the same people, but the old messages do not come back."),
+    HowToStep(title: "Does the key backup restore my messages?",
+              text: "Only if “Back up chats” was on when the file was made. Otherwise the file carries only your keys, your contacts and your PGP keys."),
     HowToStep(title: "I hid a message in a photo and it will not open",
               text: "The photo has to be sent as a file (a document). Sent as an ordinary picture it is recompressed by the messenger, and recompression destroys the hidden data."),
     HowToStep(title: "Why does the app ask for the camera?",
@@ -214,7 +214,7 @@ private let faqItems: [HowToStep] = [
     HowToStep(title: "What are profiles for?",
               text: "A profile is a separate keypair with its own contacts. You can keep several and switch between them — to keep work and private life apart, for example."),
     HowToStep(title: "How strong is the encryption?",
-              text: "Chats use Signal's own libsignal library — the same protocol as Signal itself, post-quantum handshake included. Password mode and photos use Argon2id and AES-256-GCM. Kryptos contains no home-made cryptography."),
+              text: "Chats use Signal's own libsignal library — the same protocol as Signal itself, with post-quantum protection on every message, not just the handshake. Password mode and photos use Argon2id and AES-256-GCM. Kryptos contains no home-made cryptography."),
 ]
 
 struct FAQView: View {

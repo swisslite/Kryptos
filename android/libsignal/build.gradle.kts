@@ -1,16 +1,13 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
     id("com.android.library")
-    id("org.jetbrains.kotlin.android")
 }
 
 val ls = "../../ThirdParty/libsignal/java"
 
 android {
     namespace = "org.signal.libsignal"
-    compileSdk = 34
-    ndkVersion = "26.1.10909125"
+    compileSdk = 37
+    ndkVersion = "30.0.16248370"
 
     defaultConfig {
         minSdk = 26
@@ -22,22 +19,21 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-    sourceSets["main"].apply {
-        java.srcDirs("$ls/shared/java", "$ls/client/src/main/java", "$ls/android/src/main/java")
-        kotlin.srcDirs("$ls/shared/java", "$ls/client/src/main/java", "$ls/android/src/main/java")
-        resources.srcDir("$ls/shared/resources")
-        jniLibs.srcDir("$ls/android/src/main/jniLibs")
-    }
-
 }
 
-kotlin {
-    compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
+androidComponents {
+    onVariants { variant ->
+        listOf("$ls/shared/java", "$ls/client/src/main/java", "$ls/android/src/main/java").forEach {
+            variant.sources.java?.addStaticSourceDirectory(it)
+            variant.sources.kotlin?.addStaticSourceDirectory(it)
+        }
+        variant.sources.resources?.addStaticSourceDirectory("$ls/shared/resources")
+        variant.sources.jniLibs?.addStaticSourceDirectory("$ls/android/src/main/jniLibs")
+    }
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }

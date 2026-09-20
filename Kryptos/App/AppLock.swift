@@ -11,7 +11,8 @@ final class LockGate: ObservableObject {
     private var captureShield = false
 
     init() {
-        isLocked = PrivacyConfig.appLock && LockGate.lockUsable
+        let state = PrivacyConfig.lockState()
+        isLocked = (state.appLock || !state.readable) && LockGate.lockUsable
         NotificationCenter.default.addObserver(
             forName: UIScreen.capturedDidChangeNotification, object: nil, queue: .main
         ) { [weak self] _ in
@@ -35,7 +36,16 @@ final class LockGate: ObservableObject {
         isShielded = phaseShield || captureShield
     }
 
+    /// When the settings cannot be read the app still locks; if an app passcode exists it is the
+    /// way in, so the lock screen does not open a system prompt the person may not be able to answer.
+    static var codeOnlyEntry: Bool {
+        if PrivacyConfig.appLockCodeOnly { return true }
+        guard !PrivacyConfig.isReadable else { return false }
+        return LockCodes.app.presence == .set
+    }
+
     static var lockUsable: Bool {
+        guard PrivacyConfig.isReadable else { return canAuthenticate || LockCodes.app.presence != .absent }
         guard PrivacyConfig.appLockCodeOnly else { return canAuthenticate }
         return LockCodes.app.presence != .absent
     }
@@ -116,7 +126,7 @@ final class LockGate: ObservableObject {
     }
 
     func unlock() {
-        guard isLocked, !authInFlight, !PrivacyConfig.appLockCodeOnly else { return }
+        guard isLocked, !authInFlight, !LockGate.codeOnlyEntry else { return }
         authInFlight = true
         let ctx = LAContext()
         Task {
@@ -139,7 +149,7 @@ struct LockScreen: View {
     @State private var code = ""
     @State private var checking = false
     @State private var failure: LocalizedStringKey?
-    private let codeOnly = PrivacyConfig.appLockCodeOnly
+    private let codeOnly = LockGate.codeOnlyEntry
 
     var body: some View {
         ZStack {

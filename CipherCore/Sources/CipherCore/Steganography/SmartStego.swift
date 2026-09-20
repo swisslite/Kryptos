@@ -44,8 +44,6 @@ public enum SmartTextStego {
         return nil
     }
 
-    public static func looksLikeStego(_ text: String) -> Bool { decode(text) != nil }
-
     private static func decode(tokens rawTokens: [String], grammar g: Grammar) -> Data? {
         guard g.style.unit > 1 else {
             return scanStarts(rawTokens.filter { g.vocab.contains($0) }, grammar: g)
@@ -118,7 +116,7 @@ public enum SmartTextStego {
     private static let resyncStarts = 3
     private static let hanResyncStarts = 8
 
-    private static let commaBefore: Set<String> = ["but", "so", "yet", "then", "while", "because", "though", "aber", "denn", "sondern", "и", "но", "а", "затем", "потом", "пока", "когда", "поэтому", "\u{800C}\u{4E14}", "\u{4F46}\u{662F}", "\u{7136}\u{540E}", "\u{56E0}\u{6B64}", "\u{0627}\u{0645}\u{0627}", "\u{0648}\u{0644}\u{06CC}", "\u{067E}\u{0633}"]
+    private static let commaBefore: Set<String> = ["but", "so", "yet", "then", "while", "because", "though", "aber", "denn", "sondern", "и", "но", "а", "затем", "потом", "пока", "когда", "поэтому", "\u{800C}\u{4E14}", "\u{4F46}\u{662F}", "\u{7136}\u{540E}", "\u{56E0}\u{6B64}", "\u{0627}\u{0645}\u{0627}", "\u{0648}\u{0644}\u{06CC}", "\u{067E}\u{0633}", "mas", "por\u{00E9}m", "ent\u{00E3}o", "porque", "pois", "contudo", "todavia"]
 
     struct Style {
         let unit: Int
@@ -225,7 +223,9 @@ public enum SmartTextStego {
     private static let germanGrammar = Grammar(SmartStegoData.german, style: .latin)
     private static let chineseGrammar = Grammar(SmartStegoData.chinese, style: .han)
     private static let persianGrammar = Grammar(SmartStegoData.persian, style: .persian)
-    private static let grammars = [englishGrammar, russianGrammar, germanGrammar, chineseGrammar, persianGrammar]
+    private static let portugueseGrammar = Grammar(SmartStegoData.portuguese, style: .latin)
+    private static let grammars = [englishGrammar, russianGrammar, germanGrammar, chineseGrammar,
+                                   persianGrammar, portugueseGrammar]
 
     private static func grammar(_ language: StegoLanguage) -> Grammar {
         switch language {
@@ -233,6 +233,7 @@ public enum SmartTextStego {
         case .german: return germanGrammar
         case .chinese: return chineseGrammar
         case .persian: return persianGrammar
+        case .portuguese: return portugueseGrammar
         case .english: return englishGrammar
         }
     }

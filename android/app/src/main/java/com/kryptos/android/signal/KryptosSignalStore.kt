@@ -1,5 +1,6 @@
 package com.kryptos.android.signal
 
+import com.kryptos.android.core.hexOf
 import com.kryptos.android.core.wipingBytes
 import com.kryptos.android.store.SecureStore
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -11,6 +12,7 @@ import org.signal.libsignal.protocol.IdentityKey
 import org.signal.libsignal.protocol.IdentityKeyPair
 import org.signal.libsignal.protocol.InvalidKeyIdException
 import org.signal.libsignal.protocol.NoSessionException
+import org.signal.libsignal.protocol.ReusedBaseKeyException
 import org.signal.libsignal.protocol.SignalProtocolAddress
 import org.signal.libsignal.protocol.ecc.ECPublicKey
 import org.signal.libsignal.protocol.groups.state.SenderKeyRecord
@@ -36,7 +38,13 @@ class KryptosSignalStore(
         var kyberPreKeys: MutableMap<String, Blob> = mutableMapOf(),
         var sessions: MutableMap<String, Blob> = mutableMapOf(),
         var identities: MutableMap<String, Blob> = mutableMapOf(),
-    )
+        var usedBaseKeys: MutableSet<String> = mutableSetOf(),
+    ) {
+        fun copied() = Snapshot(
+            preKeys.toMutableMap(), signedPreKeys.toMutableMap(), kyberPreKeys.toMutableMap(),
+            sessions.toMutableMap(), identities.toMutableMap(), usedBaseKeys.toMutableSet(),
+        )
+    }
 
     private val json = Json { ignoreUnknownKeys = true }
     private var snap = Snapshot()
@@ -69,16 +77,31 @@ class KryptosSignalStore(
     }
 
     fun <T> batch(body: () -> T): T {
+        val committed = if (batchDepth == 0) snap.copied() else null
         batchDepth++
-        try {
-            return body()
-        } finally {
+        val result = try {
+            body()
+        } catch (t: Throwable) {
             batchDepth--
-            if (batchDepth == 0 && pendingWrite) {
-                pendingWrite = false
+            if (committed != null) rollBack(committed)
+            throw t
+        }
+        batchDepth--
+        if (committed != null && pendingWrite) {
+            pendingWrite = false
+            try {
                 writeSnapshot()
+            } catch (t: Throwable) {
+                rollBack(committed)
+                throw t
             }
         }
+        return result
+    }
+
+    private fun rollBack(committed: Snapshot) {
+        snap = committed
+        pendingWrite = false
     }
 
     private fun addrKey(a: SignalProtocolAddress) = "${a.name}|${a.deviceId}"
@@ -104,8 +127,9 @@ class KryptosSignalStore(
         identityKey: IdentityKey,
         direction: IdentityKeyStore.Direction,
     ): Boolean {
-        val existing = snap.identities[addrKey(address)] ?: return true
-        return existing.contentEquals(identityKey.serialize())
+        val serialized = identityKey.serialize()
+        val existing = snap.identities[addrKey(address)] ?: return hexOf(serialized) == address.name
+        return existing.contentEquals(serialized)
     }
 
     override fun getIdentity(address: SignalProtocolAddress): IdentityKey? =
@@ -169,9 +193,7 @@ class KryptosSignalStore(
     override fun containsSignedPreKey(signedPreKeyId: Int): Boolean =
         snap.signedPreKeys.containsKey(signedPreKeyId.toString())
 
-    override fun removeSignedPreKey(signedPreKeyId: Int) {
-        if (snap.signedPreKeys.remove(signedPreKeyId.toString()) != null) persist()
-    }
+    override fun removeSignedPreKey(signedPreKeyId: Int) = removeRetiredSignedPreKey(signedPreKeyId.toLong())
 
     override fun loadKyberPreKey(kyberPreKeyId: Int): KyberPreKeyRecord =
         snap.kyberPreKeys[kyberPreKeyId.toString()]?.let { KyberPreKeyRecord(it) }
@@ -188,6 +210,9 @@ class KryptosSignalStore(
         snap.kyberPreKeys.containsKey(kyberPreKeyId.toString())
 
     override fun markKyberPreKeyUsed(kyberPreKeyId: Int, signedPreKeyId: Int, baseKey: ECPublicKey) {
+        val mark = "$kyberPreKeyId|$signedPreKeyId|${hexOf(baseKey.serialize())}"
+        if (!snap.usedBaseKeys.add(mark)) throw ReusedBaseKeyException("base key already used with these pre-keys")
+        persist()
     }
 
     override fun storeSenderKey(sender: SignalProtocolAddress, distributionId: UUID, record: SenderKeyRecord) {
@@ -198,11 +223,18 @@ class KryptosSignalStore(
         senderKeys["${addrKey(sender)}|$distributionId"]
 
     fun removeRetiredSignedPreKey(id: Long) {
-        if (snap.signedPreKeys.remove(id.toString()) != null) persist()
+        val removed = snap.signedPreKeys.remove(id.toString()) != null
+        if (forgetUsedBaseKeys(SIGNED_PART, id) || removed) persist()
     }
 
     fun removeRetiredKyberPreKey(id: Long) {
-        if (snap.kyberPreKeys.remove(id.toString()) != null) persist()
+        val removed = snap.kyberPreKeys.remove(id.toString()) != null
+        if (forgetUsedBaseKeys(KYBER_PART, id) || removed) persist()
+    }
+
+    private fun forgetUsedBaseKeys(part: Int, id: Long): Boolean {
+        val wanted = id.toString()
+        return snap.usedBaseKeys.removeAll { it.split('|').getOrNull(part) == wanted }
     }
 
     fun removeSessionAndIdentity(name: String) {
@@ -218,30 +250,41 @@ class KryptosSignalStore(
         persist()
     }
 
+    class Archive(
+        val parts: Map<String, Map<String, String>>,
+        val usedBaseKeys: List<String>,
+    )
+
     companion object {
+        private const val KYBER_PART = 0
+        private const val SIGNED_PART = 1
+
         private val archiveJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
-        fun exportArchive(storageKey: String): Map<String, Map<String, String>>? {
+        fun exportArchive(storageKey: String): Archive? {
             val raw = runCatching { SecureStore.readStrict(storageKey) }.getOrElse { return null }
-                ?: return emptyMap()
+                ?: return Archive(emptyMap(), emptyList())
             val snap = runCatching {
                 archiveJson.decodeFromString<Snapshot>(String(raw, Charsets.UTF_8))
             }.getOrNull() ?: return null
             fun enc(m: Map<String, Blob>) = m.mapValues { Base64.getEncoder().encodeToString(it.value) }
-            return mapOf(
-                "preKeys" to enc(snap.preKeys),
-                "signedPreKeys" to enc(snap.signedPreKeys),
-                "kyberPreKeys" to enc(snap.kyberPreKeys),
-                "sessions" to enc(snap.sessions),
-                "identities" to enc(snap.identities),
+            return Archive(
+                mapOf(
+                    "preKeys" to enc(snap.preKeys),
+                    "signedPreKeys" to enc(snap.signedPreKeys),
+                    "kyberPreKeys" to enc(snap.kyberPreKeys),
+                    "sessions" to enc(snap.sessions),
+                    "identities" to enc(snap.identities),
+                ),
+                snap.usedBaseKeys.toList(),
             )
         }
 
         @OptIn(ExperimentalSerializationApi::class)
-        fun writeArchive(storageKey: String, parts: Map<String, Map<String, String>>) {
+        fun writeArchive(storageKey: String, archive: Archive) {
             fun dec(name: String): MutableMap<String, Blob> {
                 val out = mutableMapOf<String, Blob>()
-                parts[name]?.forEach { (k, v) -> out[k] = Base64.getDecoder().decode(v) }
+                archive.parts[name]?.forEach { (k, v) -> out[k] = Base64.getDecoder().decode(v) }
                 return out
             }
             val snap = Snapshot(
@@ -250,6 +293,7 @@ class KryptosSignalStore(
                 kyberPreKeys = dec("kyberPreKeys"),
                 sessions = dec("sessions"),
                 identities = dec("identities"),
+                usedBaseKeys = archive.usedBaseKeys.toMutableSet(),
             )
             writeWiped(storageKey, wipingBytes { archiveJson.encodeToStream(Snapshot.serializer(), snap, it) })
         }

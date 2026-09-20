@@ -185,12 +185,12 @@ object EmojiData {
         sessionAdded.clear()
         runCatching {
             SecureStore.delete(STORE_RECENTS)
-            SecureStore.prefs().edit().remove(PREF_RECENTS).commit()
+            SecureStore.legacyPrefs().edit().remove(PREF_RECENTS).commit()
         }
     }
 
     @Synchronized fun migrateLegacy() {
-        val prefs = SecureStore.prefs()
+        val prefs = SecureStore.legacyPrefs()
         val legacy = prefs.getString(PREF_RECENTS, null) ?: return
         if (SecureStore.read(STORE_RECENTS) == null && legacy.isNotBlank()) {
             SecureStore.write(STORE_RECENTS, legacy.toByteArray(Charsets.UTF_8))

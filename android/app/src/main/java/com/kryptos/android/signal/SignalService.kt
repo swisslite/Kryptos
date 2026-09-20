@@ -1,6 +1,7 @@
 package com.kryptos.android.signal
 
 import com.kryptos.android.core.ArchivedContact
+import com.kryptos.android.core.ArchivedMessage
 import com.kryptos.android.core.ArchivedProfile
 import com.kryptos.android.core.ArchivedRetired
 import com.kryptos.android.AppLanguage
@@ -8,6 +9,7 @@ import com.kryptos.android.R
 import com.kryptos.android.core.BinaryReader
 import com.kryptos.android.core.BinaryWriter
 import com.kryptos.android.core.CachePurge
+import com.kryptos.android.core.CipherException
 import com.kryptos.android.core.KeyText
 import com.kryptos.android.security.ClipboardGuard
 import com.kryptos.android.core.wipingBytes
@@ -115,7 +117,7 @@ object SignalService {
     private fun defaultProfileName(n: Int): String =
         AppLanguage.wrap(SecureStore.appContext()).getString(R.string.profile_n, n)
 
-    private val autoNamePrefixes = listOf("Profile ", "Профиль ", "Profil ", "个人资料 ", "نمایه ")
+    private val autoNamePrefixes = listOf("Profile ", "Профиль ", "Profil ", "Perfil ", "个人资料 ", "نمایه ")
 
     private fun relocalizedDefaultName(profile: Profile): Profile {
         for (prefix in autoNamePrefixes) {
@@ -183,7 +185,7 @@ object SignalService {
         profile
     }
 
-    fun renameProfile(id: String, name: String) = synchronized(lock) {
+    fun renameProfile(id: String, name: String): Unit = synchronized(lock) {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
         val list = profiles.value
@@ -193,7 +195,7 @@ object SignalService {
         persistIndex()
     }
 
-    fun renameContact(contact: Contact, name: String) = synchronized(lock) {
+    fun renameContact(contact: Contact, name: String): Unit = synchronized(lock) {
         val trimmed = name.trim()
         if (trimmed.isEmpty() || !initialized) return
         val list = contacts.value
@@ -255,7 +257,7 @@ object SignalService {
     }
 
     private fun rescheduleExpiry() {
-        MessageExpiry.schedule(MessageExpiry.nextDueAt(messages.value, autoDelete.value))
+        MessageExpiry.schedule(MessageExpiry.nextDueAt(messages.value))
     }
 
     private fun dropFromClipboard(texts: Collection<String>) {
@@ -522,7 +524,7 @@ object SignalService {
         if (!spent || !hasUsableSession(addr)) {
             val useOneTime = otpMark != null && !spent
             if (useOneTime) {
-                meta.rememberUsedPreKey(otpMark!!)
+                meta.rememberUsedPreKey(otpMark)
                 saveMeta()
             }
             val bundle = if (useOneTime) {
@@ -573,7 +575,7 @@ object SignalService {
     }
 
     private fun hasUsableSession(address: SignalProtocolAddress): Boolean =
-        runCatching { store.loadSession(address)?.hasSenderChain(0.0) == true }.getOrDefault(false)
+        runCatching { store.loadSession(address)?.hasSenderChain() == true }.getOrDefault(false)
 
     private fun requireSession(fingerprint: String) {
         if (!store.containsSession(SignalProtocolAddress(fingerprint, 1))) {
@@ -595,20 +597,22 @@ object SignalService {
             SignalWire.encrypt(text, to.fingerprint, myFingerprint.value, store, AppSettingsStore.resolvedStegoLanguage(), AppSettingsStore.resolvedStegoMode(), AppSettingsStore.lengthPadding)
         }
         OwnCipherMarker.mark(sealed.armored)
-        meta.rememberDecrypt(sealed.armored, to.fingerprint, text, mine = true)
-        append(ChatMessage(text = text, mine = true), to.fingerprint)
+        record(sealed.armored, to.fingerprint, text, mine = true)
         sealed
     }
 
     fun decrypt(armored: String, from: Contact): String = synchronized(lock) {
         ready()
-        meta.decryptCache[DecryptCacheKey.of(armored)]?.let { hit ->
+        meta.cachedDecrypt(armored)?.let { hit ->
             if (hit.fingerprint != from.fingerprint) {
                 val name = contacts.value.firstOrNull { it.fingerprint == hit.fingerprint }?.displayName
                     ?: hit.fingerprint.take(8)
                 throw DecryptedForOtherContactException(name)
             }
             return@synchronized hit.text
+        }
+        if (meta.hasSeenIncoming(DecryptCacheKey.of(armored))) {
+            throw CipherException(CipherException.Kind.DECRYPTION_FAILED)
         }
         val text = try {
             store.batch { SignalWire.decrypt(armored, from.fingerprint, myFingerprint.value, store) }
@@ -617,8 +621,7 @@ object SignalService {
         } catch (e: org.signal.libsignal.protocol.InvalidKeyIdException) {
             throw PreKeyUnavailableException()
         }
-        meta.rememberDecrypt(armored, from.fingerprint, text)
-        append(ChatMessage(text = text, mine = false), from.fingerprint)
+        record(armored, from.fingerprint, text, mine = false)
         text
     }
 
@@ -626,13 +629,16 @@ object SignalService {
 
     fun cachedDecryptHit(armored: String): CacheHit? = synchronized(lock) {
         ensureInitialized()
-        val hit = meta.decryptCache[DecryptCacheKey.of(armored)] ?: return null
+        val hit = meta.cachedDecrypt(armored) ?: return null
         val contact = contacts.value.firstOrNull { it.fingerprint == hit.fingerprint }
             ?: Contact(hit.fingerprint, hit.fingerprint.take(8))
         CacheHit(contact, hit.text, hit.mine)
     }
 
-    private fun append(message: ChatMessage, fingerprint: String) {
+    private fun record(armored: String, fingerprint: String, text: String, mine: Boolean) {
+        val message = ChatMessage(text = text, mine = mine, expiresAfter = meta.expiry(fingerprint))
+        meta.rememberDecrypt(armored, fingerprint, text, mine, message.expiryAt)
+        if (!mine) meta.rememberIncoming(DecryptCacheKey.of(armored))
         messages.value = messages.value + (fingerprint to ((messages.value[fingerprint] ?: emptyList()) + message))
         if (!purgeExpiredMessages()) saveMeta()
     }
@@ -687,7 +693,7 @@ object SignalService {
         return gone
     }
 
-    fun deleteMessage(contact: Contact, messageId: String) = synchronized(lock) {
+    fun deleteMessage(contact: Contact, messageId: String): Unit = synchronized(lock) {
         if (!initialized) return
         val map = messages.value
         val list = map[contact.fingerprint] ?: return
@@ -743,7 +749,7 @@ object SignalService {
         rescheduleExpiry()
     }
 
-    fun archivedProfiles(): List<ArchivedProfile>? = synchronized(lock) {
+    fun archivedProfiles(includeChats: Boolean): List<ArchivedProfile>? = synchronized(lock) {
         ensureInitialized()
         saveMeta()
         val out = ArrayList<ArchivedProfile>()
@@ -779,16 +785,81 @@ object SignalService {
                     autoDelete = m.autoDelete,
                     pinned = m.pinned,
                     usedPreKeys = m.usedPreKeys,
+                    seenIncoming = m.seenIncoming,
                     contacts = m.contacts.map { ArchivedContact(it.fingerprint, it.displayName) },
-                    preKeys = store["preKeys"].orEmpty(),
-                    signedPreKeys = store["signedPreKeys"].orEmpty(),
-                    kyberPreKeys = store["kyberPreKeys"].orEmpty(),
-                    sessions = store["sessions"].orEmpty(),
-                    identities = store["identities"].orEmpty(),
+                    preKeys = store.parts["preKeys"].orEmpty(),
+                    signedPreKeys = store.parts["signedPreKeys"].orEmpty(),
+                    kyberPreKeys = store.parts["kyberPreKeys"].orEmpty(),
+                    sessions = store.parts["sessions"].orEmpty(),
+                    identities = store.parts["identities"].orEmpty(),
+                    usedBaseKeys = store.usedBaseKeys,
+                    chats = if (includeChats) archivedChats(m) else emptyMap(),
                 )
             )
         }
         out
+    }
+
+    private fun archivedChats(meta: Meta): Map<String, List<ArchivedMessage>> {
+        val now = System.currentTimeMillis()
+        val out = LinkedHashMap<String, List<ArchivedMessage>>()
+        for (contact in meta.contacts) {
+            val list = meta.messages[contact.fingerprint] ?: continue
+            val kept = list.mapNotNull { message ->
+                val due = message.expiryAt
+                if (due != null && due <= now) {
+                    null
+                } else {
+                    ArchivedMessage(message.id, message.text, message.mine, message.date, message.expiresAfter)
+                }
+            }
+            if (kept.isNotEmpty()) out[contact.fingerprint] = kept
+        }
+        return out
+    }
+
+    fun restorableChats(
+        chats: Map<String, List<ArchivedMessage>>,
+        contacts: List<Contact>,
+    ): Map<String, List<ChatMessage>> {
+        if (chats.isEmpty()) return emptyMap()
+        val known = contacts.mapTo(HashSet()) { it.fingerprint }
+        val now = System.currentTimeMillis()
+        val out = LinkedHashMap<String, List<ChatMessage>>()
+        for ((fingerprint, list) in chats) {
+            if (fingerprint !in known) continue
+            val restored = list.mapNotNull { entry ->
+                val seconds = entry.expiresAfter?.takeIf { it > 0 }
+                val due = seconds?.let { entry.date + (it * 1000).toLong() }
+                if (due != null && due <= now) {
+                    null
+                } else {
+                    ChatMessage(entry.id, entry.text, entry.mine, entry.date, seconds)
+                }
+            }
+            if (restored.isNotEmpty()) out[fingerprint] = restored
+        }
+        return out
+    }
+
+    fun isRestorableFingerprint(fingerprint: String): Boolean =
+        fingerprint.isNotEmpty() && fingerprint.length % 2 == 0 &&
+            fingerprint.all { it in '0'..'9' || it in 'a'..'f' }
+
+    fun restorableContacts(list: List<ArchivedContact>): List<Contact> {
+        val seen = HashSet<String>()
+        return list.mapNotNull { entry ->
+            if (!isRestorableFingerprint(entry.fingerprint) || !seen.add(entry.fingerprint)) {
+                null
+            } else {
+                Contact(entry.fingerprint, entry.displayName)
+            }
+        }
+    }
+
+    private fun merged(archived: List<String>, onDevice: List<String>, cap: Int? = null): List<String> {
+        val out = archived + onDevice.filterNot { it in archived }
+        return if (cap != null && out.size > cap) out.takeLast(cap) else out
     }
 
     @OptIn(ExperimentalSerializationApi::class)
@@ -806,6 +877,11 @@ object SignalService {
             val signedSig = runCatching { Base64.getDecoder().decode(entry.signedPreKeySig) }.getOrNull() ?: continue
             val kyberPub = runCatching { Base64.getDecoder().decode(entry.kyberPreKeyPub) }.getOrNull() ?: continue
             val kyberSig = runCatching { Base64.getDecoder().decode(entry.kyberPreKeySig) }.getOrNull() ?: continue
+            val restoredContacts = restorableContacts(entry.contacts)
+            val onDeviceSeen = runCatching { SecureStore.readStrict(StoreKey.meta(entry.id)) }.getOrNull()
+                ?.let { runCatching { json.decodeFromString<Meta>(String(it, Charsets.UTF_8)).seenIncoming }.getOrNull() }
+                .orEmpty()
+            val onDeviceMarks = KryptosSignalStore.exportArchive(StoreKey.store(entry.id))?.usedBaseKeys.orEmpty()
 
             val restoredMeta = Meta(
                 registrationId = entry.registrationId,
@@ -813,8 +889,8 @@ object SignalService {
                 signedPreKeyPub = signedPub, signedPreKeySig = signedSig,
                 kyberPreKeyId = entry.kyberPreKeyId,
                 kyberPreKeyPub = kyberPub, kyberPreKeySig = kyberSig,
-                contacts = entry.contacts.map { Contact(it.fingerprint, it.displayName) },
-                messages = emptyMap(),
+                contacts = restoredContacts,
+                messages = restorableChats(entry.chats, restoredContacts),
                 prekeyCreatedAt = entry.prekeyCreatedAt,
                 retiredPreKeyGens = entry.retired.map {
                     RetiredPreKeyGen(it.signedPreKeyId, it.kyberPreKeyId, it.retiredAt)
@@ -824,9 +900,10 @@ object SignalService {
                 nextOneTimePreKeyId = entry.nextOneTimePreKeyId,
                 oneTimePreKeyIds = entry.oneTimePreKeyIds,
                 autoDelete = entry.autoDelete,
-                pinned = entry.pinned.filter { fp -> entry.contacts.any { it.fingerprint == fp } },
+                pinned = entry.pinned.filter { fp -> restoredContacts.any { it.fingerprint == fp } },
                 decryptCache = emptyMap(),
                 usedPreKeys = entry.usedPreKeys,
+                seenIncoming = merged(entry.seenIncoming, onDeviceSeen, cap = 512),
             )
             val ok = runCatching {
                 writeWiped(StoreKey.identity(entry.id), identityBytes)
@@ -836,12 +913,15 @@ object SignalService {
                 )
                 KryptosSignalStore.writeArchive(
                     StoreKey.store(entry.id),
-                    mapOf(
-                        "preKeys" to entry.preKeys,
-                        "signedPreKeys" to entry.signedPreKeys,
-                        "kyberPreKeys" to entry.kyberPreKeys,
-                        "sessions" to entry.sessions,
-                        "identities" to entry.identities,
+                    KryptosSignalStore.Archive(
+                        mapOf(
+                            "preKeys" to entry.preKeys,
+                            "signedPreKeys" to entry.signedPreKeys,
+                            "kyberPreKeys" to entry.kyberPreKeys,
+                            "sessions" to entry.sessions,
+                            "identities" to entry.identities,
+                        ),
+                        merged(entry.usedBaseKeys, onDeviceMarks),
                     ),
                 )
             }.isSuccess
@@ -879,7 +959,7 @@ object SignalService {
         lastMetaDigest = null
         unavailableProfiles.value = emptySet()
         SecureStore.deleteAll()
-        SecureStore.prefs().edit().clear().commit()
+        SecureStore.eraseSettings()
         AppSettingsStore.invalidateCaches()
         contacts.value = emptyList()
         messages.value = emptyMap()

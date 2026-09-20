@@ -19,6 +19,7 @@
 		0000000000000000000005E1 /* SignalWire.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000005E0 /* SignalWire.swift */; };
 		0000000000000000000005F1 /* SharedSignalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000005F0 /* SharedSignalStore.swift */; };
 		000000000000000000000603 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000602 /* SharedStore.swift */; };
+		000000000000000000000605 /* MessageLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000604 /* MessageLinks.swift */; };
 		000000000000000000000610 /* KryptosKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 000000000000000000000510 /* KryptosKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -32,6 +33,7 @@
 		0000000000000000000005E0 /* SignalWire.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SignalWire.swift; path = Kryptos/Model/SignalWire.swift; sourceTree = SOURCE_ROOT; };
 		0000000000000000000005F0 /* SharedSignalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SharedSignalStore.swift; path = Kryptos/Model/SharedSignalStore.swift; sourceTree = SOURCE_ROOT; };
 		000000000000000000000602 /* SharedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SharedStore.swift; path = Kryptos/Model/SharedStore.swift; sourceTree = SOURCE_ROOT; };
+		000000000000000000000604 /* MessageLinks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MessageLinks.swift; path = Kryptos/Model/MessageLinks.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -174,6 +176,7 @@
 				de,
 				"zh-Hans",
 				fa,
+				pt,
 			);
 			mainGroup = 000000000000000000000010;
 			minimizedProjectReferenceProxies = 1;
@@ -229,6 +232,7 @@
 				0000000000000000000005E1 /* SignalWire.swift in Sources */,
 				0000000000000000000005F1 /* SharedSignalStore.swift in Sources */,
 				000000000000000000000603 /* SharedStore.swift in Sources */,
+				000000000000000000000605 /* MessageLinks.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -322,7 +326,7 @@
 				CODE_SIGNING_REQUIRED = NO;
 				CODE_SIGN_ENTITLEMENTS = Kryptos/Kryptos.entitlements;
 				CODE_SIGN_IDENTITY = "";
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 12;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Scanning QR codes to exchange keys securely.";
@@ -330,7 +334,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 2.3.3;
+				MARKETING_VERSION = 2.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kryptos.app;
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
@@ -362,7 +366,7 @@
 				CODE_SIGNING_REQUIRED = NO;
 				CODE_SIGN_ENTITLEMENTS = Kryptos/Kryptos.entitlements;
 				CODE_SIGN_IDENTITY = "";
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 12;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Scanning QR codes to exchange keys securely.";
@@ -370,7 +374,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 2.3.3;
+				MARKETING_VERSION = 2.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kryptos.app;
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
@@ -401,7 +405,7 @@
 				CODE_SIGNING_REQUIRED = NO;
 				CODE_SIGN_ENTITLEMENTS = KryptosKeyboard/KryptosKeyboard.entitlements;
 				CODE_SIGN_IDENTITY = "";
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 12;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = KryptosKeyboard/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -410,7 +414,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.3.3;
+				MARKETING_VERSION = 2.4;
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
 					"-lc++",
@@ -426,6 +430,7 @@
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -440,7 +445,7 @@
 				CODE_SIGNING_REQUIRED = NO;
 				CODE_SIGN_ENTITLEMENTS = KryptosKeyboard/KryptosKeyboard.entitlements;
 				CODE_SIGN_IDENTITY = "";
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 12;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = KryptosKeyboard/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -449,7 +454,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.3.3;
+				MARKETING_VERSION = 2.4;
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
 					"-lc++",
@@ -465,6 +470,7 @@
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 1;

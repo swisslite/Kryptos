@@ -1,6 +1,8 @@
 package com.kryptos.android.core
 
 object KryptosCore {
+    const val MIN_PASSWORD_LENGTH = 6
+
     fun encrypt(text: String, password: String, pad: Boolean = false): String =
         WireFormat.token(PasswordCipher.encrypt(text.toByteArray(Charsets.UTF_8), password, pad))
 

@@ -48,13 +48,16 @@ object PinyinEngine {
 
     private val loading = AtomicBoolean(false)
 
+    private var loadGeneration = 0
+
     fun warmUp(context: Context, onReady: (() -> Unit)? = null) {
         if (loaded && personalLoaded) return
         if (!loading.compareAndSet(false, true)) return
         val app = context.applicationContext
+        val generation = synchronized(lock) { loadGeneration }
         Thread({
             try {
-                loadDictionary(app)
+                loadDictionary(app, generation)
                 loadPersonal()
             } finally {
                 loading.set(false)
@@ -63,7 +66,16 @@ object PinyinEngine {
         }, "kryptos-pinyin").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }.start()
     }
 
-    private fun loadDictionary(app: Context) {
+    fun release() {
+        synchronized(lock) {
+            loadGeneration++
+            if (!loaded) return
+            loaded = false
+            adopt(Built(ByteArray(0), IntArray(0), ByteArray(0), IntArray(0), CharArray(0), IntArray(0), IntArray(0), IntArray(0), HashSet(), 6))
+        }
+    }
+
+    private fun loadDictionary(app: Context, generation: Int) {
         if (loaded) return
         val built = runCatching {
             app.assets.open("dict/pinyin-zh.txt").use { dict ->
@@ -73,7 +85,7 @@ object PinyinEngine {
             }
         }.getOrNull() ?: return
         synchronized(lock) {
-            if (!loaded) {
+            if (!loaded && generation == loadGeneration) {
                 adopt(built)
                 loaded = true
             }

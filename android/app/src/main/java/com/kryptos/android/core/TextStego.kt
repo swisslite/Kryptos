@@ -4,7 +4,7 @@ import java.text.Normalizer
 import java.util.Locale
 
 enum class StegoLanguage {
-    ENGLISH, RUSSIAN, GERMAN, CHINESE, PERSIAN;
+    ENGLISH, RUSSIAN, GERMAN, CHINESE, PERSIAN, PORTUGUESE;
 
     val words: List<String>
         get() = when (this) {
@@ -13,6 +13,7 @@ enum class StegoLanguage {
             GERMAN -> Wordlists.german
             CHINESE -> Wordlists.chinese
             PERSIAN -> Wordlists.persian
+            PORTUGUESE -> Wordlists.portuguese
         }
 
     val isHan: Boolean get() = this == CHINESE
@@ -44,6 +45,7 @@ enum class StegoLanguage {
             GERMAN -> Wordlists.germanIndex
             CHINESE -> Wordlists.chineseIndex
             PERSIAN -> Wordlists.persianIndex
+            PORTUGUESE -> Wordlists.portugueseIndex
         }
 
     companion object {
@@ -53,6 +55,7 @@ enum class StegoLanguage {
                 "de" -> GERMAN
                 "zh" -> CHINESE
                 "fa" -> PERSIAN
+                "pt" -> PORTUGUESE
                 else -> ENGLISH
             }
     }
@@ -64,11 +67,13 @@ internal object Wordlists {
     val german: List<String> by lazy { load("german") }
     val chinese: List<String> by lazy { load("chinese") }
     val persian: List<String> by lazy { load("persian") }
+    val portuguese: List<String> by lazy { load("portuguese") }
     val englishIndex: Map<String, Int> by lazy { index(english) }
     val russianIndex: Map<String, Int> by lazy { index(russian) }
     val germanIndex: Map<String, Int> by lazy { index(german) }
     val chineseIndex: Map<String, Int> by lazy { index(chinese) }
     val persianIndex: Map<String, Int> by lazy { index(persian) }
+    val portugueseIndex: Map<String, Int> by lazy { index(portuguese) }
 
     private fun load(name: String): List<String> {
         val stream = Wordlists::class.java.classLoader!!.getResourceAsStream("wordlists/$name.txt")

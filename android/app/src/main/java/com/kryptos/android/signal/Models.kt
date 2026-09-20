@@ -46,12 +46,28 @@ data class ChatMessage(
     val text: String,
     val mine: Boolean,
     val date: Long = System.currentTimeMillis(),
+    val expiresAfter: Double? = null,
 ) {
+    val expiryAt: Long?
+        get() = expiresAfter?.takeIf { it > 0 }?.let { date + (it * 1000).toLong() }
+
     override fun toString(): String = "ChatMessage(id=$id, mine=$mine, date=$date)"
 }
 
 object SignalFormat {
     fun hex(d: ByteArray): String = hexOf(d)
+
+    fun bytes(hex: String): ByteArray? {
+        if (hex.length % 2 != 0) return null
+        val out = ByteArray(hex.length / 2)
+        for (i in out.indices) {
+            val high = Character.digit(hex[i * 2], 16)
+            val low = Character.digit(hex[i * 2 + 1], 16)
+            if (high < 0 || low < 0) return null
+            out[i] = ((high shl 4) or low).toByte()
+        }
+        return out
+    }
 
     fun safetyNumber(fingerprintHex: String): String =
         fingerprintHex.take(24).chunked(4).joinToString(" ").uppercase()
@@ -80,18 +96,38 @@ data class CachedDecrypt(
     val text: String,
     val date: Long = System.currentTimeMillis(),
     val mine: Boolean = false,
+    val expiresAt: Long? = null,
 ) {
+    fun expired(now: Long): Boolean = expiresAt != null && expiresAt <= now
+
     override fun toString(): String = "CachedDecrypt(fingerprint=$fingerprint, mine=$mine, date=$date)"
 }
 
 object DecryptCacheKey {
     private val STEGO_CHARS = 40..64_000
 
+    private val memoLock = Any()
+    private var memoText: String? = null
+    private var memoKey: String? = null
+
+    init {
+        CachePurge.register { synchronized(memoLock) { memoText = null; memoKey = null } }
+    }
+
     fun of(armored: String): String {
+        synchronized(memoLock) {
+            val key = memoKey
+            if (key != null && armored == memoText) return key
+        }
         val payload = stegoPayload(armored)
             ?: tokenPayload(armored)
             ?: armored.trim().toByteArray(Charsets.UTF_8)
-        return sha256Hex(payload)
+        val key = sha256Hex(payload)
+        synchronized(memoLock) {
+            memoText = armored
+            memoKey = key
+        }
+        return key
     }
 
     private fun tokenPayload(armored: String): ByteArray? =
@@ -181,7 +217,11 @@ data class Meta(
     var pinned: List<String> = emptyList(),
     var decryptCache: Map<String, CachedDecrypt> = emptyMap(),
     var usedPreKeys: List<String> = emptyList(),
+    var seenIncoming: List<String> = emptyList(),
+    var expiryStamped: Boolean = false,
 ) {
+    fun expiry(fingerprint: String): Double? = autoDelete[fingerprint]?.takeIf { it > 0 }
+
     fun rememberUsedPreKey(mark: String) {
         if (mark in usedPreKeys) return
         val cap = 512
@@ -189,8 +229,28 @@ data class Meta(
         usedPreKeys = if (next.size > cap) next.takeLast(cap) else next
     }
 
-    fun rememberDecrypt(armored: String, fingerprint: String, text: String, mine: Boolean = false) {
-        var cache = decryptCache + (DecryptCacheKey.of(armored) to CachedDecrypt(fingerprint, text, mine = mine))
+    fun rememberIncoming(cacheKey: String) {
+        val mark = incomingMark(cacheKey)
+        if (mark in seenIncoming) return
+        val cap = 512
+        val next = seenIncoming + mark
+        seenIncoming = if (next.size > cap) next.takeLast(cap) else next
+    }
+
+    fun hasSeenIncoming(cacheKey: String): Boolean = incomingMark(cacheKey) in seenIncoming
+
+    fun cachedDecrypt(armored: String, now: Long = System.currentTimeMillis()): CachedDecrypt? =
+        decryptCache[DecryptCacheKey.of(armored)]?.takeUnless { it.expired(now) }
+
+    fun rememberDecrypt(
+        armored: String,
+        fingerprint: String,
+        text: String,
+        mine: Boolean = false,
+        expiresAt: Long? = null,
+    ) {
+        val entry = CachedDecrypt(fingerprint, text, mine = mine, expiresAt = expiresAt)
+        var cache = decryptCache + (DecryptCacheKey.of(armored) to entry)
         val cap = 300
         if (cache.size > cap) {
             val evict = cache.entries.sortedBy { it.value.date }.take(cache.size - cap).map { it.key }.toSet()
@@ -216,18 +276,31 @@ data class Meta(
         }
     }
 
+    fun stampCarriedOverMessages(): Boolean {
+        if (expiryStamped) return false
+        expiryStamped = true
+        for ((fingerprint, list) in messages) {
+            val seconds = expiry(fingerprint) ?: continue
+            if (list.none { it.expiresAfter == null }) continue
+            val stamped = list.map { if (it.expiresAfter == null) it.copy(expiresAfter = seconds) else it }
+            messages = messages + (fingerprint to stamped)
+        }
+        return true
+    }
+
     fun purgeExpired(): Boolean {
-        if (autoDelete.isEmpty()) return false
+        var changed = stampCarriedOverMessages()
         val now = System.currentTimeMillis()
         val cacheBefore = decryptCache.size
-        var changed = false
+        if (decryptCache.values.any { it.expired(now) }) {
+            decryptCache = decryptCache.filterValues { !it.expired(now) }
+        }
         for ((fingerprint, seconds) in autoDelete) {
             if (seconds <= 0) continue
-            val maxAgeMs = (seconds * 1000).toLong()
-            purgeDecryptCache(fingerprint, maxAgeMs)
-            val list = messages[fingerprint] ?: continue
-            if (list.isEmpty()) continue
-            val kept = list.filter { now - it.date < maxAgeMs }
+            purgeDecryptCache(fingerprint, (seconds * 1000).toLong())
+        }
+        for ((fingerprint, list) in messages) {
+            val kept = list.filter { message -> message.expiryAt?.let { it > now } ?: true }
             if (kept.size == list.size) continue
             messages = if (kept.isEmpty()) messages - fingerprint else messages + (fingerprint to kept)
             changed = true
@@ -237,6 +310,12 @@ data class Meta(
 
     override fun toString(): String =
         "Meta(registrationId=$registrationId, contacts=${contacts.size}, chats=${messages.size})"
+
+    companion object {
+        const val INCOMING_MARK_LENGTH = 32
+
+        fun incomingMark(cacheKey: String): String = cacheKey.take(INCOMING_MARK_LENGTH)
+    }
 }
 
 @Serializable

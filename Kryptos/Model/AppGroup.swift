@@ -12,6 +12,7 @@ final class ConfigCache<T>: @unchecked Sendable {
     private let lock = NSLock()
     private var stored: T?
     private var at: TimeInterval = 0
+    private var lastReadSucceeded = true
     private let ttl: TimeInterval
 
     init(ttl: TimeInterval = 0.5) { self.ttl = ttl }
@@ -25,25 +26,37 @@ final class ConfigCache<T>: @unchecked Sendable {
         }
         let remembered = stored
         lock.unlock()
-        guard let value = make() else { return remembered ?? fallback() }
+        let value = make()
         lock.lock()
-        stored = value
-        at = now
+        lastReadSucceeded = value != nil
+        if let value {
+            stored = value
+            at = now
+        }
         lock.unlock()
-        return value
+        return value ?? remembered ?? fallback()
+    }
+
+    /// False when the last read of the stored settings failed, so the returned values are
+    /// defaults rather than what the user chose.
+    var isReadable: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return lastReadSucceeded
     }
 
     func invalidate() {
         lock.lock()
         stored = nil
         at = 0
+        lastReadSucceeded = true
         lock.unlock()
     }
 }
 
 private func storedConfig<T: Decodable>(_ key: String) -> T? where T: DefaultConstructible {
     switch SharedStore.readStrict(key) {
-    case .found(let data): return (try? JSONDecoder().decode(T.self, from: data)) ?? T()
+    case .found(let data): return try? JSONDecoder().decode(T.self, from: data)
     case .absent: return T()
     case .unavailable: return nil
     }
@@ -174,6 +187,7 @@ enum ChatStego {
         case "german": language = .german
         case "chinese": language = .chinese
         case "persian": language = .persian
+        case "portuguese": language = .portuguese
         default: language = .forSystem()
         }
         return (language, mode(of: c))
@@ -194,6 +208,8 @@ enum PrivacyConfig {
         var clipboardAutoDecrypt: Bool? = true
         var lengthPadding: Bool? = false
         var codeOnly: Bool? = false
+        var backupChats: Bool? = false
+        var clipboardClearOnDecrypt: Bool? = false
     }
 
     private static let cache = ConfigCache<Config>()
@@ -205,11 +221,13 @@ enum PrivacyConfig {
     }
 
     static func save(appLock: Bool, shield: Bool, clipboardLocalOnly: Bool, clipboardExpiry: Double,
-                     clipboardAutoDecrypt: Bool, lengthPadding: Bool, codeOnly: Bool) {
+                     clipboardAutoDecrypt: Bool, lengthPadding: Bool, codeOnly: Bool, backupChats: Bool,
+                     clipboardClearOnDecrypt: Bool) {
         if let d = try? JSONEncoder().encode(Config(appLock: appLock, shield: shield,
                                                     clipboardLocalOnly: clipboardLocalOnly, clipboardExpiry: clipboardExpiry,
                                                     clipboardAutoDecrypt: clipboardAutoDecrypt, lengthPadding: lengthPadding,
-                                                    codeOnly: codeOnly)) {
+                                                    codeOnly: codeOnly, backupChats: backupChats,
+                                                    clipboardClearOnDecrypt: clipboardClearOnDecrypt)) {
             SharedStore.write(key, d)
         }
         cache.invalidate()
@@ -221,8 +239,20 @@ enum PrivacyConfig {
     }
 
     static func coverState() -> (shield: Bool, appLock: Bool) {
+        let state = lockState()
+        return (config().shield, state.appLock || !state.readable)
+    }
+
+    /// The app lock has to stay on when the stored settings cannot be read: the defaults say
+    /// "no lock", and a storage failure must not open the app.
+    static func lockState() -> (appLock: Bool, readable: Bool) {
         let c = config()
-        return (c.shield, c.appLock)
+        return (c.appLock, cache.isReadable)
+    }
+
+    static var isReadable: Bool {
+        _ = config()
+        return cache.isReadable
     }
 
     static var appLock: Bool { config().appLock }
@@ -232,6 +262,8 @@ enum PrivacyConfig {
     static var clipboardAutoDecrypt: Bool { config().clipboardAutoDecrypt ?? true }
     static var lengthPadding: Bool { config().lengthPadding ?? false }
     static var appLockCodeOnly: Bool { config().codeOnly ?? false }
+    static var backupChats: Bool { config().backupChats ?? false }
+    static var clipboardClearOnDecrypt: Bool { config().clipboardClearOnDecrypt ?? false }
 }
 
 enum LockSession {
@@ -248,16 +280,21 @@ enum LockSession {
         SharedStore.delete(storeKey)
     }
 
-    static var isOpen: Bool {
-        guard let data = SharedStore.read(storeKey), data.count == 8 else { return false }
+    static var isOpen: Bool { openUntil() != nil }
+
+    /// When the current unlock window ends, or nil when there is none. Lets a caller keep the
+    /// deadline instead of reading the store again on every check.
+    static func openUntil() -> Date? {
+        guard let data = SharedStore.read(storeKey), data.count == 8 else { return nil }
         let stamp = data.withUnsafeBytes { UInt64(bigEndian: $0.loadUnaligned(as: UInt64.self)) }
         let age = Date().timeIntervalSince1970 - TimeInterval(stamp)
-        return age >= 0 && age <= ttl
+        guard age >= 0, age <= ttl else { return nil }
+        return Date(timeIntervalSince1970: TimeInterval(stamp) + ttl)
     }
 }
 
 enum InterfaceConfig {
-    static let supportedLanguages = ["en", "ru", "de", "zh-Hans", "fa"]
+    static let supportedLanguages = ["de", "en", "pt", "ru", "fa", "zh-Hans"]
 
     private static let key = "interface"
     private struct Config: Codable, DefaultConstructible {
@@ -289,6 +326,30 @@ enum InterfaceConfig {
 }
 
 enum KeyboardConfig {
+    enum Vibration: String, CaseIterable, Sendable {
+        case light, medium, strong
+
+        var style: UIImpactFeedbackGenerator.FeedbackStyle {
+            switch self {
+            case .light: return .soft
+            case .medium: return .light
+            case .strong: return .medium
+            }
+        }
+
+        var intensity: CGFloat {
+            switch self {
+            case .light: return 0.85
+            case .medium, .strong: return 1
+            }
+        }
+
+        static func resolve(_ raw: String?) -> Vibration {
+            guard let raw, let value = Vibration(rawValue: raw) else { return .light }
+            return value
+        }
+    }
+
     enum FieldSize: String, CaseIterable, Sendable {
         case small, medium, large
 
@@ -306,9 +367,27 @@ enum KeyboardConfig {
         }
     }
 
+    enum KeySize: String, CaseIterable, Sendable {
+        case small, medium, large
+
+        var labelScale: CGFloat {
+            switch self {
+            case .small: return 0.85
+            case .medium: return 1
+            case .large: return 1.15
+            }
+        }
+
+        static func resolve(_ raw: String?) -> KeySize {
+            guard let raw, let size = KeySize(rawValue: raw) else { return .medium }
+            return size
+        }
+    }
+
     private static let key = "kbconfig"
     private struct Config: Codable, DefaultConstructible {
         var haptics = true
+        var vibration: String? = nil
         var compose = false
         var sounds = true
         var autoDecrypt: Bool? = true
@@ -319,6 +398,9 @@ enum KeyboardConfig {
         var shield: Bool? = true
         var langs: [String]? = nil
         var fieldSize: String? = nil
+        var keySize: String? = nil
+        var keyPreview: Bool? = nil
+        var autoCaps: Bool? = nil
     }
 
     private static let cache = ConfigCache<Config>()
@@ -329,15 +411,20 @@ enum KeyboardConfig {
         cache.get(fresh: { storedConfig(key) }, fallback: { Config() })
     }
 
-    static func save(haptics: Bool, compose: Bool, sounds: Bool, autoDecrypt: Bool, suggestions: Bool,
-                     emoji: Bool, autocorrect: Bool, composeToggle: Bool, shield: Bool,
-                     languages: [String]?, fieldSize: FieldSize) {
-        if let d = try? JSONEncoder().encode(Config(haptics: haptics, compose: compose, sounds: sounds,
+    static func save(haptics: Bool, vibration: Vibration, compose: Bool, sounds: Bool, autoDecrypt: Bool,
+                     suggestions: Bool, emoji: Bool, autocorrect: Bool, composeToggle: Bool, shield: Bool,
+                     languages: [String]?, fieldSize: FieldSize, keySize: KeySize, keyPreview: Bool,
+                     autoCaps: Bool) {
+        if let d = try? JSONEncoder().encode(Config(haptics: haptics, vibration: vibration.rawValue,
+                                                    compose: compose, sounds: sounds,
                                                     autoDecrypt: autoDecrypt, suggestions: suggestions,
                                                     emoji: emoji, autocorrect: autocorrect,
                                                     composeToggle: composeToggle, shield: shield,
                                                     langs: languages.map(cleaned),
-                                                    fieldSize: fieldSize.rawValue)) {
+                                                    fieldSize: fieldSize.rawValue,
+                                                    keySize: keySize.rawValue,
+                                                    keyPreview: keyPreview,
+                                                    autoCaps: autoCaps)) {
             SharedStore.write(key, d)
         }
         cache.invalidate()
@@ -352,6 +439,7 @@ enum KeyboardConfig {
 
     struct Snapshot: Sendable {
         var haptics: Bool
+        var vibration: Vibration
         var compose: Bool
         var composeToggle: Bool
         var shield: Bool
@@ -362,12 +450,16 @@ enum KeyboardConfig {
         var emoji: Bool
         var languages: [String]
         var fieldSize: FieldSize
+        var keySize: KeySize
+        var keyPreview: Bool
+        var autoCaps: Bool
     }
 
     static func snapshot() -> Snapshot {
         let c = config()
         let langs = c.langs.map(cleaned) ?? []
         return Snapshot(haptics: c.haptics,
+                        vibration: Vibration.resolve(c.vibration),
                         compose: c.compose,
                         composeToggle: c.composeToggle ?? true,
                         shield: c.shield ?? true,
@@ -377,10 +469,14 @@ enum KeyboardConfig {
                         autocorrect: c.autocorrect ?? true,
                         emoji: c.emoji ?? true,
                         languages: langs.isEmpty ? defaultLanguages : langs,
-                        fieldSize: FieldSize.resolve(c.fieldSize))
+                        fieldSize: FieldSize.resolve(c.fieldSize),
+                        keySize: KeySize.resolve(c.keySize),
+                        keyPreview: c.keyPreview ?? true,
+                        autoCaps: c.autoCaps ?? true)
     }
 
     static var haptics: Bool { config().haptics }
+    static var vibration: Vibration { Vibration.resolve(config().vibration) }
     static var compose: Bool { config().compose }
     static var sounds: Bool { config().sounds }
     static var autoDecrypt: Bool { config().autoDecrypt ?? true }
@@ -390,6 +486,9 @@ enum KeyboardConfig {
     static var composeToggle: Bool { config().composeToggle ?? true }
     static var shield: Bool { config().shield ?? true }
     static var fieldSize: FieldSize { FieldSize.resolve(config().fieldSize) }
+    static var keySize: KeySize { KeySize.resolve(config().keySize) }
+    static var keyPreview: Bool { config().keyPreview ?? true }
+    static var autoCaps: Bool { config().autoCaps ?? true }
     static var languages: [String] { storedLanguages ?? defaultLanguages }
 
     static var storedLanguages: [String]? {
@@ -412,10 +511,11 @@ enum KeyboardConfig {
         if code.hasPrefix("de") { return "de" }
         if code.hasPrefix("zh") { return "zh" }
         if code.hasPrefix("fa") { return "fa" }
+        if code.hasPrefix("pt") { return "pt" }
         return "en"
     }
 
-    static let supported = ["en", "ru", "de", "zh", "fa"]
+    static let supported = ["de", "en", "pt", "ru", "fa", "zh"]
 
     private static func cleaned(_ raw: [String]) -> [String] { supported.filter(raw.contains) }
 }

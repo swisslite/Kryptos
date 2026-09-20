@@ -91,12 +91,6 @@
     <string name="stego_letters_footer">Самый короткий режим — примерно вдвое короче «Обычных слов».</string>
     <string name="stego_letters_footer_han">Сплошной ряд без знаков препинания.</string>
     <string name="stego_smart_footer">Настоящие предложения вместо набора слов, но текст длиннее.</string>
-    <string name="lang_auto">Автоматически (язык системы)</string>
-    <string name="lang_en">Английский</string>
-    <string name="lang_ru">Русский</string>
-    <string name="lang_de">Немецкий</string>
-    <string name="lang_zh">Китайский</string>
-    <string name="lang_fa">Персидский</string>
     <string name="settings_keyboard">Клавиатура</string>
     <string name="settings_enable_keyboard">Включить клавиатуру Kryptos</string>
     <string name="settings_kb_autodecrypt">Авторасшифровка буфера в клавиатуре</string>
@@ -157,7 +151,7 @@
     <string name="screen_section">На экране</string>
     <string name="screen_decrypt_toggle">Расшифровывать на экране</string>
     <string name="screen_block_screenshots">Запрет скриншотов</string>
-    <string name="screen_block_screenshots_desc">Пока работает расшифровка на экране, скриншоты и запись экрана блокируются на всём устройстве — расшифрованный текст не попадёт в снимок.</string>
+    <string name="screen_block_screenshots_desc">При активной расшифровке на экране, снимки экрана блокируются на устройстве.</string>
     <string name="screen_decrypt_footer">Показывает расшифровку поверх шифртекста в других приложениях.</string>
     <string name="screen_decrypt_enable_service">Включить службу спец. возможностей</string>
     <string name="screen_decrypt_keep_running">Не приостанавливать приложение</string>
@@ -202,9 +196,9 @@
     <string name="quick_subtitle">Простой симметричный режим: вы с собеседником договариваетесь об одном общем пароле и шифруете текст для любого мессенджера. (Это не PGP — у PGP своя вкладка.)</string>
     <string name="label_message_text">Текст сообщения</string>
     <string name="label_encrypted_block">Зашифрованный блок</string>
-    <string name="label_ready">Готово — вставьте собеседнику</string>
+    <string name="label_ready">Готово. Отправьте собеседнику.</string>
     <string name="label_decrypted">Расшифрованный текст</string>
-    <string name="copied_banner">Зашифровано и скопировано в буфер — вставьте собеседнику.</string>
+    <string name="copied_banner">Зашифровано и скопировано. Отправьте собеседнику.</string>
 
     <string name="label_cover_photo">Фото-обложка</string>
     <string name="label_stego_photo">Фото с секретом</string>
@@ -241,9 +235,9 @@
     <string name="empty_hint">Чтобы начать, обменяйтесь ключами: нажмите значок QR (справа сверху) — откроется «Мой ключ», дайте собеседнику отсканировать его. Затем нажмите «+» рядом, чтобы добавить его ключ. Оба добавляете друг друга один раз. Пошаговая инструкция со скриншотами — в разделе «%1$s».</string>
     <string name="chat_hint">Зашифруйте сообщение, отправьте результат через любой мессенджер, а ответ вставьте сюда для расшифровки.</string>
     <string name="chat_scroll_bottom">К последнему сообщению</string>
-    <string name="auto_delete_hint">Сообщения исчезают через %1$s.</string>
-    <string name="sent_banner">Зашифровано и скопировано — вставьте собеседнику.</string>
-    <string name="sent_banner_stego">Спрятано в тексте и скопировано — вставьте собеседнику.</string>
+    <string name="auto_delete_hint">Новые сообщения исчезают через %1$s.</string>
+    <string name="sent_banner">Зашифровано и скопировано. Отправьте собеседнику.</string>
+    <string name="sent_banner_stego">Спрятано в тексте и скопировано. Отправьте собеседнику.</string>
     <string name="clipboard_empty">Буфер обмена пуст.</string>
     <string name="decrypt_failed">Не удалось расшифровать — не тот контакт, либо сообщение уже было прочитано. Если не читается каждое НОВОЕ сообщение — отправьте контакту свой ключ заново, пусть добавит вас ещё раз.</string>
     <string name="decrypt_prekey_used">Сообщение зашифровано по ключу, который уже использован или устарел. Передайте свой ключ заново и попросите добавить вас ещё раз.</string>
@@ -275,6 +269,10 @@
 
     <string name="kb_clear">Очистить</string>
     <string name="settings_kb_haptics">Вибрация клавиш</string>
+    <string name="settings_kb_vibration">Сила вибрации</string>
+    <string name="vibration_light">Лёгкая</string>
+    <string name="vibration_medium">Средняя</string>
+    <string name="vibration_strong">Сильная</string>
     <string name="settings_kb_sounds">Звук клавиш</string>
     <string name="settings_kb_compose">Поле сообщения в клавиатуре</string>
     <string name="settings_kb_compose_toggle">Кнопка поля на клавиатуре</string>
@@ -285,11 +283,20 @@
     <string name="field_size_large">Большое</string>
     <string name="settings_kb_compose_desc">Поле — набор идёт мимо мессенджера, он не сохранит черновик. Кнопка включает это поле прямо на клавиатуре.</string>
 
+    <string name="kb_keys_section">Клавиши</string>
+    <string name="settings_kb_keysize">Размер текста клавиш</string>
+    <string name="settings_kb_keypreview">Увеличение клавиши при нажатии</string>
+    <string name="key_text_small">Маленький</string>
+    <string name="key_text_medium">Средний</string>
+    <string name="key_text_large">Большой</string>
+    <string name="kb_keys_footer">Размер букв и подписей на клавишах. Увеличенная буква показывается над нажатой клавишей; если выключить, клавиша просто подсвечивается.</string>
+
     <string name="kb_typing">Набор текста</string>
     <string name="kb_field_section">Поле сообщения</string>
     <string name="settings_kb_suggestions">Подсказки слов</string>
     <string name="settings_kb_autocorrect">Автоисправление</string>
-    <string name="settings_kb_emoji">Клавиша эмодзи</string>
+    <string name="settings_kb_autocaps">Автоматические заглавные</string>
+    <string name="settings_kb_emoji">Клавиша запятой и эмодзи</string>
     <string name="settings_kb_punct">Клавиша точки и запятой</string>
     <string name="settings_kb_punct_double">Запятая по двойному нажатию</string>
     <string name="kb_voice_section">Голосовой ввод</string>
@@ -359,6 +366,8 @@
     <string name="backup_title">Резервная копия ключей</string>
     <string name="backup_intro">Файл содержит ваши ключи и зашифрован паролем, который вы задаёте здесь. Kryptos его копию не хранит.</string>
     <string name="backup_warning">Переписка в копию не входит.</string>
+    <string name="backup_chats">Включать переписку</string>
+    <string name="backup_chats_on">Переписка войдёт в файл копии и зашифруется тем же паролем.</string>
     <string name="backup_export_header">Экспорт</string>
     <string name="backup_password">Пароль копии</string>
     <string name="backup_repeat">Повторите пароль</string>
@@ -374,6 +383,7 @@
     <string name="backup_unreadable">Не удалось прочитать копию — неверный пароль или файл не является резервной копией ключей Kryptos.</string>
     <string name="backup_too_short">Используйте минимум 8 символов для пароля копии.</string>
     <string name="backup_nothing">Пока нет ключей для экспорта.</string>
+    <string name="backup_too_large">Эта копия слишком большая — её потом не удастся восстановить. Выключите копирование переписки и попробуйте снова.</string>
     <string name="backup_write_failed">Не удалось создать файл копии.</string>
     <string name="backup_read_failed">Не удалось прочитать файл.</string>
     <string name="backup_confirm_title">Восстановить ключи?</string>
@@ -435,6 +445,8 @@
     <string name="faq_a22">Да. Kryptos собран на libsignal, где с версии 0.83.0 постквантовый ратчет SPQR включён постоянно: ключ каждого сообщения выводится с постквантовой частью, а не только рукопожатие. Включить или отключить его нельзя — ни в Kryptos, ни в самой библиотеке.</string>
     <string name="faq_q23">Расшифровка на экране перестала работать сама по себе</string>
     <string name="faq_a23">Телефон может приостановить приложение, которым, по его мнению, вы больше не пользуетесь. Android при этом выключает службу спец. возможностей Kryptos и возвращает системную клавиатуру. Включите службу заново здесь же, а клавиатуру выберите заново в системных настройках ввода. Чтобы это не повторялось, откройте свойства приложения и отключите приостановку неиспользуемого приложения; на Samsung дополнительно уберите Kryptos из списка спящих приложений в разделе обслуживания устройства.</string>
+    <string name="faq_q24">Что будет, если снять блокировку экрана телефона?</string>
+    <string name="faq_a24">Все ключи, контакты и переписка в Kryptos пропадут навсегда. Если на телефоне стоит PIN-код, пароль или графический ключ, Kryptos шифрует свои данные ключом, который работает только на разблокированном телефоне. Когда блокировку снимают, Android уничтожает этот ключ, и повторная установка блокировки его не вернёт. Поэтому, перед тем как снять блокировку, сделайте резервную копию ключей в настройках.</string>
     <string name="faq_q4">Почему сообщение не расшифровывается второй раз?</string>
     <string name="faq_a4">Это не поломка, а прямая секретность: ключ каждого сообщения уничтожается сразу после прочтения, поэтому старую переписку не восстановить, даже забрав телефон. Уже открытые сообщения остаются в истории чата.</string>
     <string name="faq_q5">Пишет, что не удалось расшифровать. Что делать?</string>
@@ -452,7 +464,7 @@
     <string name="faq_q11">Зачем нужны профили?</string>
     <string name="faq_a11">Профиль — это отдельная пара ключей со своим списком контактов. Их можно держать несколько и переключаться между ними — например, чтобы разделить рабочее и личное.</string>
     <string name="faq_q12">Насколько надёжно это шифрование?</string>
-    <string name="faq_a12">Диалоги используют официальную библиотеку libsignal — тот же протокол, что и в самом Signal, вместе с постквантовым рукопожатием. Режим «Пароль» и фотографии используют Argon2id и AES-256-GCM. Собственной криптографии в Kryptos нет.</string>
+    <string name="faq_a12">Диалоги используют официальную библиотеку libsignal — тот же протокол, что и в самом Signal, с постквантовой защитой в каждом сообщении, а не только в рукопожатии. Режим «Пароль» и фотографии используют Argon2id и AES-256-GCM. Собственной криптографии в Kryptos нет.</string>
     <string name="faq_q13">Собеседнику тоже нужен Kryptos?</string>
     <string name="faq_a13">Да — расшифровать сообщение не может ничто, кроме Kryptos. А вот телефоны могут быть любые: версии для iPhone и Android полностью совместимы, ключи и сообщения работают в обе стороны.</string>
     <string name="faq_q14">Можно ли отправить через Kryptos фотографию или файл?</string>
@@ -461,8 +473,8 @@
     <string name="faq_a15">Они стирают переписку внутри Kryptos через выбранное время — у вас, и у собеседника, если он выставил то же самое у себя. Чего они не могут — так это тронуть шифртекст, уже лежащий в мессенджере: удалить его оттуда способен только сам мессенджер.</string>
     <string name="faq_q16">Что будет, если удалить приложение или потерять телефон?</string>
     <string name="faq_a16">Ключи хранятся только на самом устройстве, поэтому вместе с приложением они исчезают безвозвратно — расшифровывать станет нечем. Единственная страховка — заранее сделать резервную копию ключей в настройках. Обратная сторона того же свойства: тому, кто найдёт телефон, тоже ничего не достанется.</string>
-    <string name="faq_q17">Резервная копия ключей восстановит и переписку?</string>
-    <string name="faq_a17">Нет, и это сделано намеренно. В файл попадают только ваши ключи, контакты и PGP-ключи — история сообщений в него не записывается вообще. После восстановления на новом телефоне вы продолжите переписку с теми же людьми, но старые сообщения не вернутся.</string>
+    <string name="faq_q17">Резервная копия ключей восстановит переписку?</string>
+    <string name="faq_a17">Только если при создании файла был включён переключатель «Включать переписку». Иначе в файл попадают только ваши ключи, контакты и PGP-ключи.</string>
     <string name="faq_q18">Зачем приложению доступ к камере?</string>
     <string name="faq_a18">Только чтобы отсканировать ключ собеседника с QR-кода. Больше камера нигде не используется, и отказ ничего не ломает — ключ всегда можно вставить текстом.</string>
     <string name="faq_q19">Попадают ли мои ключи и переписка в облачную копию телефона?</string>
@@ -483,16 +495,17 @@
     <string name="kb_a11y_backspace">Удалить</string>
     <string name="kb_a11y_enter">Ввод</string>
     <string name="kb_a11y_shift">Регистр</string>
+    <string name="kb_a11y_language">Языки и клавиатуры</string>
     <string name="kb_a11y_zwnj">Полупробел</string>
     <string name="kb_a11y_emoji">Эмодзи</string>
     <string name="kb_a11y_hidden">Скрытый символ</string>
     <string name="scan_captured">Ключ отсканирован</string>
     <string name="qr_unavailable">Не удалось построить QR-код — передайте ключ кнопкой «Скопировать ключ».</string>
     <string name="photo_too_large">Это фото слишком большое. Возьмите поменьше.</string>
-    <string name="storage_unavailable">Защищённое хранилище сейчас недоступно. Разблокируй телефон и попробуй снова.</string>
-    <string name="scan_unreadable">QR-код не распознан. Возможно, он создан другой версией Kryptos — попроси прислать ключ текстом.</string>
-    <string name="msg_newer_version">Сообщение создано более новой версией Kryptos. Обнови приложение, чтобы прочитать его.</string>
-    <string name="session_lost">Защищённая сессия с этим контактом потеряна. Отправь ему свой ключ заново и добавь его ключ — это восстановит переписку.</string>
+    <string name="storage_unavailable">Защищённое хранилище сейчас недоступно. Разблокируйте телефон и попробуйте снова.</string>
+    <string name="scan_unreadable">QR-код не распознан. Возможно, он создан другой версией Kryptos — попросите прислать ключ текстом.</string>
+    <string name="msg_newer_version">Сообщение создано более новой версией Kryptos. Обновите приложение, чтобы прочитать его.</string>
+    <string name="session_lost">Защищённая сессия с этим контактом потеряна. Отправьте ему свой ключ заново и добавьте его ключ — это восстановит переписку.</string>
     <string name="faq_q20">Что делает «Маскировать длину сообщения»?</string>
     <string name="faq_a20">Длина шифртекста обычно повторяет длину вашего текста, поэтому по ней всё равно видно, ответили вы одним словом или написали страницу. С этой настройкой Kryptos добивает каждое сообщение случайными байтами до ближайшего размера из фиксированной лестницы — 64 байта, 128, 256 и дальше, — и тексты разной длины получаются одинакового размера. Работает в Диалогах и в режиме «Пароль», в том числе когда сообщение спрятано в обычном тексте; фото и PGP это не затрагивает. Собеседник снимает дополнение автоматически, независимо от своей настройки. Плата — сообщение становится длиннее, иногда почти вдвое, поэтому по умолчанию настройка выключена.</string>
     <string name="faq_q21">Зачем «Поле сообщения в клавиатуре»?</string>

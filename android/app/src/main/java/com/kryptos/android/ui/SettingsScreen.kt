@@ -148,10 +148,22 @@ private enum class SettingsPage {
 
 private val kbLanguageCatalog =
     listOf(
-        "en" to R.string.lang_en, "ru" to R.string.lang_ru,
-        "de" to R.string.lang_de, "zh" to R.string.lang_zh,
-        "fa" to R.string.lang_fa,
+        "de" to R.string.lang_de, "en" to R.string.lang_en,
+        "pt" to R.string.lang_pt, "ru" to R.string.lang_ru,
+        "fa" to R.string.lang_fa, "zh" to R.string.lang_zh,
     )
+
+private val vibrationOptions = listOf(
+    AppSettingsStore.Vibration.LIGHT to R.string.vibration_light,
+    AppSettingsStore.Vibration.MEDIUM to R.string.vibration_medium,
+    AppSettingsStore.Vibration.STRONG to R.string.vibration_strong,
+)
+
+private val keySizeOptions = listOf(
+    AppSettingsStore.KeySize.SMALL to R.string.key_text_small,
+    AppSettingsStore.KeySize.MEDIUM to R.string.key_text_medium,
+    AppSettingsStore.KeySize.LARGE to R.string.key_text_large,
+)
 
 private val fieldSizeOptions = listOf(
     AppSettingsStore.FieldSize.SMALL to R.string.field_size_small,
@@ -452,9 +464,10 @@ private fun InterfaceSettings(modifier: Modifier, onBack: () -> Unit) {
             )
             CardDivider()
             val langs = listOf(
-                "auto" to R.string.ui_auto, "en" to R.string.lang_en,
-                "ru" to R.string.lang_ru, "de" to R.string.lang_de,
-                "zh" to R.string.lang_zh, "fa" to R.string.lang_fa,
+                "auto" to R.string.ui_auto, "de" to R.string.lang_de,
+                "en" to R.string.lang_en, "pt" to R.string.lang_pt,
+                "ru" to R.string.lang_ru, "fa" to R.string.lang_fa,
+                "zh" to R.string.lang_zh,
             )
             MenuRow(
                 stringResource(R.string.ui_language),
@@ -934,6 +947,7 @@ private fun KeyBackupSettings(modifier: Modifier, onBack: () -> Unit) {
     var exportFailed by remember { mutableStateOf(false) }
     var importMessage by remember { mutableStateOf<String?>(null) }
     var importFailed by remember { mutableStateOf(false) }
+    var backupChats by remember { mutableStateOf(AppSettingsStore.backupChats) }
 
     fun failExport(text: String) { exportFailed = true; exportMessage = text }
     fun failImport(text: String) { importFailed = true; importMessage = text }
@@ -987,12 +1001,22 @@ private fun KeyBackupSettings(modifier: Modifier, onBack: () -> Unit) {
         backLabel = stringResource(R.string.tab_settings), onBack = onBack,
     ) {
         GlassCard(spacing = 10.dp) {
+            ToggleRow(stringResource(R.string.backup_chats), backupChats, onChange = {
+                backupChats = it
+                AppSettingsStore.backupChats = it
+                exportMessage = null
+            })
+        }
+        Banner(
+            stringResource(if (backupChats) R.string.backup_chats_on else R.string.backup_warning),
+            BannerKind.Warning,
+        )
+        GlassCard(spacing = 10.dp) {
             Text(
                 stringResource(R.string.backup_intro),
                 fontSize = 13.sp, lineHeight = 18.sp, color = K.textSecondary,
             )
         }
-        Banner(stringResource(R.string.backup_warning), BannerKind.Warning)
 
         SectionHeader(stringResource(R.string.backup_export_header))
         GlassCard(spacing = 12.dp) {
@@ -1024,7 +1048,7 @@ private fun KeyBackupSettings(modifier: Modifier, onBack: () -> Unit) {
                     scope.launch {
                         val text = withContext(Dispatchers.Default) {
                             runCatching {
-                                val profiles = SignalService.archivedProfiles()
+                                val profiles = SignalService.archivedProfiles(backupChats)
                                     ?: throw com.kryptos.android.core.ArchiveException(
                                         com.kryptos.android.core.ArchiveException.Kind.WRITE_FAILED
                                     )
@@ -1058,6 +1082,8 @@ private fun KeyBackupSettings(modifier: Modifier, onBack: () -> Unit) {
                                         context.getString(R.string.backup_too_short)
                                     com.kryptos.android.core.ArchiveException.Kind.NOTHING_TO_EXPORT ->
                                         context.getString(R.string.backup_nothing)
+                                    com.kryptos.android.core.ArchiveException.Kind.TOO_LARGE ->
+                                        context.getString(R.string.backup_too_large)
                                     else -> context.getString(R.string.backup_write_failed)
                                 }
                             )
@@ -1278,9 +1304,10 @@ private fun StegoSettings(modifier: Modifier, onBack: () -> Unit) {
             if (stegoEnabled) {
                 CardDivider()
                 val langs = listOf(
-                    "auto" to R.string.lang_auto, "english" to R.string.lang_en,
-                    "russian" to R.string.lang_ru, "german" to R.string.lang_de,
-                    "chinese" to R.string.lang_zh, "persian" to R.string.lang_fa,
+                    "auto" to R.string.ui_auto, "german" to R.string.lang_de,
+                    "english" to R.string.lang_en, "portuguese" to R.string.lang_pt,
+                    "russian" to R.string.lang_ru, "persian" to R.string.lang_fa,
+                    "chinese" to R.string.lang_zh,
                 )
                 MenuRow(
                     stringResource(R.string.settings_stego_lang),
@@ -1339,6 +1366,7 @@ private fun stegoLanguageOf(langKey: String): StegoLanguage = when (langKey) {
     "german" -> StegoLanguage.GERMAN
     "chinese" -> StegoLanguage.CHINESE
     "persian" -> StegoLanguage.PERSIAN
+    "portuguese" -> StegoLanguage.PORTUGUESE
     else -> StegoLanguage.forSystem()
 }
 
@@ -1390,14 +1418,18 @@ private fun KeyboardSettings(
     var kbAutoDecrypt by remember { mutableStateOf(AppSettingsStore.keyboardAutoDecrypt) }
     var kbSendAfter by remember { mutableStateOf(AppSettingsStore.keyboardSendAfterEncrypt) }
     var kbHaptics by remember { mutableStateOf(AppSettingsStore.keyboardHaptics) }
+    var kbVibration by remember { mutableStateOf(AppSettingsStore.keyboardVibration) }
     var kbSounds by remember { mutableStateOf(AppSettingsStore.keyboardSounds) }
     var kbCompose by remember { mutableStateOf(AppSettingsStore.keyboardCompose) }
     var kbComposeToggle by remember { mutableStateOf(AppSettingsStore.keyboardComposeToggle) }
     var kbFieldSize by remember { mutableStateOf(AppSettingsStore.keyboardFieldSize) }
+    var kbKeySize by remember { mutableStateOf(AppSettingsStore.keyboardKeySize) }
+    var kbKeyPreview by remember { mutableStateOf(AppSettingsStore.keyboardKeyPreview) }
     val kbComposeAuto = AppSettingsStore.keyboardComposeAuto
     var secureKb by remember { mutableStateOf(AppSettingsStore.secureKeyboard) }
     var kbSuggestions by remember { mutableStateOf(AppSettingsStore.keyboardSuggestions) }
     var kbAutocorrect by remember { mutableStateOf(AppSettingsStore.keyboardAutocorrect) }
+    var kbAutoCaps by remember { mutableStateOf(AppSettingsStore.keyboardAutoCaps) }
     var kbEmoji by remember { mutableStateOf(AppSettingsStore.keyboardEmoji) }
     var kbPunct by remember { mutableStateOf(AppSettingsStore.keyboardPunctKey) }
     var kbPunctDouble by remember { mutableStateOf(AppSettingsStore.keyboardPunctDouble) }
@@ -1470,6 +1502,24 @@ private fun KeyboardSettings(
             )
         )
 
+        SectionHeader(stringResource(R.string.kb_keys_section))
+        GlassCard(spacing = 4.dp) {
+            MenuRow(
+                stringResource(R.string.settings_kb_keysize),
+                keySizeOptions.map { stringResource(it.second) },
+                keySizeOptions.indexOfFirst { it.first == kbKeySize }.coerceAtLeast(0),
+                onPick = { i ->
+                    kbKeySize = keySizeOptions[i].first
+                    AppSettingsStore.keyboardKeySize = kbKeySize
+                },
+            )
+            CardDivider()
+            ToggleRow(stringResource(R.string.settings_kb_keypreview), kbKeyPreview, onChange = {
+                kbKeyPreview = it; AppSettingsStore.keyboardKeyPreview = it
+            })
+        }
+        FooterText(stringResource(R.string.kb_keys_footer))
+
         SectionHeader(stringResource(R.string.kb_typing))
         GlassCard(spacing = 4.dp) {
             ToggleRow(stringResource(R.string.settings_kb_suggestions), kbSuggestions, onChange = {
@@ -1478,6 +1528,10 @@ private fun KeyboardSettings(
             CardDivider()
             ToggleRow(stringResource(R.string.settings_kb_autocorrect), kbAutocorrect, onChange = {
                 kbAutocorrect = it; AppSettingsStore.keyboardAutocorrect = it
+            })
+            CardDivider()
+            ToggleRow(stringResource(R.string.settings_kb_autocaps), kbAutoCaps, onChange = {
+                kbAutoCaps = it; AppSettingsStore.keyboardAutoCaps = it
             })
             CardDivider()
             ToggleRow(stringResource(R.string.settings_kb_emoji), kbEmoji, onChange = {
@@ -1560,6 +1614,18 @@ private fun KeyboardSettings(
             ToggleRow(stringResource(R.string.settings_kb_haptics), kbHaptics, onChange = {
                 kbHaptics = it; AppSettingsStore.keyboardHaptics = it
             })
+            if (kbHaptics) {
+                CardDivider()
+                MenuRow(
+                    stringResource(R.string.settings_kb_vibration),
+                    vibrationOptions.map { stringResource(it.second) },
+                    vibrationOptions.indexOfFirst { it.first == kbVibration }.coerceAtLeast(0),
+                    onPick = { i ->
+                        kbVibration = vibrationOptions[i].first
+                        AppSettingsStore.keyboardVibration = kbVibration
+                    },
+                )
+            }
             CardDivider()
             ToggleRow(stringResource(R.string.settings_kb_sounds), kbSounds, onChange = {
                 kbSounds = it; AppSettingsStore.keyboardSounds = it
@@ -1871,6 +1937,7 @@ private val faqItems = listOf(
     R.string.faq_q13 to R.string.faq_a13,
     R.string.faq_q1 to R.string.faq_a1,
     R.string.faq_q2 to R.string.faq_a2,
+    R.string.faq_q24 to R.string.faq_a24,
     R.string.faq_q14 to R.string.faq_a14,
     R.string.faq_q3 to R.string.faq_a3,
     R.string.faq_q22 to R.string.faq_a22,
@@ -2115,7 +2182,8 @@ private fun DonateSettings(modifier: Modifier, backLabel: String, onBack: () -> 
                 Text(
                     coin.grouped,
                     fontSize = 13.sp, lineHeight = 19.sp,
-                    fontFamily = FontFamily.Monospace, color = K.textPrimary,
+                    color = K.textPrimary,
+                    style = monoValueStyle(),
                     modifier = Modifier.semantics { contentDescription = coin.address },
                 )
                 Row(

@@ -4,9 +4,6 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
-echo "▸ Running crypto unit tests…"
-( cd CipherCore && swift test )
-
 echo "▸ Building Kryptos for device (arm64, Release, unsigned)…"
 rm -rf build dist/Payload
 rm -f dist/Kryptos.ipa

@@ -15,7 +15,7 @@ object PasswordCipher {
     fun sealBody(plaintext: ByteArray, key: ByteArray, nonce: ByteArray, version: Byte, pad: Boolean): ByteArray {
         val compressed = Deflate.compress(plaintext)
         val deflate = compressed != null
-        val content = if (deflate) compressed!! else plaintext
+        val content = if (deflate) compressed else plaintext
         val framed = if (pad) Padding.frame(content) else content
         val body = ByteArray(1 + framed.size)
         body[0] = ((if (deflate) 0x01 else 0x00) or (if (pad) 0x02 else 0x00)).toByte()

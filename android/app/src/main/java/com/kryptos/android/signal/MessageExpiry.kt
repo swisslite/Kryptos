@@ -16,14 +16,11 @@ object MessageExpiry {
 
     @Volatile private var scheduledAt: Long? = null
 
-    fun nextDueAt(messages: Map<String, List<ChatMessage>>, autoDelete: Map<String, Double>): Long? {
-        if (autoDelete.isEmpty()) return null
+    fun nextDueAt(messages: Map<String, List<ChatMessage>>): Long? {
         var soonest = Long.MAX_VALUE
-        for ((fingerprint, seconds) in autoDelete) {
-            if (seconds <= 0) continue
-            val maxAgeMs = (seconds * 1000).toLong()
-            for (message in messages[fingerprint] ?: continue) {
-                val due = message.date + maxAgeMs
+        for (list in messages.values) {
+            for (message in list) {
+                val due = message.expiryAt ?: continue
                 if (due < soonest) soonest = due
             }
         }
@@ -60,7 +57,7 @@ object MessageExpiry {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val fireAt = maxOf(at, System.currentTimeMillis() + MIN_DELAY_MS)
-        val armed = runCatching { manager.set(AlarmManager.RTC, fireAt, pending) }.isSuccess
+        val armed = runCatching { manager.set(AlarmManager.RTC_WAKEUP, fireAt, pending) }.isSuccess
         scheduledAt = if (armed) at else null
     }
 }

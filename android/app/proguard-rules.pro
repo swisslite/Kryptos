@@ -4,8 +4,8 @@
 
 -keepclasseswithmembernames,includedescriptorclasses class * { native <methods>; }
 
--keep class org.bouncycastle.** { *; }
+-keep class org.bouncycastle.jcajce.provider.** { *; }
+-keep class org.bouncycastle.jce.provider.** { *; }
 -dontwarn org.bouncycastle.**
--keep class org.pgpainless.** { *; }
 -dontwarn org.pgpainless.**
 -dontwarn org.slf4j.**

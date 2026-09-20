@@ -1,0 +1,40 @@
+IMPORTANT: Installing the new version is recommended. Kryptos 2.4 is not compatible with older versions.
+
+New:
+
+- Brazilian Portuguese
+- The language switch key is now a globe key (you can also switch keyboards by holding the globe key)
+- The iOS app icon is now native
+- Libraries updated to the latest versions
+- Links, email addresses, and phone numbers in decrypted text can now be copied
+- Vibration mode setting
+- Key text size setting
+- Key press enlargement setting
+- The cursor in the keyboard input field can be moved by dragging with your finger
+- Comma key instead of the emoji key; emoji are now available by holding the comma key
+- Chats can now be included in backups
+- Option to disable automatic capitalization
+- Settings are now stored in an encrypted file
+- Third-party keyboards no longer suggest words in Kryptos fields
+- Passwords in "Password" and "Photo" modes must now be at least 6 characters long
+- Code entry is locked after 5 incorrect attempts
+- The keyboard and on-screen decryption are locked 5 minutes after leaving the app
+- When using "Trap Password", the keyboard is hidden, on-screen decryption is disabled, and access to the camera and microphone is blocked
+- Other changes
+
+Fixes:
+
+- Key flickering when moving the cursor by holding the space bar
+- Disappearing messages were deleted with a delay
+- The lock could be bypassed by setting the clock back
+- The locked keyboard displayed profiles and contacts and allowed switching profiles
+- The "Storage unavailable" screen could erase everything with a single tap without confirmation
+- On-screen decryption displayed text on the locked device
+- Text from disappearing messages remained in the cache
+- The keyboard draft remained visible after locking
+- The keyboard could remember words from encrypted messages
+- File names revealed whether codes had been set
+- Windows and menus were not protected against being overlaid by other apps
+- The app could freeze when handling a large message
+- The mask key is no longer derived from public fingerprints
+- Other fixes

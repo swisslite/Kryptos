@@ -110,15 +110,16 @@ bc1qwsnex9q5ux88fnt93udn2xmf8752mnx4km2rvm
 
 ## Security
 
-- **Signal Protocol** — the official [libsignal](https://github.com/signalapp/libsignal) v0.96.4,
+- **Signal Protocol** — the official [libsignal](https://github.com/signalapp/libsignal) v0.102.2,
   built from source on both platforms. PQXDH (X3DH with Kyber-1024) for the initial agreement and the
   Triple Ratchet for the conversation itself — the Double Ratchet with Signal's post-quantum SPQR
   mixed into the key of every message. Signed and Kyber prekeys are rotated every two days, and
   retired generations are deleted after 30 days.
-- **Wire format** — `salt ‖ AES-256-CTR(HKDF-SHA256(pairKey, salt) → key/IV, header ‖ body)`,
-  base64url, with no prefix and no plaintext header. Nothing in the output says that Kryptos produced
-  it, and the same text gives a different result every time. DEFLATE compression and length padding
-  are negotiated in a single header byte.
+- **Wire format** — `salt ‖ AES-256-CTR(HKDF-SHA256(pairSecret, salt) → key/IV, header ‖ body)`,
+  base64url, with no prefix and no plaintext header. `pairSecret` comes from the X25519 secret of the
+  two identity keys, so nothing that travels through the messenger is enough to unmask a message.
+  Nothing in the output says that Kryptos produced it, and the same text gives a different result
+  every time. DEFLATE compression and length padding are negotiated in a single header byte.
 - **Password mode** — Argon2id, 64 MiB, t=3, p=1 (the RFC 9106 profile), then AES-256-GCM with a
   per-message random salt. On iOS this is the PHC reference implementation of Argon2, on Android it
   is Bouncy Castle; both are tested against the official vectors and against each other.
@@ -145,7 +146,7 @@ execution path reaches it.
 ## Architecture
 
 ```
-CipherCore/         Swift package: Argon2id, password mode, steganography, wire format, tests
+CipherCore/         Swift package: Argon2id, password mode, steganography, wire format
 Kryptos/            iOS app (SwiftUI): chats, PGP, password mode, steganography, settings
 KryptosKeyboard/    iOS keyboard (an app extension) together with its dictionaries
 android/app/        Android app (Kotlin, Jetpack Compose)
@@ -160,8 +161,8 @@ scripts/            setup-libsignal.sh
 ```
 
 The libsignal sources are not part of this repository. The `scripts/setup-libsignal.sh` script clones
-them at the pinned tag, applies `patches/libsignal-v0.96.4-kryptos.patch` (an Android ByteBuffer cast
-and the removal of swift-docc-plugin) and builds the library.
+them at the pinned tag, applies `patches/libsignal-v0.102.2-kryptos.patch` (the removal of
+swift-docc-plugin) and builds the library.
 
 ## Development
 

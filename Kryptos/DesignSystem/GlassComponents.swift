@@ -53,10 +53,13 @@ extension View {
 struct GlassSurface<S: InsettableShape>: ViewModifier {
     let shape: S
     var tint: Color? = nil
+    var interactive = false
+    @Environment(\.isEnabled) private var isEnabled
 
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
-            content.glassEffect(tint.map { Glass.regular.tint($0) } ?? .regular, in: shape)
+            let glass = tint.map { Glass.regular.tint($0) } ?? .regular
+            content.glassEffect(glass.interactive(interactive && isEnabled), in: shape)
         } else {
             content
                 .background(tint.map { AnyShapeStyle($0.gradient) } ?? AnyShapeStyle(.ultraThinMaterial), in: shape)
@@ -66,26 +69,49 @@ struct GlassSurface<S: InsettableShape>: ViewModifier {
 }
 
 extension View {
-    func glassSurface<S: InsettableShape>(_ shape: S, tint: Color? = nil) -> some View {
-        modifier(GlassSurface(shape: shape, tint: tint))
+    func glassSurface<S: InsettableShape>(_ shape: S, tint: Color? = nil, interactive: Bool = false) -> some View {
+        modifier(GlassSurface(shape: shape, tint: tint, interactive: interactive))
+    }
+
+    @ViewBuilder
+    func softScrollEdges() -> some View {
+        if #available(iOS 26.0, *) {
+            scrollEdgeEffectStyle(.soft, for: .vertical)
+        } else {
+            self
+        }
     }
 }
 
 struct PrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.kHeadline())
-            .foregroundStyle(.white)
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 15)
-            .background(RoundedRectangle(cornerRadius: KTheme.cornerSmall, style: .continuous)
-                .fill(KTheme.accentGradient))
-            .shadow(color: KTheme.accent.opacity(configuration.isPressed ? 0.12 : 0.28), radius: 10, y: 4)
-            .opacity(configuration.isPressed ? 0.92 : 1)
-            .scaleEffect(configuration.isPressed ? 0.985 : 1)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+        Surface(configuration: configuration)
+    }
+
+    private struct Surface: View {
+        @Environment(\.isEnabled) private var isEnabled
+        let configuration: Configuration
+
+        var body: some View {
+            configuration.label
+                .font(.kHeadline())
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background(RoundedRectangle(cornerRadius: KTheme.cornerSmall, style: .continuous)
+                    .fill(KTheme.accentGradient))
+                .shadow(color: KTheme.accent.opacity(shadow), radius: 10, y: 4)
+                .opacity(isEnabled ? (configuration.isPressed ? 0.92 : 1) : 0.45)
+                .scaleEffect(configuration.isPressed ? 0.985 : 1)
+                .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+        }
+
+        private var shadow: Double {
+            guard isEnabled else { return 0 }
+            return configuration.isPressed ? 0.12 : 0.28
+        }
     }
 }
 
@@ -93,22 +119,32 @@ struct SecondaryButtonStyle: ButtonStyle {
     var accent = false
 
     func makeBody(configuration: Configuration) -> some View {
-        let shape = RoundedRectangle(cornerRadius: KTheme.cornerSmall, style: .continuous)
-        return configuration.label
-            .font(.kHeadline())
-            .foregroundStyle(accent ? KTheme.accentInk : KTheme.textPrimary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 15)
-            .background {
-                shape.fill(.ultraThinMaterial)
-                if accent { shape.fill(KTheme.accent.opacity(0.14)) }
-            }
-            .overlay(shape.strokeBorder(accent ? KTheme.accent.opacity(0.45) : KTheme.hairline,
-                                        lineWidth: accent ? 1.5 : 1))
-            .opacity(configuration.isPressed ? 0.8 : 1)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+        Surface(configuration: configuration, accent: accent)
+    }
+
+    private struct Surface: View {
+        @Environment(\.isEnabled) private var isEnabled
+        let configuration: Configuration
+        let accent: Bool
+
+        var body: some View {
+            let shape = RoundedRectangle(cornerRadius: KTheme.cornerSmall, style: .continuous)
+            return configuration.label
+                .font(.kHeadline())
+                .foregroundStyle(accent ? KTheme.accentInk : KTheme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background {
+                    shape.fill(.ultraThinMaterial)
+                    if accent { shape.fill(KTheme.accent.opacity(0.14)) }
+                }
+                .overlay(shape.strokeBorder(accent ? KTheme.accent.opacity(0.45) : KTheme.hairline,
+                                            lineWidth: accent ? 1.5 : 1))
+                .opacity(isEnabled ? (configuration.isPressed ? 0.8 : 1) : 0.45)
+                .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+        }
     }
 }
 
@@ -122,7 +158,7 @@ struct FieldBackground: View {
 }
 
 struct CopiedBanner: View {
-    var text: LocalizedStringKey = "Encrypted and copied to the clipboard — paste it to your contact."
+    var text: LocalizedStringKey = "Encrypted and copied. Send it to your contact."
     private let green = Color(red: 0.2, green: 0.72, blue: 0.45)
     var body: some View {
         HStack(spacing: 10) {

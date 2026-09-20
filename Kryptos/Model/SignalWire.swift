@@ -5,8 +5,13 @@ import CipherCore
 enum SignalWire {
     private static let ctx = NullContext()
 
-    static func pairKey(_ a: String, _ b: String) -> Data {
-        Data((a <= b ? a + b : b + a).utf8)
+    static func pairSecret(store: PersistentSignalStore, myFingerprint: String, peerFingerprint: String) throws -> Data {
+        guard let peerKey = SignalFormat.bytes(peerFingerprint), let peer = try? PublicKey(peerKey) else {
+            throw CipherError.invalidInput
+        }
+        var agreement = try store.identityKeyPair(context: ctx).privateKey.keyAgreement(with: peer)
+        defer { agreement.resetBytes(in: agreement.startIndex ..< agreement.endIndex) }
+        return WireFormat.pairSecret(agreement: agreement, myFingerprint, peerFingerprint)
     }
 
     struct Sealed: Sendable {
@@ -14,7 +19,7 @@ enum SignalWire {
         let type: UInt8
         let deflate: Bool
         let pad: Bool
-        let pairKey: Data
+        let secret: Data
     }
 
     struct Cover: Sendable {
@@ -26,20 +31,19 @@ enum SignalWire {
                      store: PersistentSignalStore, pad: Bool) throws -> Sealed {
         let addr = try ProtocolAddress(name: fp, deviceId: 1)
         let myAddr = try ProtocolAddress(name: myFingerprint, deviceId: 1)
-        let raw = Data(text.utf8)
-        let compressed = Deflate.compress(raw)
-        let deflate = compressed != nil
-        let ct = try signalEncrypt(message: Array(deflate ? compressed! : raw), for: addr, localAddress: myAddr,
+        let secret = try pairSecret(store: store, myFingerprint: myFingerprint, peerFingerprint: fp)
+        let body = Deflate.body(text)
+        let ct = try signalEncrypt(message: Array(body.bytes), for: addr, localAddress: myAddr,
                                    sessionStore: store, identityStore: store, context: ctx)
-        return Sealed(ciphertext: ct.serialize(), type: ct.messageType.rawValue, deflate: deflate,
-                      pad: pad, pairKey: pairKey(myFingerprint, fp))
+        return Sealed(ciphertext: ct.serialize(), type: ct.messageType.rawValue, deflate: body.deflated,
+                      pad: pad, secret: secret)
     }
 
     static func cover(_ sealed: Sealed, stego: StegoLanguage?, mode: StegoMode) throws -> Cover {
         if let language = stego {
-            let padded = sealed.pad && StegoWire.fits(ciphertext: sealed.ciphertext.count, padded: true)
-            let payload = StegoWire.frame(sealed.ciphertext, type: sealed.type,
-                                          deflate: sealed.deflate, padded: padded)
+            let padded = sealed.pad && WireFormat.fitsStego(ciphertext: sealed.ciphertext.count, padded: true)
+            let payload = try WireFormat.seal(sealed.ciphertext, type: sealed.type,
+                                              deflate: sealed.deflate, padded: padded, pairKey: sealed.secret)
             if payload.count <= TextStego.maxPayloadBytes {
                 let cover: String?
                 switch mode {
@@ -51,7 +55,7 @@ enum SignalWire {
             }
         }
         let token = try WireFormat.wrap(sealed.ciphertext, type: sealed.type, deflate: sealed.deflate,
-                                        padded: sealed.pad, pairKey: sealed.pairKey)
+                                        padded: sealed.pad, pairKey: sealed.secret)
         return Cover(text: token, hidden: false)
     }
 
@@ -66,20 +70,24 @@ enum SignalWire {
                         store: PersistentSignalStore, stego precomputed: Data?? = nil) throws -> String {
         let addr = try ProtocolAddress(name: fp, deviceId: 1)
         let myAddr = try ProtocolAddress(name: myFingerprint, deviceId: 1)
+        let secret = try pairSecret(store: store, myFingerprint: myFingerprint, peerFingerprint: fp)
         let hidden = { precomputed ?? stegoPayload(armored) }
 
-        if let (type, deflate, body) = WireFormat.unwrap(armored, pairKey: pairKey(myFingerprint, fp)) {
+        switch WireFormat.unwrap(armored, pairKey: secret) {
+        case .message(let type, let deflate, let body):
             do {
                 let plain = try signalDecryptBytes(type: type, body: body, addr: addr, myAddr: myAddr, store: store)
                 return try inflate(plain, deflate: deflate)
             } catch {
                 guard let payload = hidden() else { throw error }
-                return try decryptStego(payload, addr: addr, myAddr: myAddr, store: store)
+                return try decryptStego(payload, secret: secret, addr: addr, myAddr: myAddr, store: store)
             }
+        case .unsupported:
+            throw CipherError.unsupportedFormat
+        case .absent:
+            guard let payload = hidden() else { throw CipherError.notAKryptosMessage }
+            return try decryptStego(payload, secret: secret, addr: addr, myAddr: myAddr, store: store)
         }
-
-        guard let payload = hidden() else { throw CipherError.notAKryptosMessage }
-        return try decryptStego(payload, addr: addr, myAddr: myAddr, store: store)
     }
 
     static let maxStegoInputChars = 1_000_000
@@ -90,19 +98,21 @@ enum SignalWire {
     }
 
     private static func inflate(_ plain: Data, deflate: Bool) throws -> String {
-        guard deflate else { return String(decoding: plain, as: UTF8.self) }
-        guard let data = Deflate.decompress(plain) else { throw CipherError.decryptionFailed }
-        return String(decoding: data, as: UTF8.self)
+        guard let text = Deflate.text(plain, deflated: deflate) else { throw CipherError.decryptionFailed }
+        return text
     }
 
-    private static func decryptStego(_ payload: Data, addr: ProtocolAddress, myAddr: ProtocolAddress,
+    private static func decryptStego(_ payload: Data, secret: Data, addr: ProtocolAddress, myAddr: ProtocolAddress,
                                      store: PersistentSignalStore) throws -> String {
-        guard let framed = StegoWire.unframe(payload) else {
-            throw StegoWire.carriesUnknownFlags(payload) ? CipherError.unsupportedFormat : CipherError.notAKryptosMessage
+        switch WireFormat.open(payload, pairKey: secret) {
+        case .message(let type, let deflate, let body):
+            let plain = try signalDecryptBytes(type: type, body: body, addr: addr, myAddr: myAddr, store: store)
+            return try inflate(plain, deflate: deflate)
+        case .unsupported:
+            throw CipherError.unsupportedFormat
+        case .absent:
+            throw CipherError.notAKryptosMessage
         }
-        let plain = try signalDecryptBytes(type: framed.type, body: framed.body,
-                                           addr: addr, myAddr: myAddr, store: store)
-        return try inflate(plain, deflate: framed.deflate)
     }
 
     private static func signalDecryptBytes(type: UInt8, body: Data, addr: ProtocolAddress, myAddr: ProtocolAddress,

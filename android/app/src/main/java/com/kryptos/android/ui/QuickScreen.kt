@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -97,7 +98,9 @@ fun QuickScreen(modifier: Modifier = Modifier) {
                     stringResource(if (encrypting) R.string.encrypt else R.string.decrypt),
                     Modifier.weight(1f),
                     icon = if (encrypting) Icons.Default.Lock else Icons.Default.LockOpen,
-                    enabled = text.isNotBlank() && password.isNotEmpty(),
+                    enabled = text.isNotBlank() &&
+                        if (encrypting) password.length >= KryptosCore.MIN_PASSWORD_LENGTH
+                        else password.isNotEmpty(),
                     busy = busy,
                 ) {
                     error = null
@@ -151,7 +154,7 @@ private fun ResultCard(result: String, encrypting: Boolean) {
     GlassCard {
         FieldLabel(stringResource(if (encrypting) R.string.label_ready else R.string.label_decrypted))
         Text(
-            result,
+            if (encrypting) AnnotatedString(result) else linkedText(result, K.link),
             fontSize = if (encrypting) 13.sp else 16.sp,
             fontFamily = if (encrypting) FontFamily.Monospace else null,
             color = K.textPrimary,

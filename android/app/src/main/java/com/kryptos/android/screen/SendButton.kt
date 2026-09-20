@@ -8,12 +8,13 @@ object SendButton {
     private val ID_EXCLUDE = listOf(
         "attach", "emoji", "sticker", "gif", "voice", "audio", "record", "mic",
         "camera", "photo", "gallery", "file", "poll", "money", "gift", "call",
-        "delete", "cancel", "close", "search",
+        "delete", "cancel", "close", "search", "pay", "transfer", "resend", "retry",
     )
 
     private val TEXT_HINTS = listOf(
         "отправить", "послать", "send", "senden", "absenden",
         "发送", "傳送", "传送", "送出",
+        "enviar", "ارسال", "فرستادن",
     )
 
     private val TEXT_EXCLUDE = listOf(
@@ -31,6 +32,15 @@ object SendButton {
         "相机", "相機", "照片", "图库", "圖庫", "相册", "相冊",
         "文件", "红包", "紅包", "转账", "轉賬", "礼物", "禮物",
         "取消", "关闭", "關閉", "搜索", "搜尋", "投票",
+        "excluir", "apagar", "ligar", "chamada", "anexar", "anexo", "figurinha",
+        "microfone", "voz", "áudio", "gravar", "câmera", "galeria", "arquivo",
+        "presente", "dinheiro", "fechar", "pesquisar", "buscar", "enquete",
+        "حذف", "تماس", "پیوست", "استیکر", "برچسب", "شکلک", "ایموجی", "میکروفون",
+        "صوتی", "صدا", "ضبط", "دوربین", "عکس", "گالری", "فایل", "هدیه", "پول",
+        "لغو", "بستن", "جستجو", "نظرسنجی",
+        "pay", "transfer", "resend", "retry", "платёж", "платеж", "оплат", "повтор",
+        "zahlung", "bezahl", "überweis", "erneut", "pagamento", "pagar", "pix", "reenviar",
+        "novamente", "پرداخت", "انتقال", "مجدد", "دوباره", "付款", "支付", "重新", "重发", "重發", "重试", "重試",
     )
 
     fun score(viewId: String?, label: String?): Int {

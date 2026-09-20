@@ -1,6 +1,9 @@
 import Foundation
 
 public enum Kryptos {
+    /// Shortest password the UI offers when encrypting. Decryption accepts any length so that
+    /// messages made by older versions still open.
+    public static let minPasswordLength = 6
 
     public static func encrypt(text: String, password: String, pad: Bool = false) throws -> String {
         let raw = try PasswordCipher.encrypt(Data(text.utf8), password: password, pad: pad)

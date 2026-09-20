@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import Combine
 import CipherCore
 import LibSignalClient
 
@@ -11,10 +12,14 @@ struct ChatView: View {
     let contact: Contact
 
     private struct SentCipher {
+        let id = UUID()
         let text: String
         let hidden: Bool
     }
 
+    private static let bannerSeconds: Double = 7
+
+    @FocusState private var composerFocused: Bool
     @State private var lastCipher: SentCipher?
     @State private var errorText: String?
     @State private var confirmClear = false
@@ -23,9 +28,13 @@ struct ChatView: View {
     @State private var renameText = ""
     @State private var purgeTimer = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
     @State private var atBottom = true
-    @State private var didSettle = false
 
     private static let bottomAnchor = "chat.bottom"
+
+    private static var listBottomPadding: CGFloat {
+        if #available(iOS 26.0, *) { return 0 }
+        return 16
+    }
 
     private func scrollToBottom(_ proxy: ScrollViewProxy) {
         withAnimation { proxy.scrollTo(Self.bottomAnchor, anchor: .bottom) }
@@ -37,7 +46,7 @@ struct ChatView: View {
                 .font(.system(size: 15, weight: .semibold)).foregroundStyle(KTheme.accent)
                 .frame(width: 40, height: 40)
         }
-        .glassSurface(Circle())
+        .glassSurface(Circle(), interactive: true)
         .padding(.trailing, 14)
         .padding(.bottom, 10)
         .opacity(atBottom ? 0 : 1)
@@ -54,39 +63,13 @@ struct ChatView: View {
     var body: some View {
         ZStack {
             ScreenBackground()
-            VStack(spacing: 0) {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 8) {
-                            hint
-                            if currentPreset != .off { autoDeleteHint }
-                            ForEach(msgs) { bubble($0).id($0.id) }
-                            Color.clear
-                                .frame(height: 1)
-                                .id(Self.bottomAnchor)
-                                .onAppear { atBottom = true }
-                                .onDisappear { atBottom = false }
-                        }
-                        .padding(16)
-                    }
-                    .onChange(of: msgs.count) { _, _ in
-                        scrollToBottom(proxy)
-                    }
-                    .onAppear {
-                        guard !didSettle else { return }
-                        didSettle = true
-                        proxy.scrollTo(Self.bottomAnchor, anchor: .bottom)
-                    }
-                    .overlay(alignment: .bottomTrailing) {
-                        scrollDownButton { scrollToBottom(proxy) }
-                    }
+            if #available(iOS 26.0, *) {
+                messageList.safeAreaBar(edge: .bottom, spacing: 0) { composer }
+            } else {
+                VStack(spacing: 0) {
+                    messageList
+                    composer
                 }
-                if let errorText {
-                    Text(errorText).font(.kBody()).foregroundStyle(KTheme.danger)
-                        .padding(.horizontal, 16).padding(.bottom, 6)
-                }
-                if let lastCipher { sentBanner(lastCipher) }
-                inputBar
             }
         }
         .navigationTitle(live.displayName)
@@ -157,10 +140,69 @@ struct ChatView: View {
         }
     }
 
+    private var messageList: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 8) {
+                    hint
+                    if currentPreset != .off { autoDeleteHint }
+                    ForEach(msgs) { bubble($0).id($0.id) }
+                    bottomMarker.id(Self.bottomAnchor)
+                }
+                .padding([.horizontal, .top], 16)
+                .padding(.bottom, Self.listBottomPadding)
+            }
+            .modifier(BottomFollowing(atBottom: $atBottom) {
+                proxy.scrollTo(Self.bottomAnchor, anchor: .bottom)
+            })
+            .onChange(of: msgs.count) { _, _ in
+                scrollToBottom(proxy)
+            }
+            .overlay(alignment: .bottomTrailing) {
+                scrollDownButton { scrollToBottom(proxy) }
+            }
+            .simultaneousGesture(TapGesture().onEnded { composerFocused = false })
+        }
+    }
+
+    @ViewBuilder
+    private var bottomMarker: some View {
+        let marker = Color.clear.frame(height: 1)
+        if #available(iOS 26.0, *) {
+            marker
+        } else {
+            marker
+                .onAppear { atBottom = true }
+                .onDisappear { atBottom = false }
+        }
+    }
+
+    private var composer: some View {
+        VStack(spacing: 0) {
+            if let errorText {
+                Text(errorText).font(.kBody()).foregroundStyle(KTheme.danger)
+                    .padding(.horizontal, 16).padding(.bottom, 6)
+            }
+            if let lastCipher {
+                sentBanner(lastCipher)
+                    .task(id: lastCipher.id) {
+                        do {
+                            try await Task.sleep(for: .seconds(Self.bannerSeconds))
+                        } catch {
+                            return
+                        }
+                        self.lastCipher = nil
+                    }
+            }
+            ChatInputBar(focused: $composerFocused, onPaste: decryptClipboard, onSend: encrypt)
+        }
+        .contentShape(Rectangle())
+    }
+
     private var autoDeleteHint: some View {
         HStack(spacing: 6) {
             Image(systemName: "timer").font(.caption2)
-            Text("Messages disappear after \(currentPreset.title).")
+            Text("New messages disappear after \(currentPreset.title).")
         }
         .font(.kLabel()).foregroundStyle(KTheme.textSecondary)
         .padding(.horizontal, 12).padding(.vertical, 6)
@@ -172,8 +214,8 @@ struct ChatView: View {
             Image(systemName: cipher.hidden ? "text.word.spacing" : "checkmark.circle.fill")
                 .foregroundStyle(Color(red: 0.2, green: 0.72, blue: 0.45))
             Text(cipher.hidden
-                 ? "Hidden in text & copied — paste it to your contact."
-                 : "Encrypted & copied — paste it to your contact.")
+                 ? "Hidden in text and copied. Send it to your contact."
+                 : "Encrypted and copied. Send it to your contact.")
                 .font(.kBody()).foregroundStyle(KTheme.textPrimary)
             Spacer(minLength: 0)
             ShareLink(item: cipher.text) { Image(systemName: "square.and.arrow.up").foregroundStyle(KTheme.accent) }
@@ -198,7 +240,7 @@ struct ChatView: View {
         let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
         return HStack {
             if m.mine { Spacer(minLength: 40) }
-            Text(m.text)
+            LinkedText(text: m.text, color: m.mine ? .white : KTheme.link)
                 .font(.kBody())
                 .foregroundStyle(m.mine ? .white : KTheme.textPrimary)
                 .padding(.horizontal, 14).padding(.vertical, 10)
@@ -215,10 +257,6 @@ struct ChatView: View {
                 }
             if !m.mine { Spacer(minLength: 40) }
         }
-    }
-
-    private var inputBar: some View {
-        ChatInputBar(onPaste: decryptClipboard, onSend: encrypt)
     }
 
     private func encrypt(_ raw: String) async -> Bool {
@@ -243,6 +281,7 @@ struct ChatView: View {
             errorText = String(localized: "Clipboard is empty.")
             return
         }
+        let changeCount = UIPasteboard.general.changeCount
         let probe = await Task.detached(priority: .userInitiated) { () -> (cache: Data?, wire: Data?, encrypted: Bool) in
             let cache = DecryptCacheKey.stegoPayload(clip)
             let wire = cache ?? SignalWire.stegoPayload(clip)
@@ -251,6 +290,7 @@ struct ChatView: View {
         do {
             _ = try signal.decrypt(clip, from: contact, stego: .some(probe.cache),
                                    wireStego: .some(probe.wire))
+            if PrivacyConfig.clipboardClearOnDecrypt { Clipboard.clearIfUnchanged(since: changeCount) }
         } catch {
             errorText = ChatView.decryptFailureMessage(for: error, encrypted: probe.encrypted)
         }
@@ -284,7 +324,54 @@ struct ChatView: View {
     }
 }
 
+private struct BottomFollowing: ViewModifier {
+    @Binding var atBottom: Bool
+    let scrollToBottom: () -> Void
+    @State private var following = true
+    @State private var scrolling = false
+    @State private var settled = false
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .defaultScrollAnchor(.bottom, for: .initialOffset)
+                .defaultScrollAnchor(.bottom, for: .sizeChanges)
+                .onScrollGeometryChange(for: BottomEdge.self, of: BottomEdge.init) { _, new in
+                    atBottom = new.reached
+                    if new.overshot ? !scrolling : following && !new.reached { scrollToBottom() }
+                }
+                .onScrollPhaseChange { _, phase, context in
+                    scrolling = phase.isScrolling
+                    if phase == .interacting { following = false }
+                    if phase == .idle { following = BottomEdge(context.geometry).reached }
+                }
+        } else {
+            content.onAppear {
+                guard !settled else { return }
+                settled = true
+                scrollToBottom()
+            }
+        }
+    }
+}
+
+@available(iOS 18.0, *)
+private struct BottomEdge: Equatable {
+    let inset: CGFloat
+    let reached: Bool
+    let overshot: Bool
+
+    init(_ geometry: ScrollGeometry) {
+        inset = geometry.contentInsets.bottom
+        let end = geometry.visibleRect.maxY - inset
+        reached = end >= geometry.contentSize.height - 1
+        overshot = end > geometry.contentSize.height + 1
+            && geometry.contentOffset.y > -geometry.contentInsets.top + 1
+    }
+}
+
 private struct ChatInputBar: View {
+    let focused: FocusState<Bool>.Binding
     let onPaste: () async -> Void
     let onSend: (String) async -> Bool
 
@@ -304,10 +391,11 @@ private struct ChatInputBar: View {
                     .font(.system(size: 19, weight: .semibold)).foregroundStyle(KTheme.accent)
                     .frame(width: 48, height: 48)
             }
-            .glassSurface(Circle())
+            .glassSurface(Circle(), interactive: true)
             .disabled(busy)
 
             TextField("Message", text: $draft, axis: .vertical)
+                .focused(focused)
                 .lineLimit(1 ... 4)
                 .padding(.horizontal, 18).padding(.vertical, 14)
                 .glassSurface(Capsule())
@@ -325,7 +413,7 @@ private struct ChatInputBar: View {
                     .font(.system(size: 19, weight: .semibold)).foregroundStyle(.white)
                     .frame(width: 48, height: 48)
             }
-            .glassSurface(Circle(), tint: KTheme.accent)
+            .glassSurface(Circle(), tint: KTheme.accent, interactive: true)
             .onChange(of: lock.isLocked) { _, locked in if locked { draft = "" } }
             .shadow(color: KTheme.accent.opacity(empty ? 0 : 0.35), radius: 10, y: 3)
             .opacity(empty ? 0.55 : 1)

@@ -4,45 +4,82 @@ import CommonCrypto
 
 public enum WireFormat {
     public static let saltLength = 8
-    static let info = Data("kryptos/wire/v2".utf8)
+    static let marker: UInt8 = 0x03
+    static let info = Data("kryptos/wire/v3".utf8)
+    static let pairInfo = Data("kryptos/wire/pair/v1".utf8)
     static let minTokenBytes = 24
     static let minTokenChars = 32
     static let maxTokenChars = 2_000_000
     static let knownHeaderBits: UInt8 = 0x0F | 0x10 | 0x20
+
+    public enum Opened {
+        case message(type: UInt8, deflate: Bool, body: Data)
+        case unsupported
+        case absent
+    }
+
+    public static func pairSecret(agreement: Data, _ a: String, _ b: String) -> Data {
+        let salt = Data((a <= b ? a + b : b + a).utf8)
+        let okm = HKDF<SHA256>.deriveKey(inputKeyMaterial: SymmetricKey(data: agreement),
+                                         salt: salt, info: pairInfo, outputByteCount: 32)
+        return okm.withUnsafeBytes { Data($0) }
+    }
+
+    public static func sealedSize(ciphertext: Int, padded: Bool) -> Int {
+        saltLength + 2 + (padded ? Padding.target(4 + ciphertext) : ciphertext)
+    }
+
+    public static func fitsStego(ciphertext: Int, padded: Bool) -> Bool {
+        sealedSize(ciphertext: ciphertext, padded: padded) <= TextStego.maxPayloadBytes
+    }
+
+    public static func seal(_ body: Data, type: UInt8, deflate: Bool, padded: Bool, pairKey: Data) throws -> Data {
+        try seal(body, type: type, deflate: deflate, padded: padded, pairKey: pairKey, salt: randomBytes(saltLength))
+    }
+
+    public static func seal(_ body: Data, type: UInt8, deflate: Bool, padded: Bool, pairKey: Data, salt: Data) throws -> Data {
+        var plain = Data([marker, (type & 0x0F) | (deflate ? 0x10 : 0x00) | (padded ? 0x20 : 0x00)])
+        plain.append(padded ? Padding.frame(body) : body)
+        let (key, iv) = derive(pairKey: pairKey, salt: salt)
+        guard let masked = ctr(key: key, iv: iv, plain) else { throw CipherError.invalidInput }
+        var sealed = salt
+        sealed.append(masked)
+        return sealed
+    }
+
+    public static func open(_ raw: Data, pairKey: Data) -> Opened {
+        guard raw.count > saltLength + 1 else { return .absent }
+        let salt = raw.prefix(saltLength)
+        let masked = raw.suffix(from: raw.startIndex + saltLength)
+        let (key, iv) = derive(pairKey: pairKey, salt: Data(salt))
+        guard let plain = ctr(key: key, iv: iv, Data(masked)), plain.count >= 2 else { return .absent }
+        guard plain[plain.startIndex] == marker else { return .absent }
+        let header = plain[plain.startIndex + 1]
+        guard header & ~knownHeaderBits == 0 else { return .unsupported }
+        let type = header & 0x0F
+        guard type == 2 || type == 3 else { return .unsupported }
+        let inner = Data(plain.suffix(from: plain.startIndex + 2))
+        let body: Data
+        if header & 0x20 != 0 {
+            guard let unpadded = Padding.unframe(inner) else { return .absent }
+            body = unpadded
+        } else {
+            body = inner
+        }
+        return .message(type: type, deflate: header & 0x10 != 0, body: body)
+    }
 
     public static func wrap(_ body: Data, type: UInt8, deflate: Bool, padded: Bool, pairKey: Data) throws -> String {
         try wrap(body, type: type, deflate: deflate, padded: padded, pairKey: pairKey, salt: randomBytes(saltLength))
     }
 
     public static func wrap(_ body: Data, type: UInt8, deflate: Bool, padded: Bool, pairKey: Data, salt: Data) throws -> String {
-        var plain = Data([(type & 0x0F) | (deflate ? 0x10 : 0x00) | (padded ? 0x20 : 0x00)])
-        plain.append(padded ? Padding.frame(body) : body)
-        let (key, iv) = derive(pairKey: pairKey, salt: salt)
-        guard let masked = ctr(key: key, iv: iv, plain) else { throw CipherError.invalidInput }
-        var token = salt
-        token.append(masked)
-        return base64URLEncode(token)
+        base64URLEncode(try seal(body, type: type, deflate: deflate, padded: padded, pairKey: pairKey, salt: salt))
     }
 
-    public static func unwrap(_ text: String, pairKey: Data) -> (type: UInt8, deflate: Bool, body: Data)? {
-        guard let raw = rawBytes(text), raw.count > saltLength else { return nil }
-        let salt = raw.prefix(saltLength)
-        let masked = raw.suffix(from: raw.startIndex + saltLength)
-        let (key, iv) = derive(pairKey: pairKey, salt: Data(salt))
-        guard let plain = ctr(key: key, iv: iv, Data(masked)) else { return nil }
-        guard let header = plain.first else { return nil }
-        guard header & ~knownHeaderBits == 0 else { return nil }
-        let type = header & 0x0F
-        guard type == 2 || type == 3 else { return nil }
-        let inner = Data(plain.suffix(from: plain.startIndex + 1))
-        let body: Data
-        if header & 0x20 != 0 {
-            guard let unpadded = Padding.unframe(inner) else { return nil }
-            body = unpadded
-        } else {
-            body = inner
-        }
-        return (type, header & 0x10 != 0, body)
+    public static func unwrap(_ text: String, pairKey: Data) -> Opened {
+        guard let raw = rawBytes(text) else { return .absent }
+        return open(raw, pairKey: pairKey)
     }
 
     public static func token(_ raw: Data) -> String { base64URLEncode(raw) }

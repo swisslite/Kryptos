@@ -26,6 +26,7 @@ enum AutoDecrypt {
         signal.reloadCurrentFromDisk()
         guard let hit = signal.decryptFromAnyContact(s, stego: .some(verdict.stego),
                                                      wireStego: .some(verdict.stego)) else { return nil }
+        if PrivacyConfig.clipboardClearOnDecrypt { Clipboard.clearIfUnchanged(since: lastChangeCount) }
         return RevealedIncoming(contact: hit.contact, text: hit.text)
     }
 }
@@ -58,9 +59,8 @@ struct IncomingRevealView: View {
                 .background(Capsule().fill(KTheme.accent.opacity(0.13)))
 
                 ScrollView {
-                    Text(reveal.text)
-                        .font(.kBody()).foregroundStyle(KTheme.textPrimary)
-                        .textSelection(.enabled)
+                    SelectableLinkedText(text: reveal.text, color: KTheme.textPrimaryUI,
+                                         linkColor: KTheme.linkUI)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(14)
