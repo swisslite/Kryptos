@@ -150,7 +150,7 @@ Builds:
 
   - versionName: "2.4"
     versionCode: 13
-    commit: 5fc2b5dcb575838f5a183f51f90eb57d61a024eb
+    commit: fa9c5521bdb82fa2a11881a5d361123a2e60abd1
     subdir: android/app
     sudo:
       - apt-get update
