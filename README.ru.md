@@ -35,8 +35,7 @@ Kryptos использует один формат шифротекста на �
 могут использовать разные операционные системы.
 
 <p align="center">
-<img src="assets/readme/ru/demo.png" width="240" hspace="8" alt="Kryptos">
-<img src="assets/readme/ru/demo.webp" width="240" hspace="8" alt="Kryptos">
+<img src="assets/readme/ru/demo.webp" width="240" alt="Kryptos">
 </p>
 
 ## Возможности

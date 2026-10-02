@@ -36,8 +36,7 @@ Kryptos uses the same ciphertext format on both platforms, so the sender and rec
 different operating systems.
 
 <p align="center">
-<img src="assets/readme/demo.png" width="240" hspace="8" alt="Kryptos">
-<img src="assets/readme/demo.webp" width="240" hspace="8" alt="Kryptos">
+<img src="assets/readme/demo.webp" width="240" alt="Kryptos">
 </p>
 
 ## Features
