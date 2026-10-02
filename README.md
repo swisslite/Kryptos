@@ -35,6 +35,11 @@ in the keyboard after copying the ciphertext.
 Kryptos uses the same ciphertext format on both platforms, so the sender and recipient can use
 different operating systems.
 
+<p align="center">
+<img src="assets/readme/demo.png" width="240" hspace="8" alt="Kryptos">
+<img src="assets/readme/demo.webp" width="240" hspace="8" alt="Kryptos">
+</p>
+
 ## Features
 
 - System keyboard. Kryptos is installed as a regular system keyboard and allows you to encrypt text directly in the input field of any application. The keyboard supports multiple languages, emojis, suggestions, and autocorrect. It works without internet access.
