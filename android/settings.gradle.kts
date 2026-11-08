@@ -16,4 +16,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Kryptos"
 include(":app")
+include(":core")
 include(":libsignal")

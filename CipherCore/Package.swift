@@ -31,6 +31,10 @@ let package = Package(
             name: "CipherCore",
             dependencies: ["CArgon2", "CZlib"],
             path: "Sources/CipherCore"
+        ),
+        .testTarget(
+            name: "CipherCoreTests",
+            dependencies: ["CipherCore"]
         )
     ]
 )

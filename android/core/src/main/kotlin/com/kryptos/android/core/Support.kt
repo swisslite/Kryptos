@@ -129,7 +129,7 @@ internal class WipingBuffer(initial: Int = 8192) : java.io.OutputStream() {
     }
 }
 
-internal inline fun wipingBytes(write: (java.io.OutputStream) -> Unit): ByteArray {
+fun wipingBytes(write: (java.io.OutputStream) -> Unit): ByteArray {
     val buffer = WipingBuffer()
     return try {
         write(buffer)
