@@ -267,8 +267,13 @@ object SecureStore {
 
     @Synchronized
     fun deleteAll() {
-        dir().listFiles()?.forEach { it.delete() }
+        // Destroy the Keystore master key FIRST. If the wipe is interrupted
+        // (process kill, power loss), every file left behind is ciphertext
+        // without a key. Deleting files before destroying the key would leave
+        // decryptable residue behind — the exact failure the panic wipe exists
+        // to prevent.
         destroyMasterKey()
+        dir().listFiles()?.forEach { it.delete() }
     }
 
     private const val SETTINGS_KEY = "settings"
