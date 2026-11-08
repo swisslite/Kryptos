@@ -1,0 +1,60 @@
+name: Core crypto tests
+
+# The upstream repository had no CI and no tests. These two jobs deliberately
+# avoid libsignal: they exercise only the pure crypto cores, which is exactly
+# where a silent divergence between the Swift and Kotlin implementations is
+# most dangerous. Both suites assert the SAME fixed vectors, so a change to
+# HKDF info, salt handling, CTR counter order or Argon2id parameters fails one
+# side and is caught on the next push.
+
+on:
+  push:
+    paths:
+      - 'CipherCore/**'
+      - 'android/core/**'
+      - 'android/gradle/**'
+      - 'android/build.gradle.kts'
+      - 'android/settings.gradle.kts'
+      - '.github/workflows/core-tests.yml'
+  pull_request:
+    paths:
+      - 'CipherCore/**'
+      - 'android/core/**'
+      - 'android/gradle/**'
+      - 'android/build.gradle.kts'
+      - 'android/settings.gradle.kts'
+      - '.github/workflows/core-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kotlin-core:
+    name: Kotlin :core:test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - name: Run core unit tests
+        working-directory: android
+        run: ./gradlew :core:test --no-daemon
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kotlin-core-test-report
+          path: android/core/build/reports/tests/test
+
+  swift-core:
+    name: Swift CipherCore tests
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run CipherCore tests
+        working-directory: CipherCore
+        run: swift test
